@@ -6,6 +6,7 @@ import { COOKIE_NAME } from "@shared/const";
 import { systemRouter } from "./_core/systemRouter";
 import { adminProcedure, protectedProcedure, publicProcedure, router } from "./_core/trpc";
 import { canTransitionRequestStatus, validateApprovedQuantity } from "@shared/request-rules";
+import { requireAssignedRoom } from "@shared/room-access";
 import {
   ensureCatalog,
   getDashboardData,
@@ -78,12 +79,15 @@ export const appRouter = router({
       const db = await getDb(); if (!db) return [];
       const filters = [];
       if (input?.status) filters.push(eq(requests.status, input.status as any));
-      if (input?.roomId) filters.push(eq(requests.roomId, input.roomId));
 
-      // Petugas ruangan hanya boleh melihat permintaan yang dibuat oleh akunnya sendiri.
-      // Kepala gudang (admin) tetap dapat melihat seluruh permintaan.
-      if (ctx.user.role !== "admin") {
-        filters.push(eq(requests.createdBy, ctx.user.id));
+      // Admin boleh memfilter ruangan secara manual.
+      // Petugas ruangan tidak boleh mempercayai roomId dari client; server selalu
+      // memaksa filter ke ruangan yang terhubung dengan akun tersebut.
+      const assignedRoomId = requireAssignedRoom(ctx.user.role, ctx.user.roomId);
+      if (assignedRoomId !== null) {
+        filters.push(eq(requests.roomId, assignedRoomId));
+      } else if (input?.roomId) {
+        filters.push(eq(requests.roomId, input.roomId));
       }
 
       const rows = await db.select({ request: requests, room: rooms }).from(requests).leftJoin(rooms, eq(requests.roomId, rooms.id)).where(filters.length ? and(...filters) : undefined).orderBy(desc(requests.createdAt)).limit(100);
@@ -96,11 +100,18 @@ export const appRouter = router({
     }),
     create: operatorProcedure.input(z.object({ roomId: z.number().int(), priority: z.enum(["normal", "mendesak", "darurat"]), notes: z.string().max(1000).optional(), lines: z.array(z.object({ itemId: z.number().int(), requestedQty: z.number().int().positive() })).min(1) })).mutation(async ({ input, ctx }) => {
       const db = await getDb(); if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database belum tersedia." });
+
+      // Tahap 3C-3A: petugas tidak boleh menentukan ruangan lain dari client.
+      // Untuk admin, roomId dari input tetap digunakan.
+      const assignedRoomId = requireAssignedRoom(ctx.user.role, ctx.user.roomId);
+      const roomId = assignedRoomId ?? input.roomId;
+      const requestAuditInput = { ...input, roomId };
+
       const requestNo = nowNo("REQ");
-      const inserted = await db.insert(requests).values({ requestNo, roomId: input.roomId, createdBy: ctx.user.id, priority: input.priority, notes: input.notes, status: "submitted", submittedAt: new Date() });
+      const inserted = await db.insert(requests).values({ requestNo, roomId, createdBy: ctx.user.id, priority: input.priority, notes: input.notes, status: "submitted", submittedAt: new Date() });
       const requestId = Number(inserted[0].insertId);
       await db.insert(requestItems).values(input.lines.map((line) => ({ requestId, itemId: line.itemId, requestedQty: line.requestedQty })));
-      await writeAudit(ctx.user.id, "create", "request", requestId, null, input, `Permintaan ${requestNo} diajukan`);
+      await writeAudit(ctx.user.id, "create", "request", requestId, null, requestAuditInput, `Permintaan ${requestNo} diajukan`);
       return { requestId, requestNo };
     }),
     verify: adminProcedure.input(z.object({ requestId: z.number().int(), status: z.enum(["approved", "partial", "rejected", "ready"]), lines: z.array(z.object({ lineId: z.number().int(), approvedQty: z.number().int().min(0) })).optional() })).mutation(async ({ input, ctx }) => {
