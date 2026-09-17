@@ -5,6 +5,7 @@ import { getSessionCookieOptions } from "./_core/cookies";
 import { COOKIE_NAME } from "@shared/const";
 import { systemRouter } from "./_core/systemRouter";
 import { adminProcedure, protectedProcedure, publicProcedure, router } from "./_core/trpc";
+import { canTransitionRequestStatus, validateApprovedQuantity } from "@shared/request-rules";
 import {
   ensureCatalog,
   getDashboardData,
@@ -106,7 +107,57 @@ export const appRouter = router({
       const db = await getDb(); if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database belum tersedia." });
       const existing = await db.select().from(requests).where(eq(requests.id, input.requestId)).limit(1); const request = existing[0];
       if (!request) throw new TRPCError({ code: "NOT_FOUND", message: "Permintaan tidak ditemukan." });
-      if (input.lines) for (const line of input.lines) await db.update(requestItems).set({ approvedQty: line.approvedQty }).where(eq(requestItems.id, line.lineId));
+
+      if (!canTransitionRequestStatus(request.status, input.status)) {
+        throw new TRPCError({ code: "BAD_REQUEST", message: `Status ${request.status} tidak dapat diubah menjadi ${input.status}.` });
+      }
+
+      const currentLines = await db.select().from(requestItems).where(eq(requestItems.requestId, input.requestId));
+
+      if (input.status === "rejected") {
+        if (input.lines?.length) {
+          throw new TRPCError({ code: "BAD_REQUEST", message: "Permintaan yang ditolak tidak perlu mengubah jumlah item." });
+        }
+      } else {
+        if (!currentLines.length) {
+          throw new TRPCError({ code: "BAD_REQUEST", message: "Permintaan tidak memiliki item yang dapat diverifikasi." });
+        }
+        if (!input.lines || input.lines.length !== currentLines.length) {
+          throw new TRPCError({ code: "BAD_REQUEST", message: "Semua item pada permintaan harus diverifikasi." });
+        }
+
+        const linesById = new Map(currentLines.map((line) => [line.id, line]));
+        const seenLineIds = new Set<number>();
+        let totalApproved = 0;
+
+        for (const line of input.lines) {
+          if (seenLineIds.has(line.lineId)) {
+            throw new TRPCError({ code: "BAD_REQUEST", message: "Item verifikasi duplikat." });
+          }
+          seenLineIds.add(line.lineId);
+
+          const currentLine = linesById.get(line.lineId);
+          if (!currentLine) {
+            throw new TRPCError({ code: "BAD_REQUEST", message: "Item verifikasi tidak termasuk dalam permintaan ini." });
+          }
+
+          try {
+            validateApprovedQuantity(currentLine.requestedQty, line.approvedQty);
+          } catch {
+            throw new TRPCError({ code: "BAD_REQUEST", message: `Jumlah disetujui untuk item ${currentLine.itemId} tidak boleh melebihi jumlah yang diminta.` });
+          }
+
+          totalApproved += line.approvedQty;
+          await db.update(requestItems)
+            .set({ approvedQty: line.approvedQty })
+            .where(and(eq(requestItems.id, line.lineId), eq(requestItems.requestId, input.requestId)));
+        }
+
+        if (totalApproved <= 0) {
+          throw new TRPCError({ code: "BAD_REQUEST", message: "Jumlah disetujui harus lebih dari 0." });
+        }
+      }
+
       await db.update(requests).set({ status: input.status, verifiedAt: new Date() }).where(eq(requests.id, input.requestId));
       await writeAudit(ctx.user.id, "verify", "request", input.requestId, request, { status: input.status, lines: input.lines }, "Permintaan diverifikasi kepala gudang");
       return { success: true };
