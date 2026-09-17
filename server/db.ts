@@ -4,6 +4,7 @@ import {
   auditLogs,
   InsertUser,
   items,
+  requestDayLocks,
   requestItems,
   requests,
   rooms,
@@ -155,4 +156,4 @@ export async function getReportMovements(from?: Date, to?: Date) {
   return db.select({ movement: stockMovements, item: items, room: rooms, warehouse: warehouses }).from(stockMovements).leftJoin(items, eq(stockMovements.itemId, items.id)).leftJoin(rooms, eq(stockMovements.roomId, rooms.id)).leftJoin(warehouses, eq(stockMovements.sourceWarehouseId, warehouses.id)).where(filters.length ? and(...filters) : undefined).orderBy(desc(stockMovements.occurredAt));
 }
 
-export { auditLogs, items, requestItems, requests, rooms, stockAdjustments, stockMovements, users, warehouses };
+export { auditLogs, items, requestDayLocks, requestItems, requests, rooms, stockAdjustments, stockMovements, users, warehouses };
