@@ -73,11 +73,18 @@ export const appRouter = router({
     }),
   }),
   requests: router({
-    list: protectedProcedure.input(z.object({ status: z.string().optional(), roomId: z.number().optional() }).optional()).query(async ({ input }) => {
+    list: protectedProcedure.input(z.object({ status: z.string().optional(), roomId: z.number().optional() }).optional()).query(async ({ input, ctx }) => {
       const db = await getDb(); if (!db) return [];
       const filters = [];
       if (input?.status) filters.push(eq(requests.status, input.status as any));
       if (input?.roomId) filters.push(eq(requests.roomId, input.roomId));
+
+      // Petugas ruangan hanya boleh melihat permintaan yang dibuat oleh akunnya sendiri.
+      // Kepala gudang (admin) tetap dapat melihat seluruh permintaan.
+      if (ctx.user.role !== "admin") {
+        filters.push(eq(requests.createdBy, ctx.user.id));
+      }
+
       const rows = await db.select({ request: requests, room: rooms }).from(requests).leftJoin(rooms, eq(requests.roomId, rooms.id)).where(filters.length ? and(...filters) : undefined).orderBy(desc(requests.createdAt)).limit(100);
       const result = [];
       for (const row of rows) {
@@ -186,8 +193,34 @@ export const appRouter = router({
     }),
     receive: protectedProcedure.input(z.object({ requestId: z.number().int() })).mutation(async ({ input, ctx }) => {
       const db = await getDb(); if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database belum tersedia." });
-      await db.update(requests).set({ status: "received", receivedAt: new Date() }).where(eq(requests.id, input.requestId));
-      await writeAudit(ctx.user.id, "receive", "request", input.requestId, null, { status: "received" }, "Penerimaan barang dikonfirmasi");
+
+      const existing = await db.select().from(requests).where(eq(requests.id, input.requestId)).limit(1);
+      const request = existing[0];
+
+      if (!request) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Permintaan tidak ditemukan." });
+      }
+
+      // Petugas hanya boleh mengonfirmasi permintaan yang dibuat oleh akunnya sendiri.
+      // Admin tetap dapat membantu bila diperlukan.
+      if (ctx.user.role !== "admin" && request.createdBy !== ctx.user.id) {
+        throw new TRPCError({ code: "FORBIDDEN", message: "Anda hanya dapat menerima permintaan yang Anda ajukan sendiri." });
+      }
+
+      // Penerimaan tidak boleh melompati proses penyerahan.
+      if (request.status !== "delivered") {
+        throw new TRPCError({ code: "BAD_REQUEST", message: "Barang belum berstatus diserahkan." });
+      }
+
+      const result = await db.update(requests)
+        .set({ status: "received", receivedAt: new Date() })
+        .where(and(eq(requests.id, input.requestId), eq(requests.status, "delivered")));
+
+      if (result[0].affectedRows !== 1) {
+        throw new TRPCError({ code: "CONFLICT", message: "Status permintaan berubah. Silakan muat ulang halaman." });
+      }
+
+      await writeAudit(ctx.user.id, "receive", "request", input.requestId, request, { status: "received" }, "Penerimaan barang dikonfirmasi");
       return { success: true };
     }),
   }),
