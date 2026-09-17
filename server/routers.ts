@@ -21,6 +21,7 @@ import {
   rooms,
   stockAdjustments,
   stockMovements,
+  users,
   warehouses,
 } from "./db";
 
@@ -76,6 +77,22 @@ export const appRouter = router({
     }),
   }),
   requests: router({
+    todayLocks: protectedProcedure.query(async () => {
+      const db = await getDb(); if (!db) return [];
+      const requestDate = getJakartaDateKey();
+      return db
+        .select({
+          roomId: requestDayLocks.roomId,
+          requestDate: requestDayLocks.requestDate,
+          requesterId: requestDayLocks.requesterId,
+          requesterName: users.name,
+        })
+        .from(requestDayLocks)
+        .leftJoin(rooms, eq(requestDayLocks.roomId, rooms.id))
+        .leftJoin(users, eq(requestDayLocks.requesterId, users.id))
+        .where(and(eq(requestDayLocks.requestDate, requestDate), eq(rooms.active, true)))
+        .orderBy(requestDayLocks.roomId);
+    }),
     list: protectedProcedure.input(z.object({ status: z.string().optional(), roomId: z.number().optional() }).optional()).query(async ({ input, ctx }) => {
       const db = await getDb(); if (!db) return [];
       const filters = [];
@@ -225,9 +242,6 @@ export const appRouter = router({
     deliver: adminProcedure.input(z.object({ requestId: z.number().int() })).mutation(async ({ input, ctx }) => {
       const db = await getDb(); if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database belum tersedia." });
 
-      // Tahap 1: proses distribusi dibuat atomik dan hanya boleh terjadi sekali.
-      // Lock baris request selama transaksi agar dua klik/request bersamaan tidak
-      // sama-sama berhasil membuat stock movement OUT untuk request yang sama.
       const result = await db.transaction(async (tx) => {
         const existing = await tx.select().from(requests).where(eq(requests.id, input.requestId)).limit(1).for("update");
         const request = existing[0];
@@ -236,12 +250,10 @@ export const appRouter = router({
           throw new TRPCError({ code: "NOT_FOUND", message: "Permintaan tidak ditemukan." });
         }
 
-        // Request yang sudah diserahkan/diterima tidak boleh diproses ulang.
         if (["delivered", "received"].includes(request.status)) {
           throw new TRPCError({ code: "CONFLICT", message: `Permintaan ${request.requestNo} sudah pernah diserahkan.` });
         }
 
-        // Distribusi hanya boleh dilakukan setelah verifikasi.
         if (!["approved", "partial", "ready"].includes(request.status)) {
           throw new TRPCError({ code: "BAD_REQUEST", message: "Permintaan belum berada pada tahap yang dapat diserahkan." });
         }
@@ -251,8 +263,6 @@ export const appRouter = router({
 
         for (const line of lines) {
           if (!line.approvedQty) continue;
-
-          // Pengaman tambahan: satu baris request tidak boleh didistribusikan lagi.
           if (line.deliveredQty > 0) {
             throw new TRPCError({ code: "CONFLICT", message: `Item pada permintaan ${request.requestNo} sudah pernah diserahkan.` });
           }
@@ -289,7 +299,6 @@ export const appRouter = router({
         return { request, deliveredAt: now };
       });
 
-      // Audit ditulis setelah transaksi stok berhasil commit.
       await writeAudit(
         ctx.user.id,
         "deliver",
@@ -312,13 +321,10 @@ export const appRouter = router({
         throw new TRPCError({ code: "NOT_FOUND", message: "Permintaan tidak ditemukan." });
       }
 
-      // Petugas hanya boleh mengonfirmasi permintaan yang dibuat oleh akunnya sendiri.
-      // Admin tetap dapat membantu bila diperlukan.
       if (ctx.user.role !== "admin" && request.createdBy !== ctx.user.id) {
         throw new TRPCError({ code: "FORBIDDEN", message: "Anda hanya dapat menerima permintaan yang Anda ajukan sendiri." });
       }
 
-      // Penerimaan tidak boleh melompati proses penyerahan.
       if (request.status !== "delivered") {
         throw new TRPCError({ code: "BAD_REQUEST", message: "Barang belum berstatus diserahkan." });
       }
