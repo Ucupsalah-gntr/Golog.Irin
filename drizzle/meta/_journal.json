@@ -22,6 +22,13 @@
       "when": 1789632989991,
       "tag": "0002_add_user_room",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1789634400000,
+      "tag": "0003_add_request_day_locks",
+      "breakpoints": true
     }
   ]
 }
