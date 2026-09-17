@@ -6,7 +6,7 @@ import { COOKIE_NAME } from "@shared/const";
 import { systemRouter } from "./_core/systemRouter";
 import { adminProcedure, protectedProcedure, publicProcedure, router } from "./_core/trpc";
 import { canTransitionRequestStatus, validateApprovedQuantity } from "@shared/request-rules";
-import { requireAssignedRoom } from "@shared/room-access";
+import { canReuseRequestDayLock, getJakartaDateKey } from "@shared/request-day-lock";
 import {
   ensureCatalog,
   getDashboardData,
@@ -15,6 +15,7 @@ import {
   getStockQty,
   writeAudit,
   items,
+  requestDayLocks,
   requestItems,
   requests,
   rooms,
@@ -80,12 +81,11 @@ export const appRouter = router({
       const filters = [];
       if (input?.status) filters.push(eq(requests.status, input.status as any));
 
-      // Admin boleh memfilter ruangan secara manual.
-      // Petugas ruangan tidak boleh mempercayai roomId dari client; server selalu
-      // memaksa filter ke ruangan yang terhubung dengan akun tersebut.
-      const assignedRoomId = requireAssignedRoom(ctx.user.role, ctx.user.roomId);
-      if (assignedRoomId !== null) {
-        filters.push(eq(requests.roomId, assignedRoomId));
+      // Petugas tetap melihat riwayat request yang dibuat oleh akunnya sendiri.
+      // Tidak ada lagi pembatasan request berdasarkan users.roomId karena petugas
+      // dapat berganti ruangan secara dinamis setiap hari.
+      if (ctx.user.role !== "admin") {
+        filters.push(eq(requests.createdBy, ctx.user.id));
       } else if (input?.roomId) {
         filters.push(eq(requests.roomId, input.roomId));
       }
@@ -98,21 +98,70 @@ export const appRouter = router({
       }
       return result;
     }),
-    create: operatorProcedure.input(z.object({ roomId: z.number().int(), priority: z.enum(["normal", "mendesak", "darurat"]), notes: z.string().max(1000).optional(), lines: z.array(z.object({ itemId: z.number().int(), requestedQty: z.number().int().positive() })).min(1) })).mutation(async ({ input, ctx }) => {
+    create: operatorProcedure.input(z.object({ roomId: z.number().int().positive(), priority: z.enum(["normal", "mendesak", "darurat"]), notes: z.string().max(1000).optional(), lines: z.array(z.object({ itemId: z.number().int(), requestedQty: z.number().int().positive() })).min(1) })).mutation(async ({ input, ctx }) => {
       const db = await getDb(); if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database belum tersedia." });
 
-      // Tahap 3C-3A: petugas tidak boleh menentukan ruangan lain dari client.
-      // Untuk admin, roomId dari input tetap digunakan.
-      const assignedRoomId = requireAssignedRoom(ctx.user.role, ctx.user.roomId);
-      const roomId = assignedRoomId ?? input.roomId;
-      const requestAuditInput = { ...input, roomId };
+      const requestDate = getJakartaDateKey();
+      const now = new Date();
+      const roomId = input.roomId;
+      const requestAuditInput = { ...input, roomId, requestDate };
 
-      const requestNo = nowNo("REQ");
-      const inserted = await db.insert(requests).values({ requestNo, roomId, createdBy: ctx.user.id, priority: input.priority, notes: input.notes, status: "submitted", submittedAt: new Date() });
-      const requestId = Number(inserted[0].insertId);
-      await db.insert(requestItems).values(input.lines.map((line) => ({ requestId, itemId: line.itemId, requestedQty: line.requestedQty })));
-      await writeAudit(ctx.user.id, "create", "request", requestId, null, requestAuditInput, `Permintaan ${requestNo} diajukan`);
-      return { requestId, requestNo };
+      const result = await db.transaction(async (tx) => {
+        // Klaim ruangan untuk tanggal berjalan secara atomik. Unique key
+        // (roomId, requestDate) menjamin hanya satu requester pertama yang
+        // menjadi PIC request ruangan pada hari tersebut.
+        await tx.insert(requestDayLocks)
+          .values({ roomId, requestDate, requesterId: ctx.user.id })
+          .onDuplicateKeyUpdate({ set: { requestDate } });
+
+        const lockRows = await tx
+          .select()
+          .from(requestDayLocks)
+          .where(and(eq(requestDayLocks.roomId, roomId), eq(requestDayLocks.requestDate, requestDate)))
+          .limit(1);
+        const lock = lockRows[0];
+
+        if (!lock) {
+          throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "PIC request ruangan tidak dapat ditentukan." });
+        }
+
+        if (!canReuseRequestDayLock(lock.requesterId, ctx.user.id)) {
+          throw new TRPCError({
+            code: "FORBIDDEN",
+            message: "Ruangan ini sudah memiliki petugas request hari ini. Petugas tersebut yang dapat membuat request susulan.",
+          });
+        }
+
+        const requestNo = nowNo("REQ");
+        const inserted = await tx.insert(requests).values({
+          requestNo,
+          roomId,
+          createdBy: ctx.user.id,
+          priority: input.priority,
+          notes: input.notes,
+          status: "submitted",
+          submittedAt: now,
+        });
+        const requestId = Number(inserted[0].insertId);
+
+        await tx.insert(requestItems).values(
+          input.lines.map((line) => ({ requestId, itemId: line.itemId, requestedQty: line.requestedQty }))
+        );
+
+        return { requestId, requestNo };
+      });
+
+      await writeAudit(
+        ctx.user.id,
+        "create",
+        "request",
+        result.requestId,
+        null,
+        requestAuditInput,
+        `Permintaan ${result.requestNo} diajukan`
+      );
+
+      return result;
     }),
     verify: adminProcedure.input(z.object({ requestId: z.number().int(), status: z.enum(["approved", "partial", "rejected", "ready"]), lines: z.array(z.object({ lineId: z.number().int(), approvedQty: z.number().int().min(0) })).optional() })).mutation(async ({ input, ctx }) => {
       const db = await getDb(); if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database belum tersedia." });
