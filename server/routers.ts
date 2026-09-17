@@ -7,6 +7,7 @@ import { systemRouter } from "./_core/systemRouter";
 import { adminProcedure, protectedProcedure, publicProcedure, router } from "./_core/trpc";
 import { canTransitionRequestStatus, validateApprovedQuantity } from "@shared/request-rules";
 import { canReuseRequestDayLock, getJakartaDateKey } from "@shared/request-day-lock";
+import { calculateStockDifference } from "@shared/stock-reconciliation";
 import {
   ensureCatalog,
   getDashboardData,
@@ -124,9 +125,6 @@ export const appRouter = router({
       const requestAuditInput = { ...input, roomId, requestDate };
 
       const result = await db.transaction(async (tx) => {
-        // Klaim ruangan untuk tanggal berjalan secara atomik. Unique key
-        // (roomId, requestDate) menjamin hanya satu requester pertama yang
-        // menjadi PIC request ruangan pada hari tersebut.
         await tx.insert(requestDayLocks)
           .values({ roomId, requestDate, requesterId: ctx.user.id })
           .onDuplicateKeyUpdate({ set: { requestDate } });
@@ -348,15 +346,30 @@ export const appRouter = router({
     }),
     applyAdjustment: adminProcedure.input(z.object({ itemId: z.number().int(), roomId: z.number().int().nullable().optional(), adjustmentType: z.enum(["add", "subtract"]), quantity: z.number().int().positive(), physicalQty: z.number().int().min(0), reasonType: z.enum(["forgotten_entry", "holiday_pickup", "damaged", "expired", "emergency", "stocktake", "other"]), reason: z.string().min(10), incidentDate: z.coerce.date() })).mutation(async ({ input, ctx }) => {
       const db = await getDb(); if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database belum tersedia." });
+
+      // Rekonsiliasi ditentukan dari hasil stok fisik, bukan dari direction/quantity
+      // yang dikirim UI. Dengan begitu systemQty=135 dan physicalQty=130 selalu
+      // menghasilkan movement -5, sedangkan 80 -> 84 menghasilkan +4.
       const systemQty = await getStockQty(input.itemId);
-      if (input.adjustmentType === "subtract" && input.quantity > systemQty) throw new TRPCError({ code: "BAD_REQUEST", message: "Penyesuaian pengurangan melebihi stok sistem." });
+      let difference: number;
+      try {
+        difference = calculateStockDifference(systemQty, input.physicalQty);
+      } catch {
+        throw new TRPCError({ code: "BAD_REQUEST", message: "Jumlah stok sistem/fisik tidak valid." });
+      }
+
+      if (difference === 0) {
+        throw new TRPCError({ code: "BAD_REQUEST", message: "Stok fisik sama dengan stok sistem. Tidak ada penyesuaian yang perlu diterapkan." });
+      }
+
+      const adjustmentType = difference > 0 ? "add" : "subtract";
+      const quantity = Math.abs(difference);
       const adjustmentNo = nowNo("ADJ");
-      const inserted = await db.insert(stockAdjustments).values({ ...input, adjustmentNo, systemQty, status: "applied", createdBy: ctx.user.id, verifiedBy: ctx.user.id, appliedAt: new Date() });
+      const inserted = await db.insert(stockAdjustments).values({ ...input, adjustmentType, quantity, adjustmentNo, systemQty, status: "applied", createdBy: ctx.user.id, verifiedBy: ctx.user.id, appliedAt: new Date() });
       const adjustmentId = Number(inserted[0].insertId);
-      const signedQty = input.adjustmentType === "add" ? input.quantity : -input.quantity;
-      await db.insert(stockMovements).values({ itemId: input.itemId, movementType: "adjustment", quantity: signedQty, roomId: input.roomId, adjustmentId, createdBy: ctx.user.id, notes: input.reason, occurredAt: input.incidentDate });
-      await writeAudit(ctx.user.id, "apply", "stock_adjustment", adjustmentId, { systemQty }, { ...input, adjustmentNo, status: "applied", verifiedBy: ctx.user.id }, "Self-verification kepala gudang");
-      return { adjustmentId, adjustmentNo };
+      await db.insert(stockMovements).values({ itemId: input.itemId, movementType: "adjustment", quantity: difference, roomId: input.roomId, adjustmentId, createdBy: ctx.user.id, notes: input.reason, occurredAt: input.incidentDate });
+      await writeAudit(ctx.user.id, "apply", "stock_adjustment", adjustmentId, { systemQty }, { ...input, adjustmentNo, adjustmentType, quantity, difference, finalQty: input.physicalQty, status: "applied", verifiedBy: ctx.user.id }, "Rekonsiliasi stok berdasarkan hasil fisik");
+      return { adjustmentId, adjustmentNo, systemQty, physicalQty: input.physicalQty, difference, finalQty: input.physicalQty };
     }),
   }),
   reports: router({
