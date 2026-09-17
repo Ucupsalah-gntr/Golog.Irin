@@ -7,6 +7,7 @@ import {
   varchar,
   boolean,
   json,
+  uniqueIndex,
 } from "drizzle-orm/mysql-core";
 
 export const users = mysqlTable("users", {
@@ -68,6 +69,20 @@ export const requests = mysqlTable("requests", {
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });
 
+export const requestDayLocks = mysqlTable(
+  "request_day_locks",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    roomId: int("roomId").notNull(),
+    requestDate: varchar("requestDate", { length: 10 }).notNull(),
+    requesterId: int("requesterId").notNull(),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+  },
+  table => ({
+    roomDateUnique: uniqueIndex("request_day_locks_room_date_unique").on(table.roomId, table.requestDate),
+  }),
+);
+
 export const requestItems = mysqlTable("request_items", {
   id: int("id").autoincrement().primaryKey(),
   requestId: int("requestId").notNull(),
@@ -79,7 +94,7 @@ export const requestItems = mysqlTable("request_items", {
 
 export const stockMovements = mysqlTable("stock_movements", {
   id: int("id").autoincrement().primaryKey(),
-  itemId: int("itemId").notNull(),
+  itemId: int("itemId").autoincrement().primaryKey(),
   movementType: mysqlEnum("movementType", ["in", "out", "adjustment"]).notNull(),
   quantity: int("quantity").notNull(),
   sourceWarehouseId: int("sourceWarehouseId"),
