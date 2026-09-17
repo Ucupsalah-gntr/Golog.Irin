@@ -82,7 +82,7 @@ export default function UsersRooms() {
                           currentRoomId={currentRoomId}
                           rooms={rooms}
                           saving={assignRoom.isPending && assignRoom.variables?.userId === row.id}
-                          onChange={(value) => setDraftRooms((prev) => ({ ...prev, [row.id]: value }))}
+                          onChange={(value: string) => setDraftRooms((prev) => ({ ...prev, [row.id]: value }))}
                           onSave={() => assignRoom.mutate({ userId: row.id, roomId: currentRoomId === "" ? null : Number(currentRoomId) })}
                         />
                       );
