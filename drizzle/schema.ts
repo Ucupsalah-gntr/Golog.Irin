@@ -94,7 +94,7 @@ export const requestItems = mysqlTable("request_items", {
 
 export const stockMovements = mysqlTable("stock_movements", {
   id: int("id").autoincrement().primaryKey(),
-  itemId: int("itemId").autoincrement().primaryKey(),
+  itemId: int("itemId").notNull(),
   movementType: mysqlEnum("movementType", ["in", "out", "adjustment"]).notNull(),
   quantity: int("quantity").notNull(),
   sourceWarehouseId: int("sourceWarehouseId"),
