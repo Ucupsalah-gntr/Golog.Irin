@@ -383,7 +383,7 @@ export const appRouter = router({
     }),
   }),
   adjustments: router({
-    list: protectedProcedure.query(async () => {
+    list: adminProcedure.query(async () => {
       const db = await getDb(); if (!db) return [];
       return db.select({ adjustment: stockAdjustments, item: items, room: rooms }).from(stockAdjustments).leftJoin(items, eq(stockAdjustments.itemId, items.id)).leftJoin(rooms, eq(stockAdjustments.roomId, rooms.id)).orderBy(desc(stockAdjustments.createdAt)).limit(100);
     }),
@@ -417,7 +417,7 @@ export const appRouter = router({
     }),
   }),
   reports: router({
-    movements: protectedProcedure.input(z.object({ from: z.coerce.date().optional(), to: z.coerce.date().optional() }).optional()).query(({ input }) => getReportMovements(input?.from, input?.to)),
+    movements: adminProcedure.input(z.object({ from: z.coerce.date().optional(), to: z.coerce.date().optional() }).optional()).query(({ input }) => getReportMovements(input?.from, input?.to)),
   }),
 });
 
