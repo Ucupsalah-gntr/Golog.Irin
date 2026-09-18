@@ -1,141 +1,139 @@
 import {
-  int,
-  mysqlEnum,
-  mysqlTable,
+  boolean,
+  integer,
+  jsonb,
+  pgTable,
   text,
   timestamp,
-  varchar,
-  boolean,
-  json,
   uniqueIndex,
-} from "drizzle-orm/mysql-core";
+  uuid,
+  varchar,
+} from "drizzle-orm/pg-core";
 
-export const users = mysqlTable("users", {
-  id: int("id").autoincrement().primaryKey(),
-  openId: varchar("openId", { length: 64 }).notNull().unique(),
+export const users = pgTable("users", {
+  id: integer("id").generatedByDefaultAsIdentity().primaryKey(),
+  username: varchar("username", { length: 64 }).notNull().unique(),
   name: text("name"),
   email: varchar("email", { length: 320 }),
-  loginMethod: varchar("loginMethod", { length: 64 }),
-  role: mysqlEnum("role", ["user", "admin"]).default("user").notNull(),
-  roomId: int("roomId"),
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
-  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
-  lastSignedIn: timestamp("lastSignedIn").defaultNow().notNull(),
-});
+  authUserId: uuid("auth_user_id").unique(),
+  role: text("role").$type<"user" | "admin">().default("user").notNull(),
+  roomId: integer("roomId"),
+  createdAt: timestamp("createdAt", { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt", { withTimezone: true }).defaultNow().notNull(),
+  lastSignedIn: timestamp("lastSignedIn", { withTimezone: true }).defaultNow().notNull(),
+}, (table) => ({
+  roomIdx: uniqueIndex("users_room_lookup_idx").on(table.roomId),
+}));
 
-export const warehouses = mysqlTable("warehouses", {
-  id: int("id").autoincrement().primaryKey(),
+export const warehouses = pgTable("warehouses", {
+  id: integer("id").generatedByDefaultAsIdentity().primaryKey(),
   code: varchar("code", { length: 32 }).notNull().unique(),
   name: varchar("name", { length: 120 }).notNull(),
-  kind: mysqlEnum("kind", ["source", "logistics"]).default("source").notNull(),
+  kind: text("kind").$type<"source" | "logistics">().default("source").notNull(),
   active: boolean("active").default(true).notNull(),
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  createdAt: timestamp("createdAt", { withTimezone: true }).defaultNow().notNull(),
 });
 
-export const rooms = mysqlTable("rooms", {
-  id: int("id").autoincrement().primaryKey(),
+export const rooms = pgTable("rooms", {
+  id: integer("id").generatedByDefaultAsIdentity().primaryKey(),
   code: varchar("code", { length: 32 }).notNull().unique(),
   name: varchar("name", { length: 120 }).notNull(),
   active: boolean("active").default(true).notNull(),
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  createdAt: timestamp("createdAt", { withTimezone: true }).defaultNow().notNull(),
 });
 
-export const items = mysqlTable("items", {
-  id: int("id").autoincrement().primaryKey(),
+export const items = pgTable("items", {
+  id: integer("id").generatedByDefaultAsIdentity().primaryKey(),
   sku: varchar("sku", { length: 64 }).notNull().unique(),
   name: varchar("name", { length: 180 }).notNull(),
   category: varchar("category", { length: 100 }),
   unit: varchar("unit", { length: 32 }).notNull(),
-  sourceWarehouseId: int("sourceWarehouseId"),
-  minStock: int("minStock").default(0).notNull(),
+  sourceWarehouseId: integer("sourceWarehouseId"),
+  minStock: integer("minStock").default(0).notNull(),
   active: boolean("active").default(true).notNull(),
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
-  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  createdAt: timestamp("createdAt", { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt", { withTimezone: true }).defaultNow().notNull(),
 });
 
-export const requests = mysqlTable("requests", {
-  id: int("id").autoincrement().primaryKey(),
+export const requests = pgTable("requests", {
+  id: integer("id").generatedByDefaultAsIdentity().primaryKey(),
   requestNo: varchar("requestNo", { length: 40 }).notNull().unique(),
-  roomId: int("roomId").notNull(),
-  createdBy: int("createdBy").notNull(),
-  priority: mysqlEnum("priority", ["normal", "mendesak", "darurat"]).default("normal").notNull(),
-  status: mysqlEnum("status", ["draft", "submitted", "approved", "partial", "rejected", "ready", "delivered", "received", "cancelled"]).default("draft").notNull(),
+  roomId: integer("roomId").notNull(),
+  createdBy: integer("createdBy").notNull(),
+  priority: text("priority").$type<"normal" | "mendesak" | "darurat">().default("normal").notNull(),
+  status: text("status").$type<"draft" | "submitted" | "approved" | "partial" | "rejected" | "ready" | "delivered" | "received" | "cancelled">().default("draft").notNull(),
   notes: text("notes"),
-  submittedAt: timestamp("submittedAt"),
-  verifiedAt: timestamp("verifiedAt"),
-  deliveredAt: timestamp("deliveredAt"),
-  receivedAt: timestamp("receivedAt"),
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
-  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  submittedAt: timestamp("submittedAt", { withTimezone: true }),
+  verifiedAt: timestamp("verifiedAt", { withTimezone: true }),
+  deliveredAt: timestamp("deliveredAt", { withTimezone: true }),
+  receivedAt: timestamp("receivedAt", { withTimezone: true }),
+  createdAt: timestamp("createdAt", { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt", { withTimezone: true }).defaultNow().notNull(),
 });
 
-export const requestDayLocks = mysqlTable(
-  "request_day_locks",
-  {
-    id: int("id").autoincrement().primaryKey(),
-    roomId: int("roomId").notNull(),
-    requestDate: varchar("requestDate", { length: 10 }).notNull(),
-    requesterId: int("requesterId").notNull(),
-    createdAt: timestamp("createdAt").defaultNow().notNull(),
-  },
-  table => ({
-    roomDateUnique: uniqueIndex("request_day_locks_room_date_unique").on(table.roomId, table.requestDate),
-  }),
-);
+export const requestDayLocks = pgTable("request_day_locks", {
+  id: integer("id").generatedByDefaultAsIdentity().primaryKey(),
+  roomId: integer("roomId").notNull(),
+  requestDate: varchar("requestDate", { length: 10 }).notNull(),
+  requesterId: integer("requesterId").notNull(),
+  createdAt: timestamp("createdAt", { withTimezone: true }).defaultNow().notNull(),
+}, (table) => ({
+  roomDateUnique: uniqueIndex("request_day_locks_room_date_unique").on(table.roomId, table.requestDate),
+}));
 
-export const requestItems = mysqlTable("request_items", {
-  id: int("id").autoincrement().primaryKey(),
-  requestId: int("requestId").notNull(),
-  itemId: int("itemId").notNull(),
-  requestedQty: int("requestedQty").notNull(),
-  approvedQty: int("approvedQty").default(0).notNull(),
-  deliveredQty: int("deliveredQty").default(0).notNull(),
+export const requestItems = pgTable("request_items", {
+  id: integer("id").generatedByDefaultAsIdentity().primaryKey(),
+  requestId: integer("requestId").notNull(),
+  itemId: integer("itemId").notNull(),
+  requestedQty: integer("requestedQty").notNull(),
+  approvedQty: integer("approvedQty").default(0).notNull(),
+  deliveredQty: integer("deliveredQty").default(0).notNull(),
 });
 
-export const stockMovements = mysqlTable("stock_movements", {
-  id: int("id").autoincrement().primaryKey(),
-  itemId: int("itemId").notNull(),
-  movementType: mysqlEnum("movementType", ["in", "out", "adjustment"]).notNull(),
-  quantity: int("quantity").notNull(),
-  sourceWarehouseId: int("sourceWarehouseId"),
-  roomId: int("roomId"),
-  requestId: int("requestId"),
-  adjustmentId: int("adjustmentId"),
+export const stockMovements = pgTable("stock_movements", {
+  id: integer("id").generatedByDefaultAsIdentity().primaryKey(),
+  itemId: integer("itemId").notNull(),
+  movementType: text("movementType").$type<"in" | "out" | "adjustment">().notNull(),
+  quantity: integer("quantity").notNull(),
+  sourceWarehouseId: integer("sourceWarehouseId"),
+  roomId: integer("roomId"),
+  requestId: integer("requestId"),
+  adjustmentId: integer("adjustmentId"),
   notes: text("notes"),
-  occurredAt: timestamp("occurredAt").defaultNow().notNull(),
-  createdBy: int("createdBy").notNull(),
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  occurredAt: timestamp("occurredAt", { withTimezone: true }).defaultNow().notNull(),
+  createdBy: integer("createdBy").notNull(),
+  createdAt: timestamp("createdAt", { withTimezone: true }).defaultNow().notNull(),
 });
 
-export const stockAdjustments = mysqlTable("stock_adjustments", {
-  id: int("id").autoincrement().primaryKey(),
+export const stockAdjustments = pgTable("stock_adjustments", {
+  id: integer("id").generatedByDefaultAsIdentity().primaryKey(),
   adjustmentNo: varchar("adjustmentNo", { length: 40 }).notNull().unique(),
-  itemId: int("itemId").notNull(),
-  roomId: int("roomId"),
-  adjustmentType: mysqlEnum("adjustmentType", ["add", "subtract"]).notNull(),
-  quantity: int("quantity").notNull(),
-  systemQty: int("systemQty").notNull(),
-  physicalQty: int("physicalQty").notNull(),
-  reasonType: mysqlEnum("reasonType", ["forgotten_entry", "holiday_pickup", "damaged", "expired", "emergency", "stocktake", "other"]).notNull(),
+  itemId: integer("itemId").notNull(),
+  roomId: integer("roomId"),
+  adjustmentType: text("adjustmentType").$type<"add" | "subtract">().notNull(),
+  quantity: integer("quantity").notNull(),
+  systemQty: integer("systemQty").notNull(),
+  physicalQty: integer("physicalQty").notNull(),
+  reasonType: text("reasonType").$type<"forgotten_entry" | "holiday_pickup" | "damaged" | "expired" | "emergency" | "stocktake" | "other">().notNull(),
   reason: text("reason").notNull(),
-  incidentDate: timestamp("incidentDate").notNull(),
-  status: mysqlEnum("status", ["draft", "applied", "rejected"]).default("draft").notNull(),
-  createdBy: int("createdBy").notNull(),
-  verifiedBy: int("verifiedBy"),
-  appliedAt: timestamp("appliedAt"),
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  incidentDate: timestamp("incidentDate", { withTimezone: true }).notNull(),
+  status: text("status").$type<"draft" | "applied" | "rejected">().default("draft").notNull(),
+  createdBy: integer("createdBy").notNull(),
+  verifiedBy: integer("verifiedBy"),
+  appliedAt: timestamp("appliedAt", { withTimezone: true }),
+  createdAt: timestamp("createdAt", { withTimezone: true }).defaultNow().notNull(),
 });
 
-export const auditLogs = mysqlTable("audit_logs", {
-  id: int("id").autoincrement().primaryKey(),
-  actorId: int("actorId").notNull(),
+export const auditLogs = pgTable("audit_logs", {
+  id: integer("id").generatedByDefaultAsIdentity().primaryKey(),
+  actorId: integer("actorId").notNull(),
   action: varchar("action", { length: 80 }).notNull(),
   entityType: varchar("entityType", { length: 80 }).notNull(),
-  entityId: int("entityId"),
-  beforeData: json("beforeData"),
-  afterData: json("afterData"),
+  entityId: integer("entityId"),
+  beforeData: jsonb("beforeData"),
+  afterData: jsonb("afterData"),
   notes: text("notes"),
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  createdAt: timestamp("createdAt", { withTimezone: true }).defaultNow().notNull(),
 });
 
 export type User = typeof users.$inferSelect;
