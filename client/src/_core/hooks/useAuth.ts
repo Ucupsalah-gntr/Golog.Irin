@@ -49,7 +49,7 @@ export function useAuth(options?: UseAuthOptions) {
   const logout = useCallback(async () => {
     await supabase.auth.signOut();
     setSession(null);
-    utils.auth.me.setData(undefined, null);
+    utils.auth.me.setData(undefined, undefined);
     await utils.auth.me.invalidate();
   }, [utils]);
 
