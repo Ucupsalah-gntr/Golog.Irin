@@ -8,6 +8,7 @@ import { adminProcedure, protectedProcedure, publicProcedure, router } from "./_
 import { canTransitionRequestStatus, validateApprovedQuantity } from "@shared/request-rules";
 import { canReuseRequestDayLock, getJakartaDateKey } from "@shared/request-day-lock";
 import { calculateStockDifference } from "@shared/stock-reconciliation";
+import type { ImportItemRow } from "@shared/item-import";
 import {
   ensureCatalog,
   getDashboardData,
@@ -64,6 +65,43 @@ export const appRouter = router({
       const result = await db.insert(items).values(input);
       await writeAudit(ctx.user.id, "create", "item", Number(result[0].insertId), null, input, "Master barang dibuat");
       return { id: Number(result[0].insertId) };
+    }),
+    importItems: adminProcedure.input(z.object({
+      rows: z.array(z.object({
+        rowNumber: z.number().int().positive(),
+        sku: z.string().min(1).max(64),
+        name: z.string().min(2).max(180),
+        unit: z.string().min(1).max(32),
+        category: z.string().max(100).optional(),
+        sourceWarehouseCode: z.string().max(32).optional(),
+        minStock: z.number().int().min(0),
+      })).min(1).max(5000),
+    })).mutation(async ({ input, ctx }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database belum tersedia." });
+      const sourceWarehouses = await db.select().from(warehouses).where(eq(warehouses.active, true));
+      const warehouseByCode = new Map(sourceWarehouses.map((warehouse) => [warehouse.code.toUpperCase(), warehouse.id]));
+      const unknownWarehouses = Array.from(new Set(input.rows.map((row) => row.sourceWarehouseCode).filter((code): code is string => Boolean(code && !warehouseByCode.has(code.toUpperCase())))));
+      if (unknownWarehouses.length) throw new TRPCError({ code: "BAD_REQUEST", message: `Kode gudang tidak ditemukan: ${unknownWarehouses.join(", ")}.` });
+
+      let created = 0;
+      let updated = 0;
+      await db.transaction(async (tx) => {
+        for (const row of input.rows as ImportItemRow[]) {
+          const sourceWarehouseId = row.sourceWarehouseCode ? warehouseByCode.get(row.sourceWarehouseCode.toUpperCase()) ?? null : null;
+          const existing = await tx.select({ id: items.id }).from(items).where(eq(items.sku, row.sku)).limit(1);
+          const values = { sku: row.sku, name: row.name, unit: row.unit, category: row.category || null, sourceWarehouseId, minStock: row.minStock };
+          if (existing[0]) {
+            await tx.update(items).set(values).where(eq(items.id, existing[0].id));
+            updated++;
+          } else {
+            await tx.insert(items).values(values);
+            created++;
+          }
+        }
+      });
+      await writeAudit(ctx.user.id, "import", "items", null, null, { rowCount: input.rows.length, created, updated }, "Impor master barang dari Excel");
+      return { created, updated, total: input.rows.length };
     }),
   }),
   dashboard: router({
