@@ -48,7 +48,7 @@ export async function createContext(
       return { req: opts.req, res: opts.res, user: null };
     }
 
-    user = await getUserByAuthUserId(authUser.id);
+    user = (await getUserByAuthUserId(authUser.id)) ?? null;
 
     if (!user) {
       const existingProfile = await getUserByUsername(username);
