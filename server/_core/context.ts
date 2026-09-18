@@ -53,7 +53,7 @@ export async function createContext(
     if (!user) {
       const existingProfile = await getUserByUsername(username);
       if (existingProfile) {
-        user = await upsertUser({
+        user = (await upsertUser({
           id: existingProfile.id,
           username,
           name: existingProfile.name ?? authUser.user_metadata?.name ?? username,
@@ -62,7 +62,7 @@ export async function createContext(
           role: existingProfile.role,
           roomId: existingProfile.roomId,
           lastSignedIn: new Date(),
-        });
+        })) ?? null;
       }
     }
 
