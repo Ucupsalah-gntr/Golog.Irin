@@ -29,6 +29,8 @@ jobs:
           fi
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git fetch origin supabase-migration
+          git rebase origin/supabase-migration
           git add pnpm-lock.yaml
           git commit -m "chore: refresh pnpm lockfile"
           git push
