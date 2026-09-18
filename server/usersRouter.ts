@@ -73,9 +73,10 @@ export const usersRouter = router({
       const result = await db
         .update(users)
         .set({ roomId: input.roomId })
-        .where(eq(users.id, input.userId));
+        .where(eq(users.id, input.userId))
+        .returning({ id: users.id });
 
-      if (result[0].affectedRows !== 1) {
+      if (result.length !== 1) {
         throw new TRPCError({
           code: "CONFLICT",
           message: "Akun tidak berubah. Silakan muat ulang halaman.",

@@ -1,8 +1,8 @@
-import { useMemo, useState } from "react";
+import { type FormEvent, useEffect, useMemo, useState } from "react";
 import * as XLSX from "xlsx";
 import { importTemplateCsv, validateItemImport, type ImportPreview } from "@shared/item-import";
-import { startLogin } from "@/const";
 import { useAuth } from "@/_core/hooks/useAuth";
+import { supabase, usernameToAuthEmail } from "@/lib/supabase";
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -35,13 +35,13 @@ import {
 } from "lucide-react";
 
 const nav = [
-  { key: "overview", label: "Ringkasan", icon: BarChart3 },
-  { key: "requests", label: "Permintaan", icon: ClipboardList },
-  { key: "stock", label: "Stok barang", icon: Boxes },
-  { key: "inbound", label: "Barang masuk", icon: ArrowDownToLine },
-  { key: "adjustments", label: "Penyesuaian", icon: SlidersHorizontal },
-  { key: "stocktake", label: "Stock Opname", icon: ClipboardType },
-  { key: "reports", label: "Laporan", icon: FileDown },
+  { key: "overview", label: "Ringkasan", icon: BarChart3, adminOnly: false },
+  { key: "requests", label: "Permintaan", icon: ClipboardList, adminOnly: false },
+  { key: "stock", label: "Stok barang", icon: Boxes, adminOnly: false },
+  { key: "inbound", label: "Barang masuk", icon: ArrowDownToLine, adminOnly: true },
+  { key: "adjustments", label: "Penyesuaian", icon: SlidersHorizontal, adminOnly: true },
+  { key: "stocktake", label: "Stock Opname", icon: ClipboardType, adminOnly: true },
+  { key: "reports", label: "Laporan", icon: FileDown, adminOnly: true },
 ] as const;
 
 type NavKey = (typeof nav)[number]["key"];
@@ -81,8 +81,8 @@ export default function Home() {
   const dashboard = trpc.dashboard.summary.useQuery(undefined, { enabled: isAuthenticated });
   const requests = trpc.requests.list.useQuery({}, { enabled: isAuthenticated });
   const todayRoomLocks = trpc.requests.todayLocks.useQuery(undefined, { enabled: isAuthenticated });
-  const adjustments = trpc.adjustments.list.useQuery(undefined, { enabled: isAuthenticated });
-  const report = trpc.reports.movements.useQuery({}, { enabled: isAuthenticated && active === "reports" });
+  const adjustments = trpc.adjustments.list.useQuery(undefined, { enabled: isAuthenticated && user?.role === "admin" });
+  const report = trpc.reports.movements.useQuery({}, { enabled: isAuthenticated && user?.role === "admin" && active === "reports" });
   const createRequest = trpc.requests.create.useMutation({ onSuccess: () => { toast.success("Permintaan berhasil diajukan"); requests.refetch(); todayRoomLocks.refetch(); setRequestLines([{ itemId: 0, requestedQty: 1 }]); } });
   const verifyRequest = trpc.requests.verify.useMutation({ onSuccess: () => { toast.success("Status permintaan diperbarui"); requests.refetch(); dashboard.refetch(); } });
   const deliverRequest = trpc.requests.deliver.useMutation({ onSuccess: () => { toast.success("Distribusi dicatat dan stok berkurang"); requests.refetch(); dashboard.refetch(); } });
@@ -97,14 +97,28 @@ export default function Home() {
   const warehouses = catalog.data?.warehouses ?? [];
   const stock = dashboard.data?.stock ?? [];
   const isAdmin = user?.role === "admin";
+  const visibleNav = nav.filter((item) => !item.adminOnly || isAdmin);
   const selectedRoomName = rooms.find((room) => room.id === selectedRoom)?.name;
 
   const requestTotal = useMemo(() => requestLines.reduce((sum, line) => sum + Number(line.requestedQty || 0), 0), [requestLines]);
 
+  useEffect(() => {
+    if (!isAdmin && ["inbound", "adjustments", "stocktake", "reports"].includes(active)) {
+      setActive("overview");
+    }
+  }, [active, isAdmin]);
+
   if (loading) return <div className="min-h-screen grid place-items-center bg-[#f4f7f6]"><div className="text-center"><Activity className="mx-auto mb-3 animate-pulse text-teal-600" /><p className="text-sm text-slate-500">Menyiapkan ruang kerja…</p></div></div>;
   if (!isAuthenticated) return <LoginScreen />;
 
-  function refreshAll() { dashboard.refetch(); requests.refetch(); todayRoomLocks.refetch(); catalog.refetch(); adjustments.refetch(); }
+  function refreshAll() {
+    dashboard.refetch();
+    requests.refetch();
+    todayRoomLocks.refetch();
+    catalog.refetch();
+    if (isAdmin) adjustments.refetch();
+    if (isAdmin && active === "reports") report.refetch();
+  }
   function go(key: NavKey) { setActive(key); setMobileOpen(false); }
 
   return (
@@ -114,13 +128,13 @@ export default function Home() {
           <div className="flex h-full flex-col px-5 py-6">
             <div className="flex items-center justify-between border-b border-white/10 pb-6"><div className="flex items-center gap-3"><div className="grid h-11 w-11 place-items-center rounded-2xl bg-[#c9f3d7] text-[#102a2b]"><Hospital size={22} /></div><div><p className="font-semibold tracking-tight">Gudang IR</p><p className="text-xs text-teal-100/70">Rawat Intensif</p></div></div><button className="lg:hidden" onClick={() => setMobileOpen(false)}><X size={18} /></button></div>
             <div className="mt-7 rounded-2xl bg-white/10 p-4"><p className="text-[11px] uppercase tracking-[0.18em] text-teal-100/60">Sesi aktif</p><p className="mt-1 truncate font-medium">{user?.name || user?.email || "Pengguna"}</p><div className="mt-2 flex items-center gap-2 text-xs text-teal-100/70"><ShieldCheck size={14} />{isAdmin ? "Kepala gudang" : "Petugas ruangan"}</div></div>
-            <nav className="mt-8 space-y-1">{nav.map((item) => { const Icon = item.icon; return <button key={item.key} onClick={() => go(item.key)} className={`flex w-full items-center gap-3 rounded-xl px-4 py-3 text-left text-sm transition ${active === item.key ? "bg-[#c9f3d7] font-semibold text-[#102a2b]" : "text-teal-50/70 hover:bg-white/10 hover:text-white"}`}><Icon size={18} />{item.label}</button>; })}</nav>
+            <nav className="mt-8 space-y-1">{visibleNav.map((item) => { const Icon = item.icon; return <button key={item.key} onClick={() => go(item.key)} className={`flex w-full items-center gap-3 rounded-xl px-4 py-3 text-left text-sm transition ${active === item.key ? "bg-[#c9f3d7] font-semibold text-[#102a2b]" : "text-teal-50/70 hover:bg-white/10 hover:text-white"}`}><Icon size={18} />{item.label}</button>; })}</nav>
             <div className="mt-auto border-t border-white/10 pt-5"><button onClick={() => logout()} className="flex w-full items-center gap-3 rounded-xl px-4 py-3 text-sm text-teal-50/70 hover:bg-white/10 hover:text-white"><LogOut size={18} />Keluar</button></div>
           </div>
         </aside>
         {mobileOpen && <button aria-label="Tutup menu" className="fixed inset-0 z-30 bg-slate-900/40 lg:hidden" onClick={() => setMobileOpen(false)} />}
         <main className="min-w-0 flex-1">
-          <header className="sticky top-0 z-20 flex h-20 items-center justify-between border-b border-slate-200/80 bg-[#f4f7f6]/90 px-5 backdrop-blur md:px-8"><div className="flex items-center gap-3"><button className="rounded-xl p-2 hover:bg-white lg:hidden" onClick={() => setMobileOpen(true)}><Menu size={20} /></button><div><p className="text-xs font-semibold uppercase tracking-[0.18em] text-teal-700">Instalasi Rawat Intensif</p><h1 className="text-xl font-semibold tracking-tight">{nav.find((x) => x.key === active)?.label}</h1></div></div><div className="flex items-center gap-2"><button title="Refresh" onClick={refreshAll} className="rounded-xl border border-slate-200 bg-white p-2.5 text-slate-500 hover:text-teal-700"><RefreshCw size={17} /></button><div className="hidden rounded-xl border border-slate-200 bg-white px-3 py-2 text-right sm:block"><p className="text-xs font-semibold">{user?.name || "Akun aktif"}</p><p className="text-[11px] text-slate-500">{isAdmin ? "Kepala gudang" : "Petugas"}</p></div></div></header>
+          <header className="sticky top-0 z-20 flex h-20 items-center justify-between border-b border-slate-200/80 bg-[#f4f7f6]/90 px-5 backdrop-blur md:px-8"><div className="flex items-center gap-3"><button className="rounded-xl p-2 hover:bg-white lg:hidden" onClick={() => setMobileOpen(true)}><Menu size={20} /></button><div><p className="text-xs font-semibold uppercase tracking-[0.18em] text-teal-700">Instalasi Rawat Intensif</p><h1 className="text-xl font-semibold tracking-tight">{visibleNav.find((x) => x.key === active)?.label}</h1></div></div><div className="flex items-center gap-2"><button title="Refresh" onClick={refreshAll} className="rounded-xl border border-slate-200 bg-white p-2.5 text-slate-500 hover:text-teal-700"><RefreshCw size={17} /></button><div className="hidden rounded-xl border border-slate-200 bg-white px-3 py-2 text-right sm:block"><p className="text-xs font-semibold">{user?.name || "Akun aktif"}</p><p className="text-[11px] text-slate-500">{isAdmin ? "Kepala gudang" : "Petugas"}</p></div></div></header>
           <div className="mx-auto max-w-[1500px] space-y-6 p-5 md:p-8">
             {active === "overview" && <Overview dashboard={dashboard.data} isAdmin={isAdmin} onGo={go} />}
             {active === "stock" && <StockView stock={stock} isAdmin={isAdmin} items={items} warehouses={warehouses} onCreateItem={(input: any) => createItem.mutate(input)} busy={createItem.isPending} onImport={(rows: any[]) => importItems.mutate({ rows })} importBusy={importItems.isPending} />}
@@ -136,18 +150,45 @@ export default function Home() {
 }
 
 function LoginScreen() {
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
   const [loginError, setLoginError] = useState("");
   const [starting, setStarting] = useState(false);
 
-  function handleLogin() {
+  async function handleLogin(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
     setLoginError("");
+
+    const cleanUsername = username.trim().toLowerCase();
+
+    if (!cleanUsername || !password) {
+      setLoginError("Username dan password wajib diisi.");
+      return;
+    }
+
+    const supabaseUrl = String(import.meta.env.VITE_SUPABASE_URL ?? "").trim();
+    const supabaseKey = String(import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY ?? "").trim();
+
+    if (!supabaseUrl || !supabaseKey) {
+      setLoginError("Konfigurasi Supabase belum dipasang di Vercel.");
+      return;
+    }
+
     setStarting(true);
+
     try {
-      startLogin();
+      const { error } = await supabase.auth.signInWithPassword({
+        email: usernameToAuthEmail(cleanUsername),
+        password,
+      });
+
+      if (error) {
+        throw new Error("Username atau password tidak benar.");
+      }
     } catch (error) {
-      console.error("[Login] Failed to start login", error);
+      console.error("[Login] Supabase sign-in failed", error);
+      setLoginError(error instanceof Error ? error.message : "Login gagal. Silakan coba lagi.");
       setStarting(false);
-      setLoginError(error instanceof Error ? error.message : "Login belum dapat dimulai. Silakan coba lagi.");
     }
   }
 
@@ -232,37 +273,66 @@ function LoginScreen() {
                 <p className="text-xs font-bold uppercase tracking-[0.2em] text-[#078d69]">Ruang kerja</p>
                 <h2 className="mt-3 text-3xl font-bold tracking-tight text-[#122b4a] sm:text-4xl">Selamat Datang</h2>
                 <p className="mx-auto mt-3 max-w-md text-sm leading-6 text-slate-500">
-                  Masuk ke akun Gudang IR Anda untuk melanjutkan pekerjaan.
+                  Masuk menggunakan username dan password akun Gudang IR.
                 </p>
               </div>
 
-              <div className="mt-8 rounded-2xl border border-[#dce9e5] bg-white p-4">
+              <form onSubmit={handleLogin} className="mt-8 space-y-5">
+                <div>
+                  <Label htmlFor="golog-username" className="text-sm font-semibold text-[#17304c]">Username</Label>
+                  <Input
+                    id="golog-username"
+                    value={username}
+                    onChange={(event) => setUsername(event.target.value)}
+                    autoComplete="username"
+                    placeholder="contoh: kepala.gudang"
+                    className="mt-2 h-12 rounded-xl border-slate-200 bg-white"
+                    disabled={starting}
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="golog-password" className="text-sm font-semibold text-[#17304c]">Password</Label>
+                  <Input
+                    id="golog-password"
+                    type="password"
+                    value={password}
+                    onChange={(event) => setPassword(event.target.value)}
+                    autoComplete="current-password"
+                    placeholder="Masukkan password"
+                    className="mt-2 h-12 rounded-xl border-slate-200 bg-white"
+                    disabled={starting}
+                  />
+                </div>
+
+                {loginError && (
+                  <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm leading-5 text-rose-700">
+                    {loginError}
+                  </div>
+                )}
+
+                <Button
+                  type="submit"
+                  disabled={starting}
+                  className="h-14 w-full rounded-2xl bg-[#07966f] text-base font-bold text-white shadow-lg shadow-[#07966f]/20 hover:bg-[#067d5e]"
+                >
+                  {starting ? "Memeriksa akun…" : "Masuk"}
+                </Button>
+              </form>
+
+              <div className="mt-6 rounded-2xl border border-[#dce9e5] bg-white p-4">
                 <div className="flex items-start gap-3">
                   <div className="mt-0.5 grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-[#e8f8ef] text-[#078d69]">
                     <ShieldCheck size={19} />
                   </div>
                   <div>
-                    <p className="text-sm font-semibold text-[#17304c]">Login aman melalui Manus</p>
+                    <p className="text-sm font-semibold text-[#17304c]">Akses berbasis akun</p>
                     <p className="mt-1 text-xs leading-5 text-slate-500">
-                      Gunakan akun Manus yang sudah terdaftar pada proyek ini. Setelah berhasil, Anda akan kembali otomatis ke Gudang IR.
+                      Hak akses ditentukan oleh peran dan ruangan yang ditetapkan pada akun Anda.
                     </p>
                   </div>
                 </div>
               </div>
-
-              {loginError && (
-                <div className="mt-4 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm leading-5 text-rose-700">
-                  {loginError}
-                </div>
-              )}
-
-              <Button
-                onClick={handleLogin}
-                disabled={starting}
-                className="mt-6 h-14 w-full rounded-2xl bg-[#07966f] text-base font-bold text-white shadow-lg shadow-[#07966f]/20 hover:bg-[#067d5e]"
-              >
-                {starting ? "Membuka halaman login…" : "Masuk dengan akun Manus"}
-              </Button>
 
               <div className="mt-6 flex items-center gap-3 text-xs text-slate-400">
                 <div className="h-px flex-1 bg-slate-200" />
@@ -270,7 +340,7 @@ function LoginScreen() {
                 <div className="h-px flex-1 bg-slate-200" />
               </div>
               <p className="mt-4 text-center text-xs leading-5 text-slate-400">
-                Hak akses dibedakan antara <strong className="text-slate-500">kepala gudang</strong> dan <strong className="text-slate-500">petugas ruangan</strong>.
+                Gunakan akun yang telah didaftarkan oleh pengelola Gudang IR.
               </p>
             </CardContent>
           </Card>

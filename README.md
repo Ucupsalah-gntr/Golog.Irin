@@ -1,5 +1,14 @@
 # Golog.Irin
 
-Gudang Rawat Intensif — inventory and room request management application.
+Sistem manajemen gudang Rawat Intensif.
 
-This repository contains the Stage 1 audited source prepared from the Manus project.
+Stack aplikasi:
+- Vercel
+- React + Vite
+- tRPC
+- Supabase Auth
+- Supabase Postgres + Drizzle
+
+Login aplikasi menggunakan username + password. Email Supabase hanya digunakan sebagai identitas internal Auth.
+
+Migrasi Supabase sedang diuji pada branch `supabase-migration` sebelum masuk ke `main`.
