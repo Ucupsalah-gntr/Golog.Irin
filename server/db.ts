@@ -1,8 +1,10 @@
 import { and, desc, eq, gte, lte, sql } from "drizzle-orm";
-import { drizzle } from "drizzle-orm/mysql2";
+import { drizzle } from "drizzle-orm/node-postgres";
+import { Pool } from "pg";
 import {
   auditLogs,
-  InsertUser,
+  type InsertUser,
+  type User,
   items,
   requestDayLocks,
   requestItems,
@@ -17,51 +19,94 @@ import { ENV } from "./_core/env";
 import { isLowStock } from "../shared/inventory";
 
 let _db: ReturnType<typeof drizzle> | null = null;
+let _pool: Pool | null = null;
 
 export async function getDb() {
-  if (!_db && process.env.DATABASE_URL) {
+  if (!_db && ENV.databaseUrl) {
     try {
-      _db = drizzle(process.env.DATABASE_URL);
+      _pool = new Pool({
+        connectionString: ENV.databaseUrl,
+        max: 1,
+        ssl: { rejectUnauthorized: false },
+      });
+      _db = drizzle(_pool);
     } catch (error) {
       console.warn("[Database] Failed to connect:", error);
+      _pool = null;
       _db = null;
     }
   }
   return _db;
 }
 
-export async function upsertUser(user: InsertUser): Promise<void> {
-  if (!user.openId) throw new Error("User openId is required for upsert");
-  const db = await getDb();
-  if (!db) return;
-  const values: InsertUser = { openId: user.openId };
-  const updateSet: Record<string, unknown> = {};
-  for (const field of ["name", "email", "loginMethod"] as const) {
-    if (user[field] !== undefined) {
-      values[field] = user[field] ?? null;
-      updateSet[field] = user[field] ?? null;
-    }
-  }
-  if (user.lastSignedIn !== undefined) {
-    values.lastSignedIn = user.lastSignedIn;
-    updateSet.lastSignedIn = user.lastSignedIn;
-  }
-  if (user.role !== undefined) {
-    values.role = user.role;
-    updateSet.role = user.role;
-  } else if (user.openId === ENV.ownerOpenId) {
-    values.role = "admin";
-    updateSet.role = "admin";
-  }
-  values.lastSignedIn ??= new Date();
-  updateSet.lastSignedIn ??= values.lastSignedIn;
-  await db.insert(users).values(values).onDuplicateKeyUpdate({ set: updateSet });
-}
+export async function upsertUser(user: InsertUser): Promise<User | undefined> {
+  if (!user.authUserId) throw new Error("Supabase auth user id is required");
+  if (!user.username) throw new Error("Username is required");
 
-export async function getUserByOpenId(openId: string) {
   const db = await getDb();
   if (!db) return undefined;
-  const result = await db.select().from(users).where(eq(users.openId, openId)).limit(1);
+
+  const existingByAuth = await db
+    .select()
+    .from(users)
+    .where(eq(users.authUserId, user.authUserId))
+    .limit(1);
+
+  const existingByUsername = existingByAuth[0]
+    ? []
+    : await db.select().from(users).where(eq(users.username, user.username)).limit(1);
+
+  const existing = existingByAuth[0] ?? existingByUsername[0];
+
+  if (existing) {
+    const updateSet: Partial<InsertUser> = {
+      username: user.username,
+      name: user.name ?? existing.name,
+      email: user.email ?? existing.email,
+      authUserId: user.authUserId,
+      lastSignedIn: user.lastSignedIn ?? new Date(),
+      updatedAt: new Date(),
+    };
+
+    const updated = await db
+      .update(users)
+      .set(updateSet)
+      .where(eq(users.id, existing.id))
+      .returning();
+
+    return updated[0] ?? existing;
+  }
+
+  const inserted = await db
+    .insert(users)
+    .values({
+      ...user,
+      lastSignedIn: user.lastSignedIn ?? new Date(),
+    })
+    .returning();
+
+  return inserted[0];
+}
+
+export async function getUserByAuthUserId(authUserId: string) {
+  const db = await getDb();
+  if (!db) return undefined;
+  const result = await db
+    .select()
+    .from(users)
+    .where(eq(users.authUserId, authUserId))
+    .limit(1);
+  return result[0];
+}
+
+export async function getUserByUsername(username: string) {
+  const db = await getDb();
+  if (!db) return undefined;
+  const result = await db
+    .select()
+    .from(users)
+    .where(eq(users.username, username))
+    .limit(1);
   return result[0];
 }
 
