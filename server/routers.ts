@@ -56,7 +56,6 @@ export const appRouter = router({
     }),
     createItem: adminProcedure.input(z.object({ sku: z.string().min(1), name: z.string().min(2), unit: z.string().min(1), category: z.string().optional(), sourceWarehouseId: z.number().nullable().optional(), minStock: z.number().int().min(0).default(0) })).mutation(async ({ input, ctx }) => {
       const db = await getDb(); if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database belum tersedia." });
-      const result = await db.insert(items).values(input);
       const inserted = await db.insert(items).values(input).returning({ id: items.id });
       const id = inserted[0]?.id;
       if (!id) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Barang gagal disimpan." });
@@ -196,7 +195,7 @@ export const appRouter = router({
           notes: input.notes,
           status: "submitted",
           submittedAt: now,
-        });
+        }).returning({ id: requests.id });
         const requestId = inserted[0]?.id;
         if (!requestId) {
           throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Nomor permintaan gagal dibuat." });
@@ -372,7 +371,8 @@ export const appRouter = router({
 
       const result = await db.update(requests)
         .set({ status: "received", receivedAt: new Date() })
-        .where(and(eq(requests.id, input.requestId), eq(requests.status, "delivered")));
+        .where(and(eq(requests.id, input.requestId), eq(requests.status, "delivered")))
+        .returning({ id: requests.id });
 
       if (result.length !== 1) {
         throw new TRPCError({ code: "CONFLICT", message: "Status permintaan berubah. Silakan muat ulang halaman." });
