@@ -1,8 +1,8 @@
 import { useMemo, useState } from "react";
 import * as XLSX from "xlsx";
 import { importTemplateCsv, validateItemImport, type ImportPreview } from "@shared/item-import";
-import { startLogin } from "@/const";
 import { useAuth } from "@/_core/hooks/useAuth";
+import { supabase, usernameToAuthEmail } from "@/lib/supabase";
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -136,18 +136,45 @@ export default function Home() {
 }
 
 function LoginScreen() {
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
   const [loginError, setLoginError] = useState("");
   const [starting, setStarting] = useState(false);
 
-  function handleLogin() {
+  async function handleLogin(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
     setLoginError("");
+
+    const cleanUsername = username.trim().toLowerCase();
+
+    if (!cleanUsername || !password) {
+      setLoginError("Username dan password wajib diisi.");
+      return;
+    }
+
+    const supabaseUrl = String(import.meta.env.VITE_SUPABASE_URL ?? "").trim();
+    const supabaseKey = String(import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY ?? "").trim();
+
+    if (!supabaseUrl || !supabaseKey) {
+      setLoginError("Konfigurasi Supabase belum dipasang di Vercel.");
+      return;
+    }
+
     setStarting(true);
+
     try {
-      startLogin();
+      const { error } = await supabase.auth.signInWithPassword({
+        email: usernameToAuthEmail(cleanUsername),
+        password,
+      });
+
+      if (error) {
+        throw new Error("Username atau password tidak benar.");
+      }
     } catch (error) {
-      console.error("[Login] Failed to start login", error);
+      console.error("[Login] Supabase sign-in failed", error);
+      setLoginError(error instanceof Error ? error.message : "Login gagal. Silakan coba lagi.");
       setStarting(false);
-      setLoginError(error instanceof Error ? error.message : "Login belum dapat dimulai. Silakan coba lagi.");
     }
   }
 
@@ -232,37 +259,66 @@ function LoginScreen() {
                 <p className="text-xs font-bold uppercase tracking-[0.2em] text-[#078d69]">Ruang kerja</p>
                 <h2 className="mt-3 text-3xl font-bold tracking-tight text-[#122b4a] sm:text-4xl">Selamat Datang</h2>
                 <p className="mx-auto mt-3 max-w-md text-sm leading-6 text-slate-500">
-                  Masuk ke akun Gudang IR Anda untuk melanjutkan pekerjaan.
+                  Masuk menggunakan username dan password akun Gudang IR.
                 </p>
               </div>
 
-              <div className="mt-8 rounded-2xl border border-[#dce9e5] bg-white p-4">
+              <form onSubmit={handleLogin} className="mt-8 space-y-5">
+                <div>
+                  <Label htmlFor="golog-username" className="text-sm font-semibold text-[#17304c]">Username</Label>
+                  <Input
+                    id="golog-username"
+                    value={username}
+                    onChange={(event) => setUsername(event.target.value)}
+                    autoComplete="username"
+                    placeholder="contoh: kepala.gudang"
+                    className="mt-2 h-12 rounded-xl border-slate-200 bg-white"
+                    disabled={starting}
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="golog-password" className="text-sm font-semibold text-[#17304c]">Password</Label>
+                  <Input
+                    id="golog-password"
+                    type="password"
+                    value={password}
+                    onChange={(event) => setPassword(event.target.value)}
+                    autoComplete="current-password"
+                    placeholder="Masukkan password"
+                    className="mt-2 h-12 rounded-xl border-slate-200 bg-white"
+                    disabled={starting}
+                  />
+                </div>
+
+                {loginError && (
+                  <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm leading-5 text-rose-700">
+                    {loginError}
+                  </div>
+                )}
+
+                <Button
+                  type="submit"
+                  disabled={starting}
+                  className="h-14 w-full rounded-2xl bg-[#07966f] text-base font-bold text-white shadow-lg shadow-[#07966f]/20 hover:bg-[#067d5e]"
+                >
+                  {starting ? "Memeriksa akun…" : "Masuk"}
+                </Button>
+              </form>
+
+              <div className="mt-6 rounded-2xl border border-[#dce9e5] bg-white p-4">
                 <div className="flex items-start gap-3">
                   <div className="mt-0.5 grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-[#e8f8ef] text-[#078d69]">
                     <ShieldCheck size={19} />
                   </div>
                   <div>
-                    <p className="text-sm font-semibold text-[#17304c]">Login aman melalui Manus</p>
+                    <p className="text-sm font-semibold text-[#17304c]">Akses berbasis akun</p>
                     <p className="mt-1 text-xs leading-5 text-slate-500">
-                      Gunakan akun Manus yang sudah terdaftar pada proyek ini. Setelah berhasil, Anda akan kembali otomatis ke Gudang IR.
+                      Hak akses ditentukan oleh peran dan ruangan yang ditetapkan pada akun Anda.
                     </p>
                   </div>
                 </div>
               </div>
-
-              {loginError && (
-                <div className="mt-4 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm leading-5 text-rose-700">
-                  {loginError}
-                </div>
-              )}
-
-              <Button
-                onClick={handleLogin}
-                disabled={starting}
-                className="mt-6 h-14 w-full rounded-2xl bg-[#07966f] text-base font-bold text-white shadow-lg shadow-[#07966f]/20 hover:bg-[#067d5e]"
-              >
-                {starting ? "Membuka halaman login…" : "Masuk dengan akun Manus"}
-              </Button>
 
               <div className="mt-6 flex items-center gap-3 text-xs text-slate-400">
                 <div className="h-px flex-1 bg-slate-200" />
@@ -270,7 +326,7 @@ function LoginScreen() {
                 <div className="h-px flex-1 bg-slate-200" />
               </div>
               <p className="mt-4 text-center text-xs leading-5 text-slate-400">
-                Hak akses dibedakan antara <strong className="text-slate-500">kepala gudang</strong> dan <strong className="text-slate-500">petugas ruangan</strong>.
+                Gunakan akun yang telah didaftarkan oleh pengelola Gudang IR.
               </p>
             </CardContent>
           </Card>
