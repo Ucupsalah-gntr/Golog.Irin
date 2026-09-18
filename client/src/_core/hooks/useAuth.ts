@@ -36,7 +36,7 @@ export function useAuth(options?: UseAuthOptions) {
       setSession(nextSession);
       setAuthReady(true);
       if (!nextSession) {
-        utils.auth.me.setData(undefined, null);
+        utils.auth.me.setData(undefined, undefined);
       }
     });
 
