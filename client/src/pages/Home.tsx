@@ -135,7 +135,150 @@ export default function Home() {
   );
 }
 
-function LoginScreen() { return <div className="min-h-screen overflow-hidden bg-[#102a2b] text-white"><div className="mx-auto grid min-h-screen max-w-6xl items-center gap-12 px-6 py-12 lg:grid-cols-[1.1fr_.9fr]"><div><div className="mb-8 flex items-center gap-3"><div className="grid h-12 w-12 place-items-center rounded-2xl bg-[#c9f3d7] text-[#102a2b]"><Hospital /></div><span className="text-lg font-semibold">Gudang IR</span></div><p className="max-w-xl text-sm font-semibold uppercase tracking-[0.28em] text-[#c9f3d7]">Rawat Intensif · Kendali distribusi</p><h1 className="mt-5 max-w-2xl text-5xl font-semibold leading-[1.03] tracking-[-0.04em] md:text-7xl">Satu alur untuk stok yang selalu siap.</h1><p className="mt-6 max-w-lg text-lg leading-8 text-teal-50/70">Kelola barang masuk, permintaan ruangan, distribusi, dan penyesuaian stok dengan histori yang jelas.</p><div className="mt-10 flex flex-wrap gap-3 text-sm text-teal-50/80"><span className="rounded-full border border-white/15 px-4 py-2">4 gudang sumber</span><span className="rounded-full border border-white/15 px-4 py-2">6 ruangan layanan</span><span className="rounded-full border border-white/15 px-4 py-2">Audit transaksi</span></div></div><Card className="border-0 bg-white p-3 text-slate-900 shadow-2xl shadow-black/20"><CardContent className="rounded-2xl bg-[#f4f7f6] p-8"><p className="text-xs font-semibold uppercase tracking-[0.18em] text-teal-700">Ruang kerja</p><h2 className="mt-3 text-3xl font-semibold tracking-tight">Masuk untuk mulai bekerja</h2><p className="mt-3 text-sm leading-6 text-slate-500">Gunakan akun Manus yang sudah terdaftar pada proyek ini.</p><Button onClick={() => startLogin()} className="mt-8 h-12 w-full rounded-xl bg-[#102a2b] text-white hover:bg-teal-900">Masuk ke Gudang IR</Button><p className="mt-5 text-center text-xs text-slate-400">Akses dibedakan antara kepala gudang dan petugas ruangan.</p></CardContent></Card></div></div> }
+function LoginScreen() {
+  const [loginError, setLoginError] = useState("");
+  const [starting, setStarting] = useState(false);
+
+  function handleLogin() {
+    setLoginError("");
+    setStarting(true);
+    try {
+      startLogin();
+    } catch (error) {
+      console.error("[Login] Failed to start login", error);
+      setStarting(false);
+      setLoginError(error instanceof Error ? error.message : "Login belum dapat dimulai. Silakan coba lagi.");
+    }
+  }
+
+  return (
+    <div className="relative min-h-screen overflow-hidden bg-[#f4faf8] text-[#102a2b]">
+      <div className="absolute -right-24 -top-32 h-96 w-96 rounded-full bg-[#dff5e8]" />
+      <div className="absolute -left-28 bottom-[-10rem] h-96 w-96 rounded-full bg-[#dceff6]" />
+      <div className="relative mx-auto grid min-h-screen max-w-[1500px] items-center gap-10 px-6 py-8 lg:grid-cols-[1.08fr_.92fr] lg:px-12 xl:px-16">
+        <section className="flex min-h-[720px] flex-col justify-between py-5 lg:py-10">
+          <div>
+            <div className="flex items-center gap-3">
+              <div className="grid h-14 w-14 place-items-center rounded-2xl bg-[#c9f3d7] text-[#08785e] shadow-sm">
+                <Hospital size={28} />
+              </div>
+              <div>
+                <p className="text-xl font-bold tracking-tight">Gudang IR</p>
+                <p className="text-sm text-slate-500">Rawat Intensif</p>
+              </div>
+            </div>
+
+            <div className="mt-16 max-w-2xl">
+              <div className="inline-flex items-center gap-2 rounded-full bg-[#dff5eb] px-4 py-2 text-xs font-bold text-[#08785e]">
+                <ShieldCheck size={15} />
+                Sistem Manajemen Gudang
+              </div>
+              <h1 className="mt-6 text-5xl font-bold leading-[1.04] tracking-[-0.045em] text-[#122b4a] md:text-6xl xl:text-7xl">
+                Satu alur untuk
+                <span className="block text-[#07966f]">stok yang selalu siap.</span>
+              </h1>
+              <p className="mt-6 max-w-xl text-base leading-7 text-slate-500 md:text-lg">
+                Kelola barang masuk, permintaan ruangan, distribusi, dan penyesuaian stok dengan histori yang jelas.
+              </p>
+            </div>
+
+            <div className="mt-10 grid max-w-3xl gap-4 sm:grid-cols-3">
+              {[
+                { icon: Boxes, title: "Manajemen Stok", text: "Pantau stok dan cegah kekurangan." },
+                { icon: ClipboardList, title: "Transaksi Lengkap", text: "Setiap pergerakan tercatat." },
+                { icon: ShieldCheck, title: "Audit & Riwayat", text: "Transparan dan mudah ditelusuri." },
+              ].map((feature) => {
+                const Icon = feature.icon;
+                return (
+                  <div key={feature.title} className="rounded-2xl border border-white/80 bg-white/70 p-4 shadow-sm backdrop-blur">
+                    <div className="mb-3 grid h-10 w-10 place-items-center rounded-xl bg-[#e0f7eb] text-[#078d69]">
+                      <Icon size={19} />
+                    </div>
+                    <p className="text-sm font-bold text-[#17304c]">{feature.title}</p>
+                    <p className="mt-1 text-xs leading-5 text-slate-500">{feature.text}</p>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          <div className="relative mt-10 hidden h-48 overflow-hidden rounded-[2rem] border border-white bg-gradient-to-b from-[#eaf7fb] to-[#dcecf1] shadow-sm md:block">
+            <div className="absolute inset-x-0 bottom-0 h-14 bg-[#c8e1e8]" />
+            <div className="absolute bottom-12 left-8 h-24 w-44 rounded-lg border-4 border-[#496c7c]">
+              <div className="absolute left-0 right-0 top-8 border-t-4 border-[#496c7c]" />
+              <div className="absolute left-0 right-0 top-16 border-t-4 border-[#496c7c]" />
+              <div className="absolute left-5 top-[-2px] h-10 w-10 rounded-md bg-[#d89b61]" />
+              <div className="absolute left-20 top-[38px] h-8 w-12 rounded-md bg-[#e7ae72]" />
+              <div className="absolute right-4 top-[67px] h-10 w-14 rounded-md bg-[#d89b61]" />
+            </div>
+            <div className="absolute bottom-10 left-[39%] h-28 w-28 rounded-full bg-[#75c69d]/35" />
+            <div className="absolute bottom-8 left-[47%] h-24 w-12 rounded-t-[2rem] bg-[#1d5960]" />
+            <div className="absolute bottom-5 left-[44%] h-10 w-24 rounded-full bg-[#123e48]/20" />
+            <div className="absolute bottom-11 right-12 h-24 w-36 rounded-2xl bg-white/60 p-4">
+              <div className="h-3 w-20 rounded bg-[#d89b61]" />
+              <div className="mt-3 h-3 w-28 rounded bg-[#e7ae72]" />
+              <div className="mt-3 h-3 w-16 rounded bg-[#d89b61]" />
+            </div>
+          </div>
+        </section>
+
+        <section className="flex items-center justify-center lg:pl-4">
+          <Card className="w-full max-w-xl border-0 bg-white p-3 shadow-[0_24px_70px_rgba(24,64,65,0.12)]">
+            <CardContent className="rounded-[1.5rem] bg-[#f8faf9] p-7 sm:p-10">
+              <div className="mx-auto grid h-16 w-16 place-items-center rounded-2xl bg-[#c9f3d7] text-[#078d69]">
+                <Hospital size={30} />
+              </div>
+              <div className="mt-7 text-center">
+                <p className="text-xs font-bold uppercase tracking-[0.2em] text-[#078d69]">Ruang kerja</p>
+                <h2 className="mt-3 text-3xl font-bold tracking-tight text-[#122b4a] sm:text-4xl">Selamat Datang</h2>
+                <p className="mx-auto mt-3 max-w-md text-sm leading-6 text-slate-500">
+                  Masuk ke akun Gudang IR Anda untuk melanjutkan pekerjaan.
+                </p>
+              </div>
+
+              <div className="mt-8 rounded-2xl border border-[#dce9e5] bg-white p-4">
+                <div className="flex items-start gap-3">
+                  <div className="mt-0.5 grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-[#e8f8ef] text-[#078d69]">
+                    <ShieldCheck size={19} />
+                  </div>
+                  <div>
+                    <p className="text-sm font-semibold text-[#17304c]">Login aman melalui Manus</p>
+                    <p className="mt-1 text-xs leading-5 text-slate-500">
+                      Gunakan akun Manus yang sudah terdaftar pada proyek ini. Setelah berhasil, Anda akan kembali otomatis ke Gudang IR.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {loginError && (
+                <div className="mt-4 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm leading-5 text-rose-700">
+                  {loginError}
+                </div>
+              )}
+
+              <Button
+                onClick={handleLogin}
+                disabled={starting}
+                className="mt-6 h-14 w-full rounded-2xl bg-[#07966f] text-base font-bold text-white shadow-lg shadow-[#07966f]/20 hover:bg-[#067d5e]"
+              >
+                {starting ? "Membuka halaman login…" : "Masuk dengan akun Manus"}
+              </Button>
+
+              <div className="mt-6 flex items-center gap-3 text-xs text-slate-400">
+                <div className="h-px flex-1 bg-slate-200" />
+                <span>Akses terbatas</span>
+                <div className="h-px flex-1 bg-slate-200" />
+              </div>
+              <p className="mt-4 text-center text-xs leading-5 text-slate-400">
+                Hak akses dibedakan antara <strong className="text-slate-500">kepala gudang</strong> dan <strong className="text-slate-500">petugas ruangan</strong>.
+              </p>
+            </CardContent>
+          </Card>
+        </section>
+      </div>
+    </div>
+  );
+}
 
 function Overview({ dashboard, isAdmin, onGo }: { dashboard: any; isAdmin: boolean; onGo: (key: NavKey) => void }) { const stats = dashboard?.stats ?? { items: 0, lowStock: 0, pending: 0, todayIn: 0 }; return <><div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">{[{ label: "Jenis barang aktif", value: stats.items, hint: "Master item terdaftar", icon: Boxes, tint: "bg-teal-50 text-teal-700" }, { label: "Stok perlu perhatian", value: stats.lowStock, hint: "Di bawah batas minimum", icon: Activity, tint: "bg-amber-50 text-amber-700" }, { label: "Permintaan menunggu", value: stats.pending, hint: "Perlu verifikasi Anda", icon: ClipboardCheck, tint: "bg-sky-50 text-sky-700" }, { label: "Masuk hari ini", value: stats.todayIn, hint: "Unit diterima", icon: ArrowDownToLine, tint: "bg-emerald-50 text-emerald-700" }].map((item) => { const Icon = item.icon; return <Card key={item.label} className="border-slate-200/80 shadow-sm"><CardContent className="flex items-start justify-between p-5"><div><p className="text-sm text-slate-500">{item.label}</p><p className="mt-2 text-3xl font-semibold tracking-tight">{formatNumber(item.value)}</p><p className="mt-1 text-xs text-slate-400">{item.hint}</p></div><div className={`rounded-2xl p-3 ${item.tint}`}><Icon size={20} /></div></CardContent></Card>; })}</div><div className="grid gap-6 xl:grid-cols-[1.4fr_.8fr]"><Card className="border-slate-200/80 shadow-sm"><CardHeader className="flex flex-row items-center justify-between"><div><CardTitle>Aktivitas stok terbaru</CardTitle><p className="mt-1 text-sm text-slate-500">Pergerakan terakhir di Gudang Logistik.</p></div><Button variant="outline" size="sm" onClick={() => onGo("reports")}><FileDown size={15} className="mr-2" />Laporan</Button></CardHeader><CardContent><div className="divide-y divide-slate-100">{(dashboard?.recent ?? []).length ? dashboard.recent.map((row: any) => <div key={row.movement.id} className="flex items-center justify-between gap-4 py-4"><div className="flex min-w-0 items-center gap-3"><div className={`rounded-xl p-2 ${row.movement.quantity >= 0 ? "bg-emerald-50 text-emerald-700" : "bg-rose-50 text-rose-700"}`}>{row.movement.quantity >= 0 ? <ArrowDownToLine size={16} /> : <ArrowUpFromLine size={16} />}</div><div className="min-w-0"><p className="truncate text-sm font-medium">{row.item?.name ?? "Item"}</p><p className="text-xs text-slate-400">{row.movement.movementType === "in" ? "Barang masuk" : row.movement.movementType === "out" ? "Distribusi keluar" : "Penyesuaian"} · {formatDate(row.movement.occurredAt)}</p></div></div><p className={`shrink-0 text-sm font-semibold ${row.movement.quantity >= 0 ? "text-emerald-700" : "text-rose-700"}`}>{row.movement.quantity >= 0 ? "+" : ""}{formatNumber(row.movement.quantity)}</p></div>) : <EmptyState title="Belum ada aktivitas" text={isAdmin ? "Catat barang masuk untuk memulai kartu stok." : "Aktivitas gudang akan muncul setelah transaksi."} />}</div></CardContent></Card><Card className="border-0 bg-[#163c3e] text-white shadow-sm"><CardContent className="p-7"><p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#c9f3d7]">Alur hari ini</p><h3 className="mt-3 text-2xl font-semibold leading-tight">Stok masuk, permintaan, lalu serah terima.</h3><p className="mt-3 text-sm leading-6 text-teal-50/70">Pastikan setiap pengeluaran punya tujuan ruangan dan histori yang dapat dipertanggungjawabkan.</p><div className="mt-8 space-y-4 text-sm"><div className="flex items-center gap-3"><span className="grid h-8 w-8 place-items-center rounded-full bg-white/10">1</span>Petugas memilih ruangan yang dijaga</div><div className="flex items-center gap-3"><span className="grid h-8 w-8 place-items-center rounded-full bg-white/10">2</span>Kepala gudang memverifikasi</div><div className="flex items-center gap-3"><span className="grid h-8 w-8 place-items-center rounded-full bg-[#c9f3d7] text-[#102a2b]">3</span>Distribusi masuk kartu stok</div></div></CardContent></Card></div></> }
 
@@ -226,3 +369,7 @@ function ReportsView({ report }: any) { const rows = report.map((row: any) => [f
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) { return <div className="space-y-2"><Label className="text-xs font-semibold text-slate-600">{label}</Label>{children}</div>; }
 function EmptyState({ title, text }: { title: string; text: string }) { return <div className="grid place-items-center px-5 py-14 text-center"><div className="grid h-12 w-12 place-items-center rounded-2xl bg-slate-100 text-slate-400"><ClipboardList size={20} /></div><p className="mt-4 font-medium">{title}</p><p className="mt-1 max-w-sm text-sm text-slate-500">{text}</p></div>; }
+
+
+
+
