@@ -32,6 +32,8 @@ import {
   Truck,
   Users,
   X,
+  Eye,
+  EyeOff,
 } from "lucide-react";
 
 const nav = [
@@ -154,6 +156,7 @@ function LoginScreen() {
   const [password, setPassword] = useState("");
   const [loginError, setLoginError] = useState("");
   const [starting, setStarting] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   async function handleLogin(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -293,16 +296,28 @@ function LoginScreen() {
 
                 <div>
                   <Label htmlFor="golog-password" className="text-sm font-semibold text-[#17304c]">Password</Label>
-                  <Input
-                    id="golog-password"
-                    type="password"
-                    value={password}
-                    onChange={(event) => setPassword(event.target.value)}
-                    autoComplete="current-password"
-                    placeholder="Masukkan password"
-                    className="mt-2 h-12 rounded-xl border-slate-200 bg-white"
-                    disabled={starting}
-                  />
+                  <div className="relative mt-2">
+                    <Input
+                      id="golog-password"
+                      type={showPassword ? "text" : "password"}
+                      value={password}
+                      onChange={(event) => setPassword(event.target.value)}
+                      autoComplete="current-password"
+                      placeholder="Masukkan password"
+                      className="h-12 rounded-xl border-slate-200 bg-white pr-12"
+                      disabled={starting}
+                    />
+                    <button
+                      type="button"
+                      aria-label={showPassword ? "Sembunyikan password" : "Tampilkan password"}
+                      title={showPassword ? "Sembunyikan password" : "Tampilkan password"}
+                      onClick={() => setShowPassword((visible) => !visible)}
+                      disabled={starting}
+                      className="absolute inset-y-0 right-0 grid w-12 place-items-center text-slate-400 hover:text-[#078d69] disabled:opacity-50"
+                    >
+                      {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                    </button>
+                  </div>
                 </div>
 
                 {loginError && (
