@@ -73,7 +73,7 @@ function downloadExcel(filename: string, headers: string[], rows: Array<Array<st
 }
 
 export default function Home() {
-  const { user, loading, isAuthenticated, logout } = useAuth();
+  const { user, loading, isAuthenticated, logout, error: authError } = useAuth();
   const [active, setActive] = useState<NavKey>("overview");
   const [mobileOpen, setMobileOpen] = useState(false);
   const [selectedRoom, setSelectedRoom] = useState<number | null>(null);
@@ -111,7 +111,7 @@ export default function Home() {
   }, [active, isAdmin]);
 
   if (loading) return <div className="min-h-screen grid place-items-center bg-[#f4f7f6]"><div className="text-center"><Activity className="mx-auto mb-3 animate-pulse text-teal-600" /><p className="text-sm text-slate-500">Menyiapkan ruang kerja…</p></div></div>;
-  if (!isAuthenticated) return <LoginScreen />;
+  if (!isAuthenticated) { const backendError = authError instanceof Error ? authError.message : authError ? String(authError) : ""; return <LoginScreen initialError={backendError} />; }
 
   function refreshAll() {
     dashboard.refetch();
@@ -151,10 +151,10 @@ export default function Home() {
   );
 }
 
-function LoginScreen() {
+function LoginScreen({ initialError = "" }: { initialError?: string }) {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
-  const [loginError, setLoginError] = useState("");
+  const [loginError, setLoginError] = useState(initialError);
   const [starting, setStarting] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
 
