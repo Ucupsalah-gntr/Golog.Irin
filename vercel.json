@@ -1,5 +1,11 @@
 {
+  "$schema": "https://openapi.vercel.sh/vercel.json",
   "buildCommand": "pnpm build",
   "outputDirectory": "dist/public",
-  "framework": "vite"
+  "framework": "vite",
+  "functions": {
+    "api/index.ts": {
+      "runtime": "nodejs22.x"
+    }
+  }
 }
