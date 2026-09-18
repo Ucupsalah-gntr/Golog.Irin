@@ -1,8 +1,6 @@
 import { TRPCError } from "@trpc/server";
 import { and, desc, eq, sql } from "drizzle-orm";
 import { z } from "zod";
-import { getSessionCookieOptions } from "./_core/cookies";
-import { COOKIE_NAME } from "@shared/const";
 import { systemRouter } from "./_core/systemRouter";
 import { adminProcedure, protectedProcedure, publicProcedure, router } from "./_core/trpc";
 import { canTransitionRequestStatus, validateApprovedQuantity } from "@shared/request-rules";
@@ -42,12 +40,8 @@ function nowNo(prefix: string) {
 export const appRouter = router({
   system: systemRouter,
   auth: router({
-    me: publicProcedure.query((opts) => opts.ctx.user),
-    logout: publicProcedure.mutation(({ ctx }) => {
-      const cookieOptions = getSessionCookieOptions(ctx.req);
-      ctx.res.clearCookie(COOKIE_NAME, { ...cookieOptions, maxAge: -1 });
-      return { success: true } as const;
-    }),
+    me: protectedProcedure.query(({ ctx }) => ctx.user),
+    logout: publicProcedure.mutation(() => ({ success: true } as const)),
   }),
   catalog: router({
     all: protectedProcedure.query(async () => {
@@ -63,8 +57,11 @@ export const appRouter = router({
     createItem: adminProcedure.input(z.object({ sku: z.string().min(1), name: z.string().min(2), unit: z.string().min(1), category: z.string().optional(), sourceWarehouseId: z.number().nullable().optional(), minStock: z.number().int().min(0).default(0) })).mutation(async ({ input, ctx }) => {
       const db = await getDb(); if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database belum tersedia." });
       const result = await db.insert(items).values(input);
-      await writeAudit(ctx.user.id, "create", "item", Number(result[0].insertId), null, input, "Master barang dibuat");
-      return { id: Number(result[0].insertId) };
+      const inserted = await db.insert(items).values(input).returning({ id: items.id });
+      const id = inserted[0]?.id;
+      if (!id) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Barang gagal disimpan." });
+      await writeAudit(ctx.user.id, "create", "item", id, null, input, "Master barang dibuat");
+      return { id };
     }),
     importItems: adminProcedure.input(z.object({
       rows: z.array(z.object({
@@ -110,9 +107,11 @@ export const appRouter = router({
   inbound: router({
     create: adminProcedure.input(z.object({ itemId: z.number().int(), quantity: z.number().int().positive(), sourceWarehouseId: z.number().int(), occurredAt: z.coerce.date().optional(), notes: z.string().max(500).optional() })).mutation(async ({ input, ctx }) => {
       const db = await getDb(); if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database belum tersedia." });
-      const result = await db.insert(stockMovements).values({ ...input, movementType: "in", createdBy: ctx.user.id, occurredAt: input.occurredAt ?? new Date() });
-      await writeAudit(ctx.user.id, "create", "stock_movement", Number(result[0].insertId), null, input, "Barang masuk dicatat");
-      return { id: Number(result[0].insertId) };
+      const result = await db.insert(stockMovements).values({ ...input, movementType: "in", createdBy: ctx.user.id, occurredAt: input.occurredAt ?? new Date() }).returning({ id: stockMovements.id });
+      const id = result[0]?.id;
+      if (!id) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Barang masuk gagal disimpan." });
+      await writeAudit(ctx.user.id, "create", "stock_movement", id, null, input, "Barang masuk dicatat");
+      return { id };
     }),
   }),
   requests: router({
@@ -165,7 +164,10 @@ export const appRouter = router({
       const result = await db.transaction(async (tx) => {
         await tx.insert(requestDayLocks)
           .values({ roomId, requestDate, requesterId: ctx.user.id })
-          .onDuplicateKeyUpdate({ set: { requestDate } });
+          .onConflictDoUpdate({
+            target: [requestDayLocks.roomId, requestDayLocks.requestDate],
+            set: { requestDate },
+          });
 
         const lockRows = await tx
           .select()
@@ -195,7 +197,10 @@ export const appRouter = router({
           status: "submitted",
           submittedAt: now,
         });
-        const requestId = Number(inserted[0].insertId);
+        const requestId = inserted[0]?.id;
+        if (!requestId) {
+          throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Nomor permintaan gagal dibuat." });
+        }
 
         await tx.insert(requestItems).values(
           input.lines.map((line) => ({ requestId, itemId: line.itemId, requestedQty: line.requestedQty }))
@@ -369,7 +374,7 @@ export const appRouter = router({
         .set({ status: "received", receivedAt: new Date() })
         .where(and(eq(requests.id, input.requestId), eq(requests.status, "delivered")));
 
-      if (result[0].affectedRows !== 1) {
+      if (result.length !== 1) {
         throw new TRPCError({ code: "CONFLICT", message: "Status permintaan berubah. Silakan muat ulang halaman." });
       }
 
@@ -403,8 +408,9 @@ export const appRouter = router({
       const adjustmentType = difference > 0 ? "add" : "subtract";
       const quantity = Math.abs(difference);
       const adjustmentNo = nowNo("ADJ");
-      const inserted = await db.insert(stockAdjustments).values({ ...input, adjustmentType, quantity, adjustmentNo, systemQty, status: "applied", createdBy: ctx.user.id, verifiedBy: ctx.user.id, appliedAt: new Date() });
-      const adjustmentId = Number(inserted[0].insertId);
+      const inserted = await db.insert(stockAdjustments).values({ ...input, adjustmentType, quantity, adjustmentNo, systemQty, status: "applied", createdBy: ctx.user.id, verifiedBy: ctx.user.id, appliedAt: new Date() }).returning({ id: stockAdjustments.id });
+      const adjustmentId = inserted[0]?.id;
+      if (!adjustmentId) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Penyesuaian stok gagal disimpan." });
       await db.insert(stockMovements).values({ itemId: input.itemId, movementType: "adjustment", quantity: difference, roomId: input.roomId, adjustmentId, createdBy: ctx.user.id, notes: input.reason, occurredAt: input.incidentDate });
       await writeAudit(ctx.user.id, "apply", "stock_adjustment", adjustmentId, { systemQty }, { ...input, adjustmentNo, adjustmentType, quantity, difference, finalQty: input.physicalQty, status: "applied", verifiedBy: ctx.user.id }, "Rekonsiliasi stok berdasarkan hasil fisik");
       return { adjustmentId, adjustmentNo, systemQty, physicalQty: input.physicalQty, difference, finalQty: input.physicalQty };
