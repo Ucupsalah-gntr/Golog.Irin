@@ -1,4 +1,4 @@
-import { type FormEvent, useMemo, useState } from "react";
+import { type FormEvent, useEffect, useMemo, useState } from "react";
 import * as XLSX from "xlsx";
 import { importTemplateCsv, validateItemImport, type ImportPreview } from "@shared/item-import";
 import { useAuth } from "@/_core/hooks/useAuth";
@@ -35,13 +35,13 @@ import {
 } from "lucide-react";
 
 const nav = [
-  { key: "overview", label: "Ringkasan", icon: BarChart3 },
-  { key: "requests", label: "Permintaan", icon: ClipboardList },
-  { key: "stock", label: "Stok barang", icon: Boxes },
-  { key: "inbound", label: "Barang masuk", icon: ArrowDownToLine },
-  { key: "adjustments", label: "Penyesuaian", icon: SlidersHorizontal },
-  { key: "stocktake", label: "Stock Opname", icon: ClipboardType },
-  { key: "reports", label: "Laporan", icon: FileDown },
+  { key: "overview", label: "Ringkasan", icon: BarChart3, adminOnly: false },
+  { key: "requests", label: "Permintaan", icon: ClipboardList, adminOnly: false },
+  { key: "stock", label: "Stok barang", icon: Boxes, adminOnly: false },
+  { key: "inbound", label: "Barang masuk", icon: ArrowDownToLine, adminOnly: true },
+  { key: "adjustments", label: "Penyesuaian", icon: SlidersHorizontal, adminOnly: true },
+  { key: "stocktake", label: "Stock Opname", icon: ClipboardType, adminOnly: true },
+  { key: "reports", label: "Laporan", icon: FileDown, adminOnly: true },
 ] as const;
 
 type NavKey = (typeof nav)[number]["key"];
@@ -81,8 +81,8 @@ export default function Home() {
   const dashboard = trpc.dashboard.summary.useQuery(undefined, { enabled: isAuthenticated });
   const requests = trpc.requests.list.useQuery({}, { enabled: isAuthenticated });
   const todayRoomLocks = trpc.requests.todayLocks.useQuery(undefined, { enabled: isAuthenticated });
-  const adjustments = trpc.adjustments.list.useQuery(undefined, { enabled: isAuthenticated });
-  const report = trpc.reports.movements.useQuery({}, { enabled: isAuthenticated && active === "reports" });
+  const adjustments = trpc.adjustments.list.useQuery(undefined, { enabled: isAuthenticated && user?.role === "admin" });
+  const report = trpc.reports.movements.useQuery({}, { enabled: isAuthenticated && user?.role === "admin" && active === "reports" });
   const createRequest = trpc.requests.create.useMutation({ onSuccess: () => { toast.success("Permintaan berhasil diajukan"); requests.refetch(); todayRoomLocks.refetch(); setRequestLines([{ itemId: 0, requestedQty: 1 }]); } });
   const verifyRequest = trpc.requests.verify.useMutation({ onSuccess: () => { toast.success("Status permintaan diperbarui"); requests.refetch(); dashboard.refetch(); } });
   const deliverRequest = trpc.requests.deliver.useMutation({ onSuccess: () => { toast.success("Distribusi dicatat dan stok berkurang"); requests.refetch(); dashboard.refetch(); } });
@@ -97,6 +97,7 @@ export default function Home() {
   const warehouses = catalog.data?.warehouses ?? [];
   const stock = dashboard.data?.stock ?? [];
   const isAdmin = user?.role === "admin";
+  const visibleNav = nav.filter((item) => !item.adminOnly || isAdmin);
   const selectedRoomName = rooms.find((room) => room.id === selectedRoom)?.name;
 
   const requestTotal = useMemo(() => requestLines.reduce((sum, line) => sum + Number(line.requestedQty || 0), 0), [requestLines]);
@@ -104,7 +105,20 @@ export default function Home() {
   if (loading) return <div className="min-h-screen grid place-items-center bg-[#f4f7f6]"><div className="text-center"><Activity className="mx-auto mb-3 animate-pulse text-teal-600" /><p className="text-sm text-slate-500">Menyiapkan ruang kerja…</p></div></div>;
   if (!isAuthenticated) return <LoginScreen />;
 
-  function refreshAll() { dashboard.refetch(); requests.refetch(); todayRoomLocks.refetch(); catalog.refetch(); adjustments.refetch(); }
+  useEffect(() => {
+    if (!isAdmin && ["inbound", "adjustments", "stocktake", "reports"].includes(active)) {
+      setActive("overview");
+    }
+  }, [active, isAdmin]);
+
+  function refreshAll() {
+    dashboard.refetch();
+    requests.refetch();
+    todayRoomLocks.refetch();
+    catalog.refetch();
+    if (isAdmin) adjustments.refetch();
+    if (isAdmin && active === "reports") report.refetch();
+  }
   function go(key: NavKey) { setActive(key); setMobileOpen(false); }
 
   return (
@@ -114,13 +128,13 @@ export default function Home() {
           <div className="flex h-full flex-col px-5 py-6">
             <div className="flex items-center justify-between border-b border-white/10 pb-6"><div className="flex items-center gap-3"><div className="grid h-11 w-11 place-items-center rounded-2xl bg-[#c9f3d7] text-[#102a2b]"><Hospital size={22} /></div><div><p className="font-semibold tracking-tight">Gudang IR</p><p className="text-xs text-teal-100/70">Rawat Intensif</p></div></div><button className="lg:hidden" onClick={() => setMobileOpen(false)}><X size={18} /></button></div>
             <div className="mt-7 rounded-2xl bg-white/10 p-4"><p className="text-[11px] uppercase tracking-[0.18em] text-teal-100/60">Sesi aktif</p><p className="mt-1 truncate font-medium">{user?.name || user?.email || "Pengguna"}</p><div className="mt-2 flex items-center gap-2 text-xs text-teal-100/70"><ShieldCheck size={14} />{isAdmin ? "Kepala gudang" : "Petugas ruangan"}</div></div>
-            <nav className="mt-8 space-y-1">{nav.map((item) => { const Icon = item.icon; return <button key={item.key} onClick={() => go(item.key)} className={`flex w-full items-center gap-3 rounded-xl px-4 py-3 text-left text-sm transition ${active === item.key ? "bg-[#c9f3d7] font-semibold text-[#102a2b]" : "text-teal-50/70 hover:bg-white/10 hover:text-white"}`}><Icon size={18} />{item.label}</button>; })}</nav>
+            <nav className="mt-8 space-y-1">{visibleNav.map((item) => { const Icon = item.icon; return <button key={item.key} onClick={() => go(item.key)} className={`flex w-full items-center gap-3 rounded-xl px-4 py-3 text-left text-sm transition ${active === item.key ? "bg-[#c9f3d7] font-semibold text-[#102a2b]" : "text-teal-50/70 hover:bg-white/10 hover:text-white"}`}><Icon size={18} />{item.label}</button>; })}</nav>
             <div className="mt-auto border-t border-white/10 pt-5"><button onClick={() => logout()} className="flex w-full items-center gap-3 rounded-xl px-4 py-3 text-sm text-teal-50/70 hover:bg-white/10 hover:text-white"><LogOut size={18} />Keluar</button></div>
           </div>
         </aside>
         {mobileOpen && <button aria-label="Tutup menu" className="fixed inset-0 z-30 bg-slate-900/40 lg:hidden" onClick={() => setMobileOpen(false)} />}
         <main className="min-w-0 flex-1">
-          <header className="sticky top-0 z-20 flex h-20 items-center justify-between border-b border-slate-200/80 bg-[#f4f7f6]/90 px-5 backdrop-blur md:px-8"><div className="flex items-center gap-3"><button className="rounded-xl p-2 hover:bg-white lg:hidden" onClick={() => setMobileOpen(true)}><Menu size={20} /></button><div><p className="text-xs font-semibold uppercase tracking-[0.18em] text-teal-700">Instalasi Rawat Intensif</p><h1 className="text-xl font-semibold tracking-tight">{nav.find((x) => x.key === active)?.label}</h1></div></div><div className="flex items-center gap-2"><button title="Refresh" onClick={refreshAll} className="rounded-xl border border-slate-200 bg-white p-2.5 text-slate-500 hover:text-teal-700"><RefreshCw size={17} /></button><div className="hidden rounded-xl border border-slate-200 bg-white px-3 py-2 text-right sm:block"><p className="text-xs font-semibold">{user?.name || "Akun aktif"}</p><p className="text-[11px] text-slate-500">{isAdmin ? "Kepala gudang" : "Petugas"}</p></div></div></header>
+          <header className="sticky top-0 z-20 flex h-20 items-center justify-between border-b border-slate-200/80 bg-[#f4f7f6]/90 px-5 backdrop-blur md:px-8"><div className="flex items-center gap-3"><button className="rounded-xl p-2 hover:bg-white lg:hidden" onClick={() => setMobileOpen(true)}><Menu size={20} /></button><div><p className="text-xs font-semibold uppercase tracking-[0.18em] text-teal-700">Instalasi Rawat Intensif</p><h1 className="text-xl font-semibold tracking-tight">{visibleNav.find((x) => x.key === active)?.label}</h1></div></div><div className="flex items-center gap-2"><button title="Refresh" onClick={refreshAll} className="rounded-xl border border-slate-200 bg-white p-2.5 text-slate-500 hover:text-teal-700"><RefreshCw size={17} /></button><div className="hidden rounded-xl border border-slate-200 bg-white px-3 py-2 text-right sm:block"><p className="text-xs font-semibold">{user?.name || "Akun aktif"}</p><p className="text-[11px] text-slate-500">{isAdmin ? "Kepala gudang" : "Petugas"}</p></div></div></header>
           <div className="mx-auto max-w-[1500px] space-y-6 p-5 md:p-8">
             {active === "overview" && <Overview dashboard={dashboard.data} isAdmin={isAdmin} onGo={go} />}
             {active === "stock" && <StockView stock={stock} isAdmin={isAdmin} items={items} warehouses={warehouses} onCreateItem={(input: any) => createItem.mutate(input)} busy={createItem.isPending} onImport={(rows: any[]) => importItems.mutate({ rows })} importBusy={importItems.isPending} />}
