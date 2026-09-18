@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { type FormEvent, useMemo, useState } from "react";
 import * as XLSX from "xlsx";
 import { importTemplateCsv, validateItemImport, type ImportPreview } from "@shared/item-import";
 import { useAuth } from "@/_core/hooks/useAuth";
@@ -141,7 +141,7 @@ function LoginScreen() {
   const [loginError, setLoginError] = useState("");
   const [starting, setStarting] = useState(false);
 
-  async function handleLogin(event: React.FormEvent<HTMLFormElement>) {
+  async function handleLogin(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setLoginError("");
 
