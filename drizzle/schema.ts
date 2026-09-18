@@ -5,7 +5,7 @@ import {
   pgTable,
   text,
   timestamp,
-  uniqueIndex,
+  index,
   uuid,
   varchar,
 } from "drizzle-orm/pg-core";
@@ -22,7 +22,7 @@ export const users = pgTable("users", {
   updatedAt: timestamp("updatedAt", { withTimezone: true }).defaultNow().notNull(),
   lastSignedIn: timestamp("lastSignedIn", { withTimezone: true }).defaultNow().notNull(),
 }, (table) => ({
-  roomIdx: uniqueIndex("users_room_lookup_idx").on(table.roomId),
+  roomIdx: index("users_room_lookup_idx").on(table.roomId),
 }));
 
 export const warehouses = pgTable("warehouses", {
