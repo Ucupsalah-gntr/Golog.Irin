@@ -102,14 +102,14 @@ export default function Home() {
 
   const requestTotal = useMemo(() => requestLines.reduce((sum, line) => sum + Number(line.requestedQty || 0), 0), [requestLines]);
 
-  if (loading) return <div className="min-h-screen grid place-items-center bg-[#f4f7f6]"><div className="text-center"><Activity className="mx-auto mb-3 animate-pulse text-teal-600" /><p className="text-sm text-slate-500">Menyiapkan ruang kerja…</p></div></div>;
-  if (!isAuthenticated) return <LoginScreen />;
-
   useEffect(() => {
     if (!isAdmin && ["inbound", "adjustments", "stocktake", "reports"].includes(active)) {
       setActive("overview");
     }
   }, [active, isAdmin]);
+
+  if (loading) return <div className="min-h-screen grid place-items-center bg-[#f4f7f6]"><div className="text-center"><Activity className="mx-auto mb-3 animate-pulse text-teal-600" /><p className="text-sm text-slate-500">Menyiapkan ruang kerja…</p></div></div>;
+  if (!isAuthenticated) return <LoginScreen />;
 
   function refreshAll() {
     dashboard.refetch();
