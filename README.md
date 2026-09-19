@@ -9,6 +9,9 @@ Stack aplikasi:
 - Supabase Auth
 - Supabase Postgres + Drizzle
 
-Login aplikasi menggunakan username + password. Email Supabase hanya digunakan sebagai identitas internal Auth.
+Login aplikasi menggunakan username + password. Email Supabase digunakan sebagai identitas internal Auth.
 
-Migrasi Supabase sedang diuji pada branch `supabase-migration` sebelum masuk ke `main`.
+Status:
+- Migrasi dari Manus ke Supabase sudah diterapkan di branch `main`.
+- Frontend menggunakan Supabase Auth untuk sesi login.
+- Backend tRPC memvalidasi access token Supabase dan menerapkan role `admin` / `user`.
