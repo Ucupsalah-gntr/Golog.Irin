@@ -106,6 +106,12 @@ export const appRouter = router({
   inbound: router({
     create: adminProcedure.input(z.object({ itemId: z.number().int(), quantity: z.number().int().positive(), sourceWarehouseId: z.number().int(), occurredAt: z.coerce.date().optional(), notes: z.string().max(500).optional() })).mutation(async ({ input, ctx }) => {
       const db = await getDb(); if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database belum tersedia." });
+      const itemRows = await db.select({ id: items.id }).from(items).where(and(eq(items.id, input.itemId), eq(items.active, true))).limit(1);
+      if (!itemRows[0]) throw new TRPCError({ code: "BAD_REQUEST", message: "Barang tidak ditemukan atau sudah tidak aktif." });
+
+      const warehouseRows = await db.select({ id: warehouses.id }).from(warehouses).where(and(eq(warehouses.id, input.sourceWarehouseId), eq(warehouses.active, true))).limit(1);
+      if (!warehouseRows[0]) throw new TRPCError({ code: "BAD_REQUEST", message: "Gudang sumber tidak ditemukan atau sudah tidak aktif." });
+
       const result = await db.insert(stockMovements).values({ ...input, movementType: "in", createdBy: ctx.user.id, occurredAt: input.occurredAt ?? new Date() }).returning({ id: stockMovements.id });
       const id = result[0]?.id;
       if (!id) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Barang masuk gagal disimpan." });
@@ -154,6 +160,19 @@ export const appRouter = router({
     }),
     create: operatorProcedure.input(z.object({ roomId: z.number().int().positive(), priority: z.enum(["normal", "mendesak", "darurat"]), notes: z.string().max(1000).optional(), lines: z.array(z.object({ itemId: z.number().int(), requestedQty: z.number().int().positive() })).min(1) })).mutation(async ({ input, ctx }) => {
       const db = await getDb(); if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database belum tersedia." });
+
+      const roomRows = await db.select({ id: rooms.id }).from(rooms).where(and(eq(rooms.id, input.roomId), eq(rooms.active, true))).limit(1);
+      if (!roomRows[0]) throw new TRPCError({ code: "BAD_REQUEST", message: "Ruangan tidak ditemukan atau sedang tidak aktif." });
+
+      const itemIds = input.lines.map((line) => line.itemId);
+      if (new Set(itemIds).size !== itemIds.length) {
+        throw new TRPCError({ code: "BAD_REQUEST", message: "Barang yang sama tidak boleh dimasukkan dua kali dalam satu permintaan." });
+      }
+
+      const activeItems = await db.select({ id: items.id }).from(items).where(and(eq(items.active, true), sql`"items"."id" = ANY(${itemIds})`));
+      if (activeItems.length !== itemIds.length) {
+        throw new TRPCError({ code: "BAD_REQUEST", message: "Salah satu barang tidak ditemukan atau sudah tidak aktif." });
+      }
 
       const requestDate = getJakartaDateKey();
       const now = new Date();
@@ -393,6 +412,14 @@ export const appRouter = router({
       // Rekonsiliasi ditentukan dari hasil stok fisik, bukan dari direction/quantity
       // yang dikirim UI. Dengan begitu systemQty=135 dan physicalQty=130 selalu
       // menghasilkan movement -5, sedangkan 80 -> 84 menghasilkan +4.
+      const itemRows = await db.select({ id: items.id }).from(items).where(and(eq(items.id, input.itemId), eq(items.active, true))).limit(1);
+      if (!itemRows[0]) throw new TRPCError({ code: "BAD_REQUEST", message: "Barang tidak ditemukan atau sudah tidak aktif." });
+
+      if (input.roomId !== null && input.roomId !== undefined) {
+        const roomRows = await db.select({ id: rooms.id }).from(rooms).where(and(eq(rooms.id, input.roomId), eq(rooms.active, true))).limit(1);
+        if (!roomRows[0]) throw new TRPCError({ code: "BAD_REQUEST", message: "Ruangan tidak ditemukan atau sedang tidak aktif." });
+      }
+
       const systemQty = await getStockQty(input.itemId);
       let difference: number;
       try {
