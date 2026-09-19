@@ -318,12 +318,26 @@ export const appRouter = router({
         }
 
         const lines = await tx.select().from(requestItems).where(eq(requestItems.requestId, input.requestId));
+        // Lock item rows in a stable order so concurrent deliveries for the
+        // same item cannot both observe the same available stock.
+        lines.sort((a, b) => a.itemId - b.itemId);
         const now = new Date();
 
         for (const line of lines) {
           if (!line.approvedQty) continue;
           if (line.deliveredQty > 0) {
             throw new TRPCError({ code: "CONFLICT", message: `Item pada permintaan ${request.requestNo} sudah pernah diserahkan.` });
+          }
+
+          const lockedItem = await tx
+            .select({ id: items.id })
+            .from(items)
+            .where(and(eq(items.id, line.itemId), eq(items.active, true)))
+            .limit(1)
+            .for("update");
+
+          if (!lockedItem[0]) {
+            throw new TRPCError({ code: "BAD_REQUEST", message: "Barang tidak ditemukan atau sudah tidak aktif." });
           }
 
           const stockRows = await tx
