@@ -2,6 +2,7 @@ import {
   boolean,
   integer,
   jsonb,
+  foreignKey,
   pgTable,
   text,
   timestamp,
@@ -24,6 +25,7 @@ export const users = pgTable("users", {
   lastSignedIn: timestamp("lastSignedIn", { withTimezone: true }).defaultNow().notNull(),
 }, (table) => ({
   roomIdx: index("users_room_lookup_idx").on(table.roomId),
+  roomFk: foreignKey({ columns: [table.roomId], foreignColumns: [rooms.id], name: "users_room_id_fk" }),
 }));
 
 export const warehouses = pgTable("warehouses", {
@@ -54,7 +56,9 @@ export const items = pgTable("items", {
   active: boolean("active").default(true).notNull(),
   createdAt: timestamp("createdAt", { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp("updatedAt", { withTimezone: true }).defaultNow().notNull(),
-});
+}, (table) => ({
+  warehouseFk: foreignKey({ columns: [table.sourceWarehouseId], foreignColumns: [warehouses.id], name: "items_source_warehouse_id_fk" }),
+}));
 
 export const requests = pgTable("requests", {
   id: integer("id").generatedByDefaultAsIdentity().primaryKey(),
@@ -70,7 +74,10 @@ export const requests = pgTable("requests", {
   receivedAt: timestamp("receivedAt", { withTimezone: true }),
   createdAt: timestamp("createdAt", { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp("updatedAt", { withTimezone: true }).defaultNow().notNull(),
-});
+}, (table) => ({
+  roomFk: foreignKey({ columns: [table.roomId], foreignColumns: [rooms.id], name: "requests_room_id_fk" }),
+  createdByFk: foreignKey({ columns: [table.createdBy], foreignColumns: [users.id], name: "requests_created_by_fk" }),
+}));
 
 export const requestDayLocks = pgTable("request_day_locks", {
   id: integer("id").generatedByDefaultAsIdentity().primaryKey(),
@@ -79,6 +86,8 @@ export const requestDayLocks = pgTable("request_day_locks", {
   requesterId: integer("requesterId").notNull(),
   createdAt: timestamp("createdAt", { withTimezone: true }).defaultNow().notNull(),
 }, (table) => ({
+  roomFk: foreignKey({ columns: [table.roomId], foreignColumns: [rooms.id], name: "request_day_locks_room_id_fk" }),
+  requesterFk: foreignKey({ columns: [table.requesterId], foreignColumns: [users.id], name: "request_day_locks_requester_id_fk" }),
   roomDateUnique: uniqueIndex("request_day_locks_room_date_unique").on(table.roomId, table.requestDate),
 }));
 
@@ -89,7 +98,10 @@ export const requestItems = pgTable("request_items", {
   requestedQty: integer("requestedQty").notNull(),
   approvedQty: integer("approvedQty").default(0).notNull(),
   deliveredQty: integer("deliveredQty").default(0).notNull(),
-});
+}, (table) => ({
+  requestFk: foreignKey({ columns: [table.requestId], foreignColumns: [requests.id], name: "request_items_request_id_fk" }),
+  itemFk: foreignKey({ columns: [table.itemId], foreignColumns: [items.id], name: "request_items_item_id_fk" }),
+}));
 
 export const stockMovements = pgTable("stock_movements", {
   id: integer("id").generatedByDefaultAsIdentity().primaryKey(),
@@ -104,7 +116,13 @@ export const stockMovements = pgTable("stock_movements", {
   occurredAt: timestamp("occurredAt", { withTimezone: true }).defaultNow().notNull(),
   createdBy: integer("createdBy").notNull(),
   createdAt: timestamp("createdAt", { withTimezone: true }).defaultNow().notNull(),
-});
+}, (table) => ({
+  itemFk: foreignKey({ columns: [table.itemId], foreignColumns: [items.id], name: "stock_movements_item_id_fk" }),
+  roomFk: foreignKey({ columns: [table.roomId], foreignColumns: [rooms.id], name: "stock_movements_room_id_fk" }),
+  requestFk: foreignKey({ columns: [table.requestId], foreignColumns: [requests.id], name: "stock_movements_request_id_fk" }),
+  adjustmentFk: foreignKey({ columns: [table.adjustmentId], foreignColumns: [stockAdjustments.id], name: "stock_movements_adjustment_id_fk" }),
+  createdByFk: foreignKey({ columns: [table.createdBy], foreignColumns: [users.id], name: "stock_movements_created_by_fk" }),
+}));
 
 export const stockAdjustments = pgTable("stock_adjustments", {
   id: integer("id").generatedByDefaultAsIdentity().primaryKey(),
@@ -123,7 +141,12 @@ export const stockAdjustments = pgTable("stock_adjustments", {
   verifiedBy: integer("verifiedBy"),
   appliedAt: timestamp("appliedAt", { withTimezone: true }),
   createdAt: timestamp("createdAt", { withTimezone: true }).defaultNow().notNull(),
-});
+}, (table) => ({
+  itemFk: foreignKey({ columns: [table.itemId], foreignColumns: [items.id], name: "stock_adjustments_item_id_fk" }),
+  roomFk: foreignKey({ columns: [table.roomId], foreignColumns: [rooms.id], name: "stock_adjustments_room_id_fk" }),
+  createdByFk: foreignKey({ columns: [table.createdBy], foreignColumns: [users.id], name: "stock_adjustments_created_by_fk" }),
+  verifiedByFk: foreignKey({ columns: [table.verifiedBy], foreignColumns: [users.id], name: "stock_adjustments_verified_by_fk" }),
+}));
 
 export const auditLogs = pgTable("audit_logs", {
   id: integer("id").generatedByDefaultAsIdentity().primaryKey(),
@@ -135,7 +158,9 @@ export const auditLogs = pgTable("audit_logs", {
   afterData: jsonb("afterData"),
   notes: text("notes"),
   createdAt: timestamp("createdAt", { withTimezone: true }).defaultNow().notNull(),
-});
+}, (table) => ({
+  actorFk: foreignKey({ columns: [table.actorId], foreignColumns: [users.id], name: "audit_logs_actor_id_fk" }),
+}));
 
 export type User = typeof users.$inferSelect;
 export type InsertUser = typeof users.$inferInsert;
