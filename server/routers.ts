@@ -1,5 +1,5 @@
 import { TRPCError } from "@trpc/server";
-import { and, desc, eq, sql } from "drizzle-orm";
+import { and, desc, eq, inArray, sql } from "drizzle-orm";
 import { z } from "zod";
 import { systemRouter } from "./_core/systemRouter";
 import { adminProcedure, protectedProcedure, publicProcedure, router } from "./_core/trpc";
@@ -169,7 +169,7 @@ export const appRouter = router({
         throw new TRPCError({ code: "BAD_REQUEST", message: "Barang yang sama tidak boleh dimasukkan dua kali dalam satu permintaan." });
       }
 
-      const activeItems = await db.select({ id: items.id }).from(items).where(and(eq(items.active, true), sql`"items"."id" = ANY(${itemIds})`));
+      const activeItems = await db.select({ id: items.id }).from(items).where(and(eq(items.active, true), inArray(items.id, itemIds)));
       if (activeItems.length !== itemIds.length) {
         throw new TRPCError({ code: "BAD_REQUEST", message: "Salah satu barang tidak ditemukan atau sudah tidak aktif." });
       }
