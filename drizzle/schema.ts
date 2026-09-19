@@ -25,7 +25,6 @@ export const users = pgTable("users", {
   lastSignedIn: timestamp("lastSignedIn", { withTimezone: true }).defaultNow().notNull(),
 }, (table) => ({
   roomIdx: index("users_room_lookup_idx").on(table.roomId),
-  roomFk: foreignKey({ columns: [table.roomId], foreignColumns: [rooms.id], name: "users_room_id_fk" }),
 }));
 
 export const warehouses = pgTable("warehouses", {
@@ -120,7 +119,6 @@ export const stockMovements = pgTable("stock_movements", {
   itemFk: foreignKey({ columns: [table.itemId], foreignColumns: [items.id], name: "stock_movements_item_id_fk" }),
   roomFk: foreignKey({ columns: [table.roomId], foreignColumns: [rooms.id], name: "stock_movements_room_id_fk" }),
   requestFk: foreignKey({ columns: [table.requestId], foreignColumns: [requests.id], name: "stock_movements_request_id_fk" }),
-  adjustmentFk: foreignKey({ columns: [table.adjustmentId], foreignColumns: [stockAdjustments.id], name: "stock_movements_adjustment_id_fk" }),
   createdByFk: foreignKey({ columns: [table.createdBy], foreignColumns: [users.id], name: "stock_movements_created_by_fk" }),
 }));
 
