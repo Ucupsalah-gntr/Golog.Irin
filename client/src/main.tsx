@@ -36,7 +36,7 @@ const trpcClient = trpc.createClient({
         const { data } = await supabase.auth.getSession();
         const token = data.session?.access_token;
 
-        return token
+        return token ? { Authorization: `Bearer ${token}`, "x-supabase-apikey": String(import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY ?? "").trim() } : {};
           ? { Authorization: `Bearer ${token}` }
           : {};
       },
