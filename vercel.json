@@ -2,5 +2,12 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "buildCommand": "pnpm build",
   "outputDirectory": "dist/public",
-  "framework": "vite"
+  "framework": "vite",
+  "functions": {
+    "api/trpc/[...path].js": {
+      "includeFiles": [
+        "dist/vercel-trpc.js"
+      ]
+    }
+  }
 }
