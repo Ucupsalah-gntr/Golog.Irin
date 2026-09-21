@@ -25,11 +25,22 @@ export default async function handler(
   });
 
   try {
-    await pool.query("select 1 as ok");
+    const result = await pool.query(`
+      select
+        (select count(*)::int from public.items where active = true) as active_items,
+        (select count(*)::int from public.stock_movements) as stock_movements,
+        (select count(*)::int from public.users) as users
+    `);
+
+    const row = result.rows[0] ?? {};
+
     res.status(200).json({
       ok: true,
       databaseConfigured: true,
       databaseReachable: true,
+      activeItems: Number(row.active_items ?? 0),
+      stockMovements: Number(row.stock_movements ?? 0),
+      users: Number(row.users ?? 0),
       timestamp: new Date().toISOString(),
     });
   } catch (error) {
