@@ -32,11 +32,11 @@ function usernameFromAuthUser(user: SupabaseAuthUser) {
   return at > 0 ? email.slice(0, at) : "";
 }
 
-async function getSupabaseAuthUser(accessToken: string): Promise<SupabaseAuthUser | null> {
+async function getSupabaseAuthUser(accessToken: string, supabaseKey: string): Promise<SupabaseAuthUser | null> {
   const response = await fetch(`${ENV.supabaseUrl}/auth/v1/user`, {
     method: "GET",
     headers: {
-      apikey: ENV.supabasePublishableKey,
+      apikey: supabaseKey,
       Authorization: `Bearer ${accessToken}`,
     },
   });
@@ -61,12 +61,15 @@ export async function createContext(
       return { req: opts.req, res: opts.res, user: null };
     }
 
-    if (!ENV.supabaseUrl || !ENV.supabasePublishableKey) {
+    const requestSupabaseKey = opts.req.get("x-supabase-apikey")?.trim() || "";
+    const supabaseKey = requestSupabaseKey || ENV.supabasePublishableKey;
+
+    if (!ENV.supabaseUrl || !supabaseKey) {
       console.warn("[Auth] Supabase server environment is not configured.");
       return { req: opts.req, res: opts.res, user: null };
     }
 
-    const authUser = await getSupabaseAuthUser(token);
+    const authUser = await getSupabaseAuthUser(token, supabaseKey);
     if (!authUser) {
       return { req: opts.req, res: opts.res, user: null };
     }
