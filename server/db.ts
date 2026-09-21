@@ -14,9 +14,9 @@ import {
   stockMovements,
   users,
   warehouses,
-} from "../drizzle/schema";
-import { ENV } from "./_core/env";
-import { isLowStock } from "../shared/inventory";
+} from "../drizzle/schema.js";
+import { ENV } from "./_core/env.js";
+import { isLowStock } from "../shared/inventory.js";
 
 let _db: ReturnType<typeof drizzle> | null = null;
 let _pool: Pool | null = null;
