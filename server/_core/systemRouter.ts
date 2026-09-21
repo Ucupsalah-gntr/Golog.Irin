@@ -1,6 +1,6 @@
 import { z } from "zod";
-import { publicProcedure, router } from "./trpc";
-import { usersRouter } from "../usersRouter";
+import { publicProcedure, router } from "./trpc.js";
+import { usersRouter } from "../usersRouter.js";
 
 export const systemRouter = router({
   health: publicProcedure
