@@ -111,7 +111,7 @@ export default function Home() {
   }, [active, isAdmin]);
 
   if (loading) return <div className="min-h-screen grid place-items-center bg-[#f4f7f6]"><div className="text-center"><Activity className="mx-auto mb-3 animate-pulse text-teal-600" /><p className="text-sm text-slate-500">Menyiapkan ruang kerja…</p></div></div>;
-  if (!isAuthenticated) { const backendError = authError instanceof Error ? authError.message : authError ? String(authError) : ""; return <LoginScreen initialError={backendError} />; }
+  if (!isAuthenticated) return <LoginScreen />;
 
   function refreshAll() {
     dashboard.refetch();
