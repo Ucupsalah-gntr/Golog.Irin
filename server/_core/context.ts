@@ -73,8 +73,14 @@ export async function createContext(
 
     const username = usernameFromAuthUser(authUser);
     if (!username) {
+      console.warn("[Auth] Supabase user has no username/email identity.");
       return { req: opts.req, res: opts.res, user: null };
     }
+
+    console.info("[Auth] Auth user validated:", {
+      authUserId: authUser.id,
+      username,
+    });
 
     user = (await getUserByAuthUserId(authUser.id)) ?? null;
 
@@ -92,6 +98,13 @@ export async function createContext(
           lastSignedIn: new Date(),
         })) ?? null;
       }
+    }
+
+    if (!user) {
+      console.warn("[Auth] No local user profile found for:", {
+        authUserId: authUser.id,
+        username,
+      });
     }
 
     if (user) {
