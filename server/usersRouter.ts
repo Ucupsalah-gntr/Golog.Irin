@@ -1,8 +1,8 @@
 import { TRPCError } from "@trpc/server";
 import { eq } from "drizzle-orm";
 import { z } from "zod";
-import { adminProcedure, router } from "./_core/trpc";
-import { getDb, rooms, users, writeAudit } from "./db";
+import { adminProcedure, router } from "./_core/trpc.js";
+import { getDb, rooms, users, writeAudit } from "./db.js";
 
 export const usersRouter = router({
   list: adminProcedure.query(async () => {
