@@ -42,7 +42,7 @@ const trpcClient = trpc.createClient({
               "x-supabase-apikey": String(import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY ?? "").trim(),
             }
           : {};
-      }
+      },
 
       fetch(input, init) {
         return globalThis.fetch(input, {
