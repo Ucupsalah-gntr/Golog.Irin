@@ -1,12 +1,12 @@
 import { TRPCError } from "@trpc/server";
 import { and, desc, eq, inArray, sql } from "drizzle-orm";
 import { z } from "zod";
-import { systemRouter } from "./_core/systemRouter.js";
-import { adminProcedure, protectedProcedure, publicProcedure, router } from "./_core/trpc.js";
-import { canTransitionRequestStatus, validateApprovedQuantity } from "../shared/request-rules.js";
-import { canReuseRequestDayLock, getJakartaDateKey } from "../shared/request-day-lock.js";
-import { calculateStockDifference } from "../shared/stock-reconciliation.js";
-import type { ImportItemRow } from "../shared/item-import.js";
+import { systemRouter } from "./_core/systemRouter.ts";
+import { adminProcedure, protectedProcedure, publicProcedure, router } from "./_core/trpc.ts";
+import { canTransitionRequestStatus, validateApprovedQuantity } from "../shared/request-rules.ts";
+import { canReuseRequestDayLock, getJakartaDateKey } from "../shared/request-day-lock.ts";
+import { calculateStockDifference } from "../shared/stock-reconciliation.ts";
+import type { ImportItemRow } from "../shared/item-import.ts";
 import {
   ensureCatalog,
   getDashboardData,
@@ -23,7 +23,7 @@ import {
   stockMovements,
   users,
   warehouses,
-} from "./db.js";
+} from "./db.ts";
 
 const roleGuard = (role: "admin" | "user") => protectedProcedure.use(({ ctx, next }) => {
   if (ctx.user.role !== role && !(role === "user" && ctx.user.role === "admin")) {
