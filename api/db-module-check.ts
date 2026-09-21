@@ -1,17 +1,22 @@
-import { sql } from "drizzle-orm";
-import { getDb } from "../server/db";
-
 export default async function handler(
   _req: { method?: string },
   res: { status: (code: number) => { json: (body: unknown) => void } },
 ) {
   try {
+    const { getDb } = await import("../server/db");
     const db = await getDb();
+
     if (!db) {
-      res.status(200).json({ ok: false, reason: "getDb-returned-null" });
+      res.status(200).json({
+        ok: false,
+        dbModuleLoaded: true,
+        reason: "getDb-returned-null",
+        timestamp: new Date().toISOString(),
+      });
       return;
     }
 
+    const { sql } = await import("drizzle-orm");
     const result = await db.execute(
       sql`select count(*)::int as active_items from public.items where active = true`,
     );
@@ -27,7 +32,9 @@ export default async function handler(
     console.error("[DB Module Check] failed:", error);
     res.status(200).json({
       ok: false,
-      reason: error instanceof Error ? error.message : "db-module-check-failed",
+      dbModuleLoaded: false,
+      reason: error instanceof Error ? `${error.name}: ${error.message}` : String(error),
+      stack: error instanceof Error ? error.stack?.split("\n").slice(0, 8) : undefined,
       timestamp: new Date().toISOString(),
     });
   }
