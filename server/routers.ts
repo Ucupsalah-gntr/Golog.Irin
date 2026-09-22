@@ -13,6 +13,7 @@ import {
   getDb,
   getReportMovements,
   getStockQty,
+  getStockRows,
   writeAudit,
   items,
   requestDayLocks,
