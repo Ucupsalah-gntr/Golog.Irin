@@ -39,6 +39,7 @@ import {
 const nav = [
   { key: "overview", label: "Ringkasan", icon: BarChart3, adminOnly: false },
   { key: "requests", label: "Permintaan", icon: ClipboardList, adminOnly: false },
+  { key: "usage", label: "Pemakaian Ruangan", icon: ArrowUpFromLine, adminOnly: false },
   { key: "stock", label: "Stok barang", icon: Boxes, adminOnly: false },
   { key: "inbound", label: "Barang masuk", icon: ArrowDownToLine, adminOnly: true },
   { key: "adjustments", label: "Penyesuaian", icon: SlidersHorizontal, adminOnly: true },
@@ -55,6 +56,15 @@ function formatNumber(value: unknown) {
 function formatDate(value: unknown) {
   return value ? new Date(String(value)).toLocaleDateString("id-ID", { day: "2-digit", month: "short", year: "numeric" }) : "—";
 }
+function getJakartaDateKeyClient(value = new Date()) {
+  return new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Jakarta" }).format(value);
+}
+function getJakartaMonthKeyClient(value = new Date()) {
+  return getJakartaDateKeyClient(value).slice(0, 7);
+}
+function getReportDay(value: unknown) {
+  return Number(getJakartaDateKeyClient(new Date(String(value))).slice(-2));
+}
 function statusLabel(status: string) {
   return ({ submitted: "Diajukan", approved: "Disetujui", partial: "Sebagian", rejected: "Ditolak", ready: "Siap diambil", delivered: "Diserahkan", received: "Diterima", cancelled: "Dibatalkan", draft: "Draft" } as Record<string, string>)[status] ?? status;
 }
@@ -65,18 +75,22 @@ function statusTone(status: string) {
   return "bg-sky-100 text-sky-700 border-sky-200";
 }
 
-function downloadExcel(filename: string, headers: string[], rows: Array<Array<string | number>>) {
-  const worksheet = XLSX.utils.aoa_to_sheet([headers, ...rows]);
-  worksheet["!cols"] = headers.map((header, index) => {
-    const maxLength = Math.max(
-      String(header).length,
-      ...rows.map((row) => String(row[index] ?? "").length),
-    );
-    return { wch: Math.min(Math.max(maxLength + 2, 10), 36) };
-  });
-
+type ExcelCell = string | number;
+function downloadWorkbook(filename: string, sheets: Array<{ name: string; rows: ExcelCell[][] }>) {
   const workbook = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(workbook, worksheet, "Laporan Stok");
+
+  for (const sheet of sheets) {
+    const worksheet = XLSX.utils.aoa_to_sheet(sheet.rows);
+    const columnCount = Math.max(...sheet.rows.map((row) => row.length), 1);
+    worksheet["!cols"] = Array.from({ length: columnCount }, (_, index) => {
+      const maxLength = Math.max(
+        ...sheet.rows.map((row) => String(row[index] ?? "").length),
+      );
+      return { wch: Math.min(Math.max(maxLength + 2, index === 0 ? 8 : 12), 36) };
+    });
+    XLSX.utils.book_append_sheet(workbook, worksheet, sheet.name.slice(0, 31));
+  }
+
   XLSX.writeFile(workbook, filename);
 }
 
@@ -86,19 +100,30 @@ export default function Home() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [selectedRoom, setSelectedRoom] = useState<number | null>(null);
   const [requestLines, setRequestLines] = useState<Line[]>([{ itemId: 0, requestedQty: 1 }]);
+  const [reportMonth, setReportMonth] = useState(getJakartaMonthKeyClient());
   const utils = trpc.useUtils();
   const catalog = trpc.catalog.all.useQuery(undefined, { enabled: isAuthenticated });
   const dashboard = trpc.dashboard.summary.useQuery({ roomId: selectedRoom }, { enabled: isAuthenticated });
   const requests = trpc.requests.list.useQuery({}, { enabled: isAuthenticated });
   const todayRoomLocks = trpc.requests.todayLocks.useQuery(undefined, { enabled: isAuthenticated });
+  const usage = trpc.usage.list.useQuery({ roomId: selectedRoom }, { enabled: isAuthenticated && active === "usage" });
+  const usageStock = trpc.usage.stock.useQuery({ roomId: selectedRoom }, { enabled: isAuthenticated && active === "usage" && selectedRoom !== null });
   const adjustments = trpc.adjustments.list.useQuery(undefined, { enabled: isAuthenticated && user?.role === "admin" });
-  const report = trpc.reports.movements.useQuery({}, { enabled: isAuthenticated && user?.role === "admin" && active === "reports" });
+  const monthlyReport = trpc.reports.monthly.useQuery({ month: reportMonth }, { enabled: isAuthenticated && user?.role === "admin" && active === "reports" });
   const createRequest = trpc.requests.create.useMutation({
     onSuccess: () => {
       toast.success("Permintaan berhasil diajukan");
       requests.refetch();
       todayRoomLocks.refetch();
       setRequestLines([{ itemId: 0, requestedQty: 1 }]);
+    },
+  });
+  const createUsage = trpc.usage.create.useMutation({
+    onSuccess: () => {
+      toast.success("Pemakaian ruangan berhasil dicatat");
+      usage.refetch();
+      usageStock.refetch();
+      dashboard.refetch();
     },
   });
   const verifyRequest = trpc.requests.verify.useMutation({
@@ -130,6 +155,12 @@ export default function Home() {
     }
   }, [active, isAdmin]);
 
+  useEffect(() => {
+    if (!isAdmin && selectedRoom === null && dashboard.data?.roomId) {
+      setSelectedRoom(dashboard.data.roomId);
+    }
+  }, [dashboard.data?.roomId, isAdmin, selectedRoom]);
+
   if (loading) return <div className="min-h-screen grid place-items-center bg-[#f4f7f6]"><div className="text-center"><Activity className="mx-auto mb-3 animate-pulse text-teal-600" /><p className="text-sm text-slate-500">Menyiapkan ruang kerja…</p></div></div>;
   if (!isAuthenticated) return <LoginScreen />;
 
@@ -139,7 +170,11 @@ export default function Home() {
     todayRoomLocks.refetch();
     catalog.refetch();
     if (isAdmin) adjustments.refetch();
-    if (isAdmin && active === "reports") report.refetch();
+    if (active === "usage") {
+      usage.refetch();
+      usageStock.refetch();
+    }
+    if (isAdmin && active === "reports") monthlyReport.refetch();
   }
   function go(key: NavKey) { setActive(key); setMobileOpen(false); }
 
@@ -162,8 +197,10 @@ export default function Home() {
             {active === "stock" && <StockView stock={stock} isAdmin={isAdmin} items={items} warehouses={warehouses} onCreateItem={(input: any) => createItem.mutate(input)} busy={createItem.isPending} onImport={(rows: any[]) => importItems.mutate({ rows })} importBusy={importItems.isPending} />}
             {active === "inbound" && <InboundView items={items} warehouses={warehouses} onSubmit={(input: any) => createInbound.mutate(input)} busy={createInbound.isPending} />}
             {active === "requests" && <RequestsView requests={requests.data ?? []} rooms={rooms} items={items} isAdmin={isAdmin} currentUserId={user?.id} todayRoomLocks={todayRoomLocks.data ?? []} selectedRoom={selectedRoom} selectedRoomName={selectedRoomName} setSelectedRoom={setSelectedRoom} lines={requestLines} setLines={setRequestLines} total={requestTotal} onCreate={(input: any) => createRequest.mutate(input)} onVerify={(input: any) => verifyRequest.mutate(input)} busy={createRequest.isPending || verifyRequest.isPending} />}
-            {active === "adjustments" && <AdjustmentsView adjustments={adjustments.data ?? []} items={items} rooms={rooms} onSubmit={(input: any) => createAdjustment.mutate(input)} busy={createAdjustment.isPending} />}\n            {active === "stocktake" && <StockOpnameView stock={stock} items={items} rooms={rooms} onSubmit={(input: any) => createAdjustment.mutate(input)} busy={createAdjustment.isPending} />}
-            {active === "reports" && <ReportsView report={report.data ?? []} />}
+            {active === "usage" && <UsageView usages={usage.data ?? []} stock={usageStock.data ?? []} rooms={rooms} items={items} isAdmin={isAdmin} selectedRoom={selectedRoom} setSelectedRoom={setSelectedRoom} onSubmit={(input: any) => createUsage.mutate(input)} busy={createUsage.isPending} />}
+            {active === "adjustments" && <AdjustmentsView adjustments={adjustments.data ?? []} items={items} rooms={rooms} onSubmit={(input: any) => createAdjustment.mutate(input)} busy={createAdjustment.isPending} />}
+            {active === "stocktake" && <StockOpnameView stock={stock} items={items} rooms={rooms} onSubmit={(input: any) => createAdjustment.mutate(input)} busy={createAdjustment.isPending} />}
+            {active === "reports" && <ReportsView report={monthlyReport.data} month={reportMonth} onMonthChange={setReportMonth} />}
           </div>
         </main>
       </div>
@@ -563,7 +600,327 @@ function StockOpnameView({ stock, items, onSubmit, busy }: any) {
 }
 function AdjustmentsView({ adjustments, items, rooms, onSubmit, busy }: any) { const [form, setForm] = useState({ itemId: "", roomId: "", adjustmentType: "subtract", quantity: "", physicalQty: "", reasonType: "holiday_pickup", reason: "", incidentDate: new Date().toISOString().slice(0, 10) }); return <div className="grid gap-6 xl:grid-cols-[.9fr_1.4fr]"><Card className="border-slate-200/80 shadow-sm"><CardHeader><CardTitle>Penyesuaian stok</CardTitle><p className="mt-1 text-sm text-slate-500">Untuk selisih fisik, pengambilan hari libur, rusak, atau darurat.</p></CardHeader><CardContent><div className="grid gap-4"><Field label="Barang *"><select className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm" value={form.itemId} onChange={(e) => setForm({ ...form, itemId: e.target.value })}><option value="">Pilih barang</option>{items.map((item: any) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></Field><div className="grid grid-cols-2 gap-3"><Field label="Jenis"><select className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm" value={form.adjustmentType} onChange={(e) => setForm({ ...form, adjustmentType: e.target.value })}><option value="subtract">Pengurangan</option><option value="add">Penambahan</option></select></Field><Field label="Jumlah"><Input type="number" min="1" value={form.quantity} onChange={(e) => setForm({ ...form, quantity: e.target.value })} /></Field></div><Field label="Ruangan terkait"><select className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm" value={form.roomId} onChange={(e) => setForm({ ...form, roomId: e.target.value })}><option value="">Tidak ada / umum</option>{rooms.map((room: any) => <option key={room.id} value={room.id}>{room.name}</option>)}</select></Field><Field label="Stok fisik setelah kejadian"><Input type="number" min="0" value={form.physicalQty} onChange={(e) => setForm({ ...form, physicalQty: e.target.value })} /></Field><Field label="Jenis kejadian"><select className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm" value={form.reasonType} onChange={(e) => setForm({ ...form, reasonType: e.target.value })}><option value="holiday_pickup">Pengambilan hari libur</option><option value="forgotten_entry">Lupa tercatat</option><option value="emergency">Pengeluaran darurat</option><option value="damaged">Barang rusak</option><option value="expired">Kedaluwarsa</option><option value="stocktake">Stock opname</option><option value="other">Lainnya</option></select></Field><Field label="Tanggal kejadian"><Input type="date" value={form.incidentDate} onChange={(e) => setForm({ ...form, incidentDate: e.target.value })} /></Field><Field label="Alasan wajib (minimal 10 karakter)"><Textarea value={form.reason} onChange={(e) => setForm({ ...form, reason: e.target.value })} placeholder="Contoh: 10 box diambil ICU Garuda saat hari libur…" /></Field><Button disabled={busy || !form.itemId || !form.quantity || !form.physicalQty || form.reason.length < 10} onClick={() => onSubmit({ ...form, itemId: Number(form.itemId), roomId: form.roomId ? Number(form.roomId) : null, quantity: Number(form.quantity), physicalQty: Number(form.physicalQty), incidentDate: new Date(form.incidentDate) })}><ClipboardCheck size={16} className="mr-2" />Terapkan penyesuaian</Button><p className="text-xs leading-5 text-slate-400">Penyesuaian langsung menerapkan stok dan mencatat self-verification kepala gudang.</p></div></CardContent></Card><Card className="border-slate-200/80 shadow-sm"><CardHeader><CardTitle>Riwayat penyesuaian</CardTitle></CardHeader><CardContent><div className="space-y-3">{adjustments.map((row: any) => <div key={row.adjustment.id} className="rounded-xl border border-slate-200 p-4"><div className="flex justify-between gap-3"><div><p className="font-semibold">{row.adjustment.adjustmentNo}</p><p className="mt-1 text-sm text-slate-500">{row.item?.name} · {row.room?.name || "umum"}</p></div><Badge className="border-violet-200 bg-violet-50 text-violet-700">Self-verified</Badge></div><p className="mt-3 text-sm">{row.adjustment.reason}</p><p className="mt-2 text-xs text-slate-400">{formatDate(row.adjustment.incidentDate)} · {row.adjustment.adjustmentType === "add" ? "+" : "−"}{row.adjustment.quantity} unit</p></div>)}{!adjustments.length && <EmptyState title="Belum ada penyesuaian" text="Setiap koreksi stok akan tercatat di sini." />}</div></CardContent></Card></div> }
 
-function ReportsView({ report }: any) { const rows = report.map((row: any) => [formatDate(row.movement.occurredAt), row.item?.sku || "", row.item?.name || "", row.item?.unit || "", row.warehouse?.name || (row.movement.movementType === "out" ? "Gudang Logistik" : ""), row.room?.name || "", row.movement.quantity, row.movement.movementType]); return <Card className="border-slate-200/80 shadow-sm"><CardHeader className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between"><div><CardTitle>Laporan pergerakan stok</CardTitle><p className="mt-1 text-sm text-slate-500">Unduh histori pergerakan stok dalam format Excel (.xlsx).</p></div><Button onClick={() => downloadExcel(`laporan-stok-${new Date().toISOString().slice(0, 10)}.xlsx`, ["Tanggal", "SKU", "Barang", "Satuan", "Gudang Sumber", "Ruangan", "Jumlah", "Jenis"], rows)} disabled={!rows.length}><FileDown size={16} className="mr-2" />Export Excel</Button></CardHeader><CardContent><div className="overflow-x-auto"><table className="w-full min-w-[760px] text-left text-sm"><thead className="border-b border-slate-200 text-xs uppercase tracking-wider text-slate-400"><tr>{["Tanggal", "Barang", "Gudang / ruangan", "Jumlah", "Jenis"].map((h) => <th className="px-3 py-3" key={h}>{h}</th>)}</tr></thead><tbody className="divide-y divide-slate-100">{report.map((row: any) => <tr key={row.movement.id}><td className="px-3 py-4">{formatDate(row.movement.occurredAt)}</td><td className="px-3 py-4"><p className="font-medium">{row.item?.name || "—"}</p><p className="text-xs text-slate-400">{row.item?.sku || ""}</p></td><td className="px-3 py-4 text-slate-500">{row.room?.name || row.warehouse?.name || "Gudang Logistik"}</td><td className={`px-3 py-4 font-semibold ${row.movement.quantity < 0 ? "text-rose-700" : "text-emerald-700"}`}>{row.movement.quantity > 0 ? "+" : ""}{formatNumber(row.movement.quantity)}</td><td className="px-3 py-4 text-slate-500">{row.movement.movementType === "in" ? "Masuk" : row.movement.movementType === "out" ? "Keluar" : "Penyesuaian"}</td></tr>)}{!report.length && <tr><td colSpan={5}><EmptyState title="Belum ada transaksi" text="Laporan akan terisi setelah barang masuk, distribusi otomatis, atau penyesuaian dicatat." /></td></tr>}</tbody></table></div></CardContent></Card> }
+function UsageView({ usages, stock, rooms, items, isAdmin, selectedRoom, setSelectedRoom, onSubmit, busy }: any) {
+  const [form, setForm] = useState({
+    roomId: selectedRoom ? String(selectedRoom) : "",
+    itemId: "",
+    quantity: "",
+    occurredAt: getJakartaDateKeyClient(),
+    notes: "",
+  });
+
+  useEffect(() => {
+    if (selectedRoom !== null) {
+      setForm((current) => ({ ...current, roomId: String(selectedRoom) }));
+    }
+  }, [selectedRoom]);
+
+  const selectedStock = stock.find((row: any) => Number(row.itemId) === Number(form.itemId));
+  const available = Number(selectedStock?.movementQty ?? 0);
+  const quantity = form.quantity === "" ? 0 : Number(form.quantity);
+  const validQuantity = Number.isInteger(quantity) && quantity > 0;
+  const canSubmit = Boolean(
+    form.roomId &&
+    form.itemId &&
+    validQuantity &&
+    quantity <= available &&
+    form.occurredAt,
+  );
+
+  function submit() {
+    if (!canSubmit) return;
+    onSubmit({
+      roomId: Number(form.roomId),
+      itemId: Number(form.itemId),
+      quantity,
+      occurredAt: new Date(`${form.occurredAt}T00:00:00+07:00`),
+      notes: form.notes.trim() || undefined,
+    });
+    setForm((current) => ({ ...current, itemId: "", quantity: "", notes: "" }));
+  }
+
+  return <div className="grid gap-6 xl:grid-cols-[.9fr_1.2fr]">
+    <Card className="border-slate-200/80 shadow-sm">
+      <CardHeader>
+        <CardTitle>Catat Pemakaian Ruangan</CardTitle>
+        <p className="mt-1 text-sm text-slate-500">Setiap pemakaian akan mengurangi stok ruangan dan masuk ke laporan BMHP bulanan.</p>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <Field label="Ruangan *">
+          <select className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm" value={form.roomId} onChange={(e) => {
+            const value = e.target.value;
+            setForm((current) => ({ ...current, roomId: value, itemId: "", quantity: "" }));
+            setSelectedRoom(value ? Number(value) : null);
+          }}>
+            <option value="">Pilih ruangan</option>
+            {rooms.map((room: any) => <option key={room.id} value={room.id}>{room.name}</option>)}
+          </select>
+        </Field>
+
+        <Field label="Barang *">
+          <select className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm" value={form.itemId} onChange={(e) => setForm((current) => ({ ...current, itemId: e.target.value, quantity: "" }))} disabled={!form.roomId}>
+            <option value="">{form.roomId ? "Pilih barang" : "Pilih ruangan terlebih dahulu"}</option>
+            {items.map((item: any) => {
+              const row = stock.find((candidate: any) => Number(candidate.itemId) === Number(item.id));
+              const qty = Number(row?.movementQty ?? 0);
+              return <option key={item.id} value={item.id}>{item.name} · stok {formatNumber(qty)} {item.unit}</option>;
+            })}
+          </select>
+        </Field>
+
+        <div className="grid gap-3 sm:grid-cols-2">
+          <Field label="Jumlah dipakai *">
+            <Input type="number" min="1" step="1" value={form.quantity} onChange={(e) => setForm((current) => ({ ...current, quantity: e.target.value }))} placeholder="Contoh 5" />
+          </Field>
+          <Field label="Tanggal pemakaian *">
+            <Input type="date" value={form.occurredAt} onChange={(e) => setForm((current) => ({ ...current, occurredAt: e.target.value }))} />
+          </Field>
+        </div>
+
+        {form.itemId && <div className={`rounded-xl p-3 text-sm ${validQuantity && quantity <= available ? "bg-emerald-50 text-emerald-800" : "bg-amber-50 text-amber-800"}`}>
+          Stok tersedia: <strong>{formatNumber(available)} {selectedStock?.unit || ""}</strong>
+          {validQuantity && quantity > available && <span className="ml-2">Jumlah pemakaian melebihi stok.</span>}
+          {validQuantity && quantity <= available && <span className="ml-2">Sisa setelah pemakaian: <strong>{formatNumber(available - quantity)} {selectedStock?.unit || ""}</strong></span>}
+        </div>}
+
+        <Field label="Catatan">
+          <Textarea value={form.notes} onChange={(e) => setForm((current) => ({ ...current, notes: e.target.value }))} placeholder="Contoh: pemakaian tindakan / shift / keterangan..." />
+        </Field>
+
+        <Button className="w-full" disabled={busy || !canSubmit} onClick={submit}>
+          <ArrowUpFromLine size={16} className="mr-2" />Simpan pemakaian
+        </Button>
+
+        {!isAdmin && <p className="text-xs leading-5 text-slate-400">Pilih ruangan yang sedang Anda layani. Golog.Irin akan menolak transaksi yang membuat stok ruangan menjadi negatif.</p>}
+      </CardContent>
+    </Card>
+
+    <Card className="border-slate-200/80 shadow-sm">
+      <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <CardTitle>Riwayat pemakaian</CardTitle>
+          <p className="mt-1 text-sm text-slate-500">Transaksi terbaru pada ruangan yang dipilih.</p>
+        </div>
+        <Badge className="border-slate-200 bg-slate-50 text-slate-600">{usages.length} transaksi</Badge>
+      </CardHeader>
+      <CardContent>
+        <div className="space-y-3">
+          {usages.map((row: any) => (
+            <div key={row.movement.id} className="rounded-xl border border-slate-200 p-4">
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div>
+                  <p className="font-semibold">{row.item?.name || "Barang"}</p>
+                  <p className="mt-1 text-xs text-slate-400">{row.item?.sku || "—"} · {row.room?.name || "Ruangan"}</p>
+                </div>
+                <p className="font-semibold text-rose-700">−{formatNumber(Math.abs(Number(row.movement.quantity)))} {row.item?.unit || ""}</p>
+              </div>
+              <p className="mt-2 text-sm text-slate-500">{formatDate(row.movement.occurredAt)}{row.movement.notes ? ` · ${row.movement.notes}` : ""}</p>
+            </div>
+          ))}
+          {!usages.length && <EmptyState title="Belum ada pemakaian" text="Catatan pemakaian barang dari ruangan akan muncul di sini." />}
+        </div>
+      </CardContent>
+    </Card>
+  </div>;
+}
+
+function ReportsView({ report, month, onMonthChange }: any) {
+  const data = report ?? {};
+  const items = data.items ?? [];
+  const rooms = data.rooms ?? [];
+  const movements = data.movements ?? [];
+  const daysInMonth = Number(data.daysInMonth ?? 0);
+  const openingWarehouse = new Map((data.openingWarehouse ?? []).map((row: any) => [Number(row.itemId), Number(row.quantity ?? 0)]));
+  const openingRooms = new Map((data.openingRooms ?? []).map((row: any) => [`${Number(row.roomId)}:${Number(row.itemId)}`, Number(row.quantity ?? 0)]));
+
+  const warehouseStats = new Map<number, { opening: number; inbound: number; distributed: number; adjustment: number }>();
+  const roomStats = new Map<string, { roomId: number; itemId: number; distributed: number; used: number; adjustment: number }>();
+  const inboundDaily = new Map<string, number>();
+  const usageDaily = new Map<string, number>();
+  const distributionRows: ExcelCell[][] = [];
+  const movementRows: ExcelCell[][] = [];
+
+  for (const item of items) {
+    warehouseStats.set(Number(item.id), { opening: openingWarehouse.get(Number(item.id)) ?? 0, inbound: 0, distributed: 0, adjustment: 0 });
+  }
+
+  for (const row of movements) {
+    const movement = row.movement;
+    const itemId = Number(movement.itemId);
+    const roomId = movement.roomId === null ? null : Number(movement.roomId);
+    const quantity = Number(movement.quantity);
+    const absoluteQty = Math.abs(quantity);
+    const day = getReportDay(movement.occurredAt);
+    const item = row.item;
+    const room = row.room;
+
+    movementRows.push([
+      formatDate(movement.occurredAt),
+      item?.sku || "",
+      item?.name || "",
+      item?.unit || "",
+      room?.name || row.warehouse?.name || "Gudang Pusat",
+      movement.movementType === "in" ? "Masuk" : movement.movementType === "out" ? "Keluar" : "Penyesuaian",
+      quantity,
+      movement.notes || "",
+    ]);
+
+    if (roomId === null) {
+      const stats = warehouseStats.get(itemId) ?? { opening: 0, inbound: 0, distributed: 0, adjustment: 0 };
+      if (movement.movementType === "in") {
+        stats.inbound += absoluteQty;
+        inboundDaily.set(`${itemId}:${day}`, (inboundDaily.get(`${itemId}:${day}`) ?? 0) + absoluteQty);
+      } else if (movement.movementType === "out") {
+        stats.distributed += absoluteQty;
+      } else {
+        stats.adjustment += quantity;
+      }
+      warehouseStats.set(itemId, stats);
+    } else {
+      const key = `${roomId}:${itemId}`;
+      const stats = roomStats.get(key) ?? { roomId, itemId, distributed: 0, used: 0, adjustment: 0 };
+      if (movement.movementType === "in") {
+        stats.distributed += absoluteQty;
+        distributionRows.push([formatDate(movement.occurredAt), room?.name || "", item?.sku || "", item?.name || "", item?.unit || "", absoluteQty, movement.notes || ""]);
+      } else if (movement.movementType === "out") {
+        stats.used += absoluteQty;
+        usageDaily.set(`${key}:${day}`, (usageDaily.get(`${key}:${day}`) ?? 0) + absoluteQty);
+      } else {
+        stats.adjustment += quantity;
+      }
+      roomStats.set(key, stats);
+    }
+  }
+
+  const rekapRows: ExcelCell[][] = [];
+  for (const item of items) {
+    const itemId = Number(item.id);
+    const stats = warehouseStats.get(itemId) ?? { opening: 0, inbound: 0, distributed: 0, adjustment: 0 };
+    const closing = stats.opening + stats.inbound - stats.distributed + stats.adjustment;
+    if (stats.opening || stats.inbound || stats.distributed || stats.adjustment || closing) {
+      rekapRows.push([item.sku, item.name, item.category || "", item.unit, stats.opening, stats.inbound, stats.distributed, stats.adjustment, closing]);
+    }
+  }
+
+  const weekRanges = [[1, 7], [8, 14], [15, 21], [22, daysInMonth]];
+  function weekTotal(getValue: (day: number) => number, range: number[]) {
+    if (range[0] > range[1]) return 0;
+    let total = 0;
+    for (let day = range[0]; day <= range[1]; day += 1) total += getValue(day);
+    return total;
+  }
+
+  const inboundHeaders: ExcelCell[] = ["No", "SKU", "Nama Barang", "Satuan", ...Array.from({ length: daysInMonth }, (_, index) => index + 1), "MG1", "MG2", "MG3", "MG4", "Total"];
+  const inboundRows: ExcelCell[][] = items
+    .filter((item: any) => {
+      const stats = warehouseStats.get(Number(item.id));
+      return Boolean(stats?.inbound || stats?.opening || stats?.distributed || stats?.adjustment);
+    })
+    .map((item: any, index: number) => {
+      const getDay = (day: number) => inboundDaily.get(`${Number(item.id)}:${day}`) ?? 0;
+      const daily = Array.from({ length: daysInMonth }, (_, dayIndex) => getDay(dayIndex + 1));
+      return [index + 1, item.sku, item.name, item.unit, ...daily, ...weekRanges.map((range) => weekTotal(getDay, range)), daily.reduce((sum, qty) => sum + qty, 0)];
+    });
+
+  const roomSheetRows = rooms.map((room: any) => {
+    const roomItems = items.filter((item: any) => {
+      const key = `${Number(room.id)}:${Number(item.id)}`;
+      const stats = roomStats.get(key);
+      return Boolean(stats?.distributed || stats?.used || stats?.adjustment || (openingRooms.get(key) ?? 0));
+    });
+    const headers: ExcelCell[] = ["No", "SKU", "Nama Barang", "Satuan", ...Array.from({ length: daysInMonth }, (_, index) => index + 1), "MG1", "MG2", "MG3", "MG4", "Total"];
+    const rows = roomItems.map((item: any, index: number) => {
+      const key = `${Number(room.id)}:${Number(item.id)}`;
+      const getDay = (day: number) => usageDaily.get(`${key}:${day}`) ?? 0;
+      const daily = Array.from({ length: daysInMonth }, (_, dayIndex) => getDay(dayIndex + 1));
+      return [index + 1, item.sku, item.name, item.unit, ...daily, ...weekRanges.map((range) => weekTotal(getDay, range)), daily.reduce((sum, qty) => sum + qty, 0)];
+    });
+    return { room, headers, rows };
+  });
+
+  const totalInbound = Array.from(warehouseStats.values()).reduce((sum, stats) => sum + stats.inbound, 0);
+  const totalDistributed = Array.from(warehouseStats.values()).reduce((sum, stats) => sum + stats.distributed, 0);
+  const totalUsage = Array.from(roomStats.values()).reduce((sum, stats) => sum + stats.used, 0);
+  const totalAdjustment = Array.from(warehouseStats.values()).reduce((sum, stats) => sum + stats.adjustment, 0) + Array.from(roomStats.values()).reduce((sum, stats) => sum + stats.adjustment, 0);
+
+  function exportReport() {
+    const summaryRows: ExcelCell[][] = [
+      ["Laporan BMHP Golog.Irin"],
+      ["Periode", month],
+      ["Dibuat", getJakartaDateKeyClient()],
+      [],
+      ["Indikator", "Nilai"],
+      ["Transaksi bulan berjalan", movements.length],
+      ["Barang masuk Gudang Pusat", totalInbound],
+      ["Distribusi ke ruangan", totalDistributed],
+      ["Pemakaian ruangan", totalUsage],
+      ["Penyesuaian bersih", totalAdjustment],
+      ["Jumlah master barang aktif", items.length],
+      ["Jumlah ruangan aktif", rooms.length],
+    ];
+
+    const rekapSheet = [["SKU", "Nama Barang", "Kategori", "Satuan", "Stok Awal Gudang", "Barang Masuk", "Distribusi", "Penyesuaian", "Stok Akhir Gudang"], ...rekapRows];
+    const distribusiSheet = [["Tanggal", "Ruangan", "SKU", "Nama Barang", "Satuan", "Jumlah", "Catatan"], ...distributionRows];
+    const movementSheet = [["Tanggal", "SKU", "Nama Barang", "Satuan", "Lokasi", "Jenis", "Jumlah Bertanda", "Catatan"], ...movementRows];
+
+    const sheets: Array<{ name: string; rows: ExcelCell[][] }> = [
+      { name: "Ringkasan", rows: summaryRows },
+      { name: "Rekap Gudang", rows: rekapSheet },
+      { name: "Penerimaan", rows: [inboundHeaders, ...inboundRows] },
+      { name: "Distribusi", rows: distribusiSheet },
+    ];
+
+    for (const sheet of roomSheetRows) {
+      sheets.push({
+        name: `Pemakaian ${String(sheet.room.name)}`,
+        rows: [[`Pemakaian BHP - ${sheet.room.name}`], sheet.headers, ...sheet.rows],
+      });
+    }
+
+    sheets.push({ name: "Transaksi", rows: movementSheet });
+    downloadWorkbook(`BMHP-${month}.xlsx`, sheets);
+  }
+
+  return <div className="space-y-6">
+    <Card className="border-slate-200/80 shadow-sm">
+      <CardHeader className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+        <div>
+          <CardTitle>Laporan BMHP Bulanan</CardTitle>
+          <p className="mt-1 text-sm text-slate-500">Format mengikuti pola laporan penerimaan, distribusi, pemakaian harian ruangan, dan rekap stok.</p>
+        </div>
+        <div className="flex flex-col gap-2 sm:flex-row">
+          <Input type="month" value={month} onChange={(e) => onMonthChange(e.target.value)} className="h-10 sm:w-40" />
+          <Button onClick={exportReport} disabled={!daysInMonth}><FileDown size={16} className="mr-2" />Export BMHP Excel</Button>
+        </div>
+      </CardHeader>
+      <CardContent>
+        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+          {[
+            ["Barang masuk", totalInbound],
+            ["Distribusi", totalDistributed],
+            ["Pemakaian", totalUsage],
+            ["Penyesuaian bersih", totalAdjustment],
+          ].map(([label, value]) => <div key={label} className="rounded-2xl bg-slate-50 p-4"><p className="text-xs text-slate-400">{label}</p><p className="mt-1 text-2xl font-semibold">{formatNumber(value)}</p><p className="mt-1 text-xs text-slate-400">periode {month}</p></div>)}
+        </div>
+      </CardContent>
+    </Card>
+
+    <Card className="border-slate-200/80 shadow-sm">
+      <CardHeader><CardTitle>Rekap stok Gudang Pusat</CardTitle><p className="mt-1 text-sm text-slate-500">Stok akhir dihitung dari stok awal + barang masuk − distribusi ± penyesuaian.</p></CardHeader>
+      <CardContent>
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[860px] text-left text-sm">
+            <thead className="border-b border-slate-200 text-xs uppercase tracking-wider text-slate-400"><tr>{["SKU", "Barang", "Kategori", "Satuan", "Stok Awal", "Masuk", "Distribusi", "Penyesuaian", "Stok Akhir"].map((h) => <th className="px-3 py-3" key={h}>{h}</th>)}</tr></thead>
+            <tbody className="divide-y divide-slate-100">
+              {rekapRows.map((row) => <tr key={String(row[0])}><td className="px-3 py-3">{String(row[0])}</td><td className="px-3 py-3 font-medium">{String(row[1])}</td><td className="px-3 py-3 text-slate-500">{String(row[2])}</td><td className="px-3 py-3">{String(row[3])}</td><td className="px-3 py-3">{formatNumber(row[4])}</td><td className="px-3 py-3">{formatNumber(row[5])}</td><td className="px-3 py-3">{formatNumber(row[6])}</td><td className="px-3 py-3">{formatNumber(row[7])}</td><td className="px-3 py-3 font-semibold">{formatNumber(row[8])}</td></tr>)}
+              {!rekapRows.length && <tr><td colSpan={9}><EmptyState title="Belum ada data bulan ini" text="Pilih bulan lain atau catat transaksi terlebih dahulu." /></td></tr>}
+            </tbody>
+          </table>
+        </div>
+      </CardContent>
+    </Card>
+  </div>;
+}
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) { return <div className="space-y-2"><Label className="text-xs font-semibold text-slate-600">{label}</Label>{children}</div>; }
 function EmptyState({ title, text }: { title: string; text: string }) { return <div className="grid place-items-center px-5 py-14 text-center"><div className="grid h-12 w-12 place-items-center rounded-2xl bg-slate-100 text-slate-400"><ClipboardList size={20} /></div><p className="mt-4 font-medium">{title}</p><p className="mt-1 max-w-sm text-sm text-slate-500">{text}</p></div>; }
