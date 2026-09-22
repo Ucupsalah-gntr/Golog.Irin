@@ -1,4 +1,4 @@
-import { and, desc, eq, gte, isNull, lte, sql } from "drizzle-orm";
+import { and, desc, eq, gte, isNull, lt, lte, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/node-postgres";
 import { Pool } from "pg";
 import {
@@ -288,6 +288,110 @@ export async function getReportMovements(from?: Date, to?: Date) {
   if (from) filters.push(gte(stockMovements.occurredAt, from));
   if (to) filters.push(lte(stockMovements.occurredAt, to));
   return db.select({ movement: stockMovements, item: items, room: rooms, warehouse: warehouses }).from(stockMovements).leftJoin(items, eq(stockMovements.itemId, items.id)).leftJoin(rooms, eq(stockMovements.roomId, rooms.id)).leftJoin(warehouses, eq(stockMovements.sourceWarehouseId, warehouses.id)).where(filters.length ? and(...filters) : undefined).orderBy(desc(stockMovements.occurredAt));
+}
+
+
+export async function getMonthlyReportData(monthKey: string) {
+  const db = await getDb();
+  if (!db) {
+    return {
+      monthKey,
+      daysInMonth: 0,
+      items: [],
+      rooms: [],
+      openingWarehouse: [],
+      openingRooms: [],
+      movements: [],
+    };
+  }
+
+  if (!/^\\d{4}-\\d{2}$/.test(monthKey)) {
+    throw new Error("Format bulan harus YYYY-MM");
+  }
+
+  const [yearText, monthText] = monthKey.split("-");
+  const year = Number(yearText);
+  const month = Number(monthText);
+
+  if (!Number.isInteger(year) || !Number.isInteger(month) || month < 1 || month > 12) {
+    throw new Error("Bulan tidak valid");
+  }
+
+  const start = new Date(`${monthKey}-01T00:00:00+07:00`);
+  const nextMonth = month === 12
+    ? new Date(`${year + 1}-01-01T00:00:00+07:00`)
+    : new Date(`${year}-${String(month + 1).padStart(2, "0")}-01T00:00:00+07:00`);
+  const daysInMonth = new Date(Date.UTC(year, month, 0)).getUTCDate();
+
+  const [activeItems, activeRooms, openingWarehouseRows, openingRoomRows, monthlyMovements] = await Promise.all([
+    db.select({
+      id: items.id,
+      sku: items.sku,
+      name: items.name,
+      category: items.category,
+      unit: items.unit,
+      minStock: items.minStock,
+      sourceWarehouseId: items.sourceWarehouseId,
+    }).from(items).where(eq(items.active, true)).orderBy(items.name),
+    db.select({
+      id: rooms.id,
+      code: rooms.code,
+      name: rooms.name,
+    }).from(rooms).where(eq(rooms.active, true)).orderBy(rooms.name),
+    db.select({
+      itemId: stockMovements.itemId,
+      quantity: sql<number>`COALESCE(SUM(${stockMovements.quantity}), 0)`,
+    })
+      .from(stockMovements)
+      .where(and(
+        isNull(stockMovements.roomId),
+        lt(stockMovements.occurredAt, start),
+      ))
+      .groupBy(stockMovements.itemId),
+    db.select({
+      roomId: stockMovements.roomId,
+      itemId: stockMovements.itemId,
+      quantity: sql<number>`COALESCE(SUM(${stockMovements.quantity}), 0)`,
+    })
+      .from(stockMovements)
+      .where(and(
+        sql`${stockMovements.roomId} IS NOT NULL`,
+        lt(stockMovements.occurredAt, start),
+      ))
+      .groupBy(stockMovements.roomId, stockMovements.itemId),
+    db.select({
+      movement: stockMovements,
+      item: items,
+      room: rooms,
+      warehouse: warehouses,
+    })
+      .from(stockMovements)
+      .leftJoin(items, eq(stockMovements.itemId, items.id))
+      .leftJoin(rooms, eq(stockMovements.roomId, rooms.id))
+      .leftJoin(warehouses, eq(stockMovements.sourceWarehouseId, warehouses.id))
+      .where(and(
+        gte(stockMovements.occurredAt, start),
+        lt(stockMovements.occurredAt, nextMonth),
+      ))
+      .orderBy(stockMovements.occurredAt),
+  ]);
+
+  return {
+    monthKey,
+    daysInMonth,
+    items: activeItems,
+    rooms: activeRooms,
+    openingWarehouse: openingWarehouseRows.map((row) => ({
+      itemId: row.itemId,
+      quantity: Number(row.quantity ?? 0),
+    })),
+    openingRooms: openingRoomRows.map((row) => ({
+      roomId: row.roomId,
+      itemId: row.itemId,
+      quantity: Number(row.quantity ?? 0),
+    })),
+    movements: monthlyMovements,
+  };
 }
 
 export { auditLogs, items, requestDayLocks, requestItems, requests, rooms, stockAdjustments, stockMovements, users, warehouses };
