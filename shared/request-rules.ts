@@ -36,3 +36,29 @@ export function validateApprovedQuantity(requestedQty: number, approvedQty: numb
     throw new Error("Approved quantity cannot exceed requested quantity");
   }
 }
+
+export function validateApprovalStatus(
+  status: "approved" | "partial",
+  lines: Array<{ requestedQty: number; approvedQty: number }>,
+) {
+  if (!lines.length) {
+    throw new Error("Approval lines are required");
+  }
+
+  for (const line of lines) {
+    validateApprovedQuantity(line.requestedQty, line.approvedQty);
+  }
+
+  const totalApproved = lines.reduce((sum, line) => sum + line.approvedQty, 0);
+  if (totalApproved <= 0) {
+    throw new Error("Approved quantity must be greater than zero");
+  }
+
+  if (status === "approved" && lines.some((line) => line.approvedQty !== line.requestedQty)) {
+    throw new Error("Approved status requires the full requested quantity for every item");
+  }
+
+  if (status === "partial" && lines.every((line) => line.approvedQty === line.requestedQty)) {
+    throw new Error("Partial status requires at least one item to be approved below the requested quantity");
+  }
+}
