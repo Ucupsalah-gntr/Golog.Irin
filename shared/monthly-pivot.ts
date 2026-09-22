@@ -142,7 +142,7 @@ export function computeMonthlyPivot(input: MonthlyPivotInput): MonthlyPivotResul
     pivotRow.keluarTotal += quantity;
   }
 
-  for (const pivotRow of perItem.values()) {
+  for (const pivotRow of Array.from(perItem.values())) {
     pivotRow.stokTersedia = pivotRow.sisaAwal + pivotRow.masukGudang + pivotRow.penyesuaianGudang;
     pivotRow.sisaAkhir = pivotRow.stokTersedia - pivotRow.keluarTotal;
     pivotRow.isLowStock = pivotRow.sisaAkhir <= pivotRow.minStock;
