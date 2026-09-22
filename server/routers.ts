@@ -1,5 +1,5 @@
 import { TRPCError } from "@trpc/server";
-import { and, desc, eq, inArray, sql } from "drizzle-orm";
+import { and, desc, eq, inArray, isNull, sql } from "drizzle-orm";
 import { z } from "zod";
 import { systemRouter } from "./_core/systemRouter.ts";
 import { adminProcedure, protectedProcedure, publicProcedure, router } from "./_core/trpc.ts";
@@ -13,6 +13,7 @@ import {
   getDb,
   getReportMovements,
   getStockQty,
+  getStockRows,
   writeAudit,
   items,
   requestDayLocks,
@@ -37,6 +38,20 @@ function nowNo(prefix: string) {
   return `${prefix}-${new Date().toISOString().slice(0, 10).replaceAll("-", "")}-${Date.now().toString().slice(-5)}`;
 }
 
+async function dbSafeFindTodayRoomLock(userId: number) {
+  const db = await getDb();
+  if (!db) return null;
+  const rows = await db
+    .select({ roomId: requestDayLocks.roomId })
+    .from(requestDayLocks)
+    .where(and(
+      eq(requestDayLocks.requesterId, userId),
+      eq(requestDayLocks.requestDate, getJakartaDateKey()),
+    ))
+    .orderBy(desc(requestDayLocks.id))
+    .limit(1);
+  return rows[0] ?? null;
+}
 export const appRouter = router({
   system: systemRouter,
   auth: router({
@@ -48,10 +63,37 @@ export const appRouter = router({
       await ensureCatalog();
       const db = await getDb();
       if (!db) return { rooms: [], warehouses: [], items: [] };
+
+      const activeRooms = await db
+        .select()
+        .from(rooms)
+        .where(eq(rooms.active, true))
+        .orderBy(rooms.name);
+
+      const activeWarehouses = await db
+        .select()
+        .from(warehouses)
+        .where(eq(warehouses.active, true))
+        .orderBy(warehouses.name);
+
+      const activeItems = await db
+        .select()
+        .from(items)
+        .where(eq(items.active, true))
+        .orderBy(items.name);
+
+      const warehouseStock = await getStockRows();
+      const warehouseStockByItem = new Map(
+        warehouseStock.map((row) => [row.itemId, Number(row.movementQty)]),
+      );
+
       return {
-        rooms: await db.select().from(rooms).where(eq(rooms.active, true)).orderBy(rooms.name),
-        warehouses: await db.select().from(warehouses).where(eq(warehouses.active, true)).orderBy(warehouses.name),
-        items: await db.select().from(items).where(eq(items.active, true)).orderBy(items.name),
+        rooms: activeRooms,
+        warehouses: activeWarehouses,
+        items: activeItems.map((item) => ({
+          ...item,
+          warehouseStockQty: warehouseStockByItem.get(item.id) ?? 0,
+        })),
       };
     }),
     createItem: adminProcedure.input(z.object({ sku: z.string().min(1), name: z.string().min(2), unit: z.string().min(1), category: z.string().optional(), sourceWarehouseId: z.number().nullable().optional(), minStock: z.number().int().min(0).default(0) })).mutation(async ({ input, ctx }) => {
@@ -101,7 +143,21 @@ export const appRouter = router({
     }),
   }),
   dashboard: router({
-    summary: protectedProcedure.query(async () => getDashboardData()),
+    summary: protectedProcedure.input(
+      z.object({ roomId: z.number().int().positive().nullable().optional() }).optional(),
+    ).query(async ({ input, ctx }) => {
+      if (ctx.user.role === "admin") {
+        return getDashboardData("admin", null, ctx.user.id);
+      }
+
+      let roomId = input?.roomId ?? ctx.user.roomId ?? null;
+      if (roomId === null) {
+        const todayLock = await dbSafeFindTodayRoomLock(ctx.user.id);
+        roomId = todayLock?.roomId ?? null;
+      }
+
+      return getDashboardData("user", roomId, ctx.user.id);
+    }),
   }),
   inbound: router({
     create: adminProcedure.input(z.object({ itemId: z.number().int(), quantity: z.number().int().positive(), sourceWarehouseId: z.number().int(), occurredAt: z.coerce.date().optional(), notes: z.string().max(500).optional() })).mutation(async ({ input, ctx }) => {
@@ -239,180 +295,260 @@ export const appRouter = router({
 
       return result;
     }),
-    verify: adminProcedure.input(z.object({ requestId: z.number().int(), status: z.enum(["approved", "partial", "rejected", "ready"]), lines: z.array(z.object({ lineId: z.number().int(), approvedQty: z.number().int().min(0) })).optional() })).mutation(async ({ input, ctx }) => {
-      const db = await getDb(); if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database belum tersedia." });
-      const existing = await db.select().from(requests).where(eq(requests.id, input.requestId)).limit(1); const request = existing[0];
-      if (!request) throw new TRPCError({ code: "NOT_FOUND", message: "Permintaan tidak ditemukan." });
-
-      if (!canTransitionRequestStatus(request.status, input.status)) {
-        throw new TRPCError({ code: "BAD_REQUEST", message: `Status ${request.status} tidak dapat diubah menjadi ${input.status}.` });
+    verify: adminProcedure.input(z.object({
+      requestId: z.number().int(),
+      status: z.enum(["approved", "partial", "rejected"]),
+      lines: z.array(z.object({
+        lineId: z.number().int(),
+        approvedQty: z.number().int().min(0),
+      })).optional(),
+    })).mutation(async ({ input, ctx }) => {
+      const db = await getDb();
+      if (!db) {
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Database belum tersedia.",
+        });
       }
 
-      const currentLines = await db.select().from(requestItems).where(eq(requestItems.requestId, input.requestId));
+      if (input.status !== "rejected" && (!input.lines || input.lines.length === 0)) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Jumlah persetujuan harus diisi untuk permintaan yang disetujui.",
+        });
+      }
 
-      if (input.status === "rejected") {
-        if (input.lines?.length) {
-          throw new TRPCError({ code: "BAD_REQUEST", message: "Permintaan yang ditolak tidak perlu mengubah jumlah item." });
+      await ensureCatalog();
+
+      const result = await db.transaction(async (tx) => {
+        const requestRows = await tx
+          .select()
+          .from(requests)
+          .where(eq(requests.id, input.requestId))
+          .limit(1)
+          .for("update");
+
+        const request = requestRows[0];
+        if (!request) {
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message: "Permintaan tidak ditemukan.",
+          });
         }
-      } else {
-        if (!currentLines.length) {
-          throw new TRPCError({ code: "BAD_REQUEST", message: "Permintaan tidak memiliki item yang dapat diverifikasi." });
+
+        if (!canTransitionRequestStatus(request.status, input.status)) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: `Status ${request.status} tidak dapat diubah menjadi ${input.status}.`,
+          });
         }
+
+        const currentLines = await tx
+          .select()
+          .from(requestItems)
+          .where(eq(requestItems.requestId, input.requestId));
+
+        if (input.status === "rejected") {
+          await tx
+            .update(requests)
+            .set({ status: "rejected", verifiedAt: new Date() })
+            .where(eq(requests.id, input.requestId));
+
+          return {
+            request,
+            status: "rejected" as const,
+            lines: [],
+            transferred: [],
+          };
+        }
+
         if (!input.lines || input.lines.length !== currentLines.length) {
-          throw new TRPCError({ code: "BAD_REQUEST", message: "Semua item pada permintaan harus diverifikasi." });
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "Semua item pada permintaan harus diverifikasi.",
+          });
         }
 
         const linesById = new Map(currentLines.map((line) => [line.id, line]));
         const seenLineIds = new Set<number>();
-        let totalApproved = 0;
+        const approvalByLineId = new Map<number, number>();
 
         for (const line of input.lines) {
           if (seenLineIds.has(line.lineId)) {
-            throw new TRPCError({ code: "BAD_REQUEST", message: "Item verifikasi duplikat." });
+            throw new TRPCError({
+              code: "BAD_REQUEST",
+              message: "Item verifikasi duplikat.",
+            });
           }
           seenLineIds.add(line.lineId);
 
           const currentLine = linesById.get(line.lineId);
           if (!currentLine) {
-            throw new TRPCError({ code: "BAD_REQUEST", message: "Item verifikasi tidak termasuk dalam permintaan ini." });
+            throw new TRPCError({
+              code: "BAD_REQUEST",
+              message: "Item verifikasi tidak termasuk dalam permintaan ini.",
+            });
           }
 
           try {
             validateApprovedQuantity(currentLine.requestedQty, line.approvedQty);
           } catch {
-            throw new TRPCError({ code: "BAD_REQUEST", message: `Jumlah disetujui untuk item ${currentLine.itemId} tidak boleh melebihi jumlah yang diminta.` });
+            throw new TRPCError({
+              code: "BAD_REQUEST",
+              message: `Jumlah disetujui untuk item ${currentLine.itemId} tidak boleh melebihi jumlah yang diminta.`,
+            });
           }
 
-          totalApproved += line.approvedQty;
-          await db.update(requestItems)
-            .set({ approvedQty: line.approvedQty })
-            .where(and(eq(requestItems.id, line.lineId), eq(requestItems.requestId, input.requestId)));
+          approvalByLineId.set(line.lineId, line.approvedQty);
         }
 
-        if (totalApproved <= 0) {
-          throw new TRPCError({ code: "BAD_REQUEST", message: "Jumlah disetujui harus lebih dari 0." });
-        }
-      }
+        const centralWarehouseRows = await tx
+          .select({ id: warehouses.id, name: warehouses.name })
+          .from(warehouses)
+          .where(and(
+            eq(warehouses.kind, "logistics"),
+            eq(warehouses.active, true),
+          ))
+          .limit(1);
 
-      await db.update(requests).set({ status: input.status, verifiedAt: new Date() }).where(eq(requests.id, input.requestId));
-      await writeAudit(ctx.user.id, "verify", "request", input.requestId, request, { status: input.status, lines: input.lines }, "Permintaan diverifikasi kepala gudang");
-      return { success: true };
-    }),
-    deliver: adminProcedure.input(z.object({ requestId: z.number().int() })).mutation(async ({ input, ctx }) => {
-      const db = await getDb(); if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database belum tersedia." });
-
-      const result = await db.transaction(async (tx) => {
-        const existing = await tx.select().from(requests).where(eq(requests.id, input.requestId)).limit(1).for("update");
-        const request = existing[0];
-
-        if (!request) {
-          throw new TRPCError({ code: "NOT_FOUND", message: "Permintaan tidak ditemukan." });
+        const centralWarehouse = centralWarehouseRows[0];
+        if (!centralWarehouse) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "Gudang pusat belum dikonfigurasi.",
+          });
         }
 
-        if (["delivered", "received"].includes(request.status)) {
-          throw new TRPCError({ code: "CONFLICT", message: `Permintaan ${request.requestNo} sudah pernah diserahkan.` });
-        }
+        const sortedLines = [...currentLines].sort((a, b) => a.itemId - b.itemId);
+        const transferred: Array<{ itemId: number; quantity: number }> = [];
 
-        if (!["approved", "partial", "ready"].includes(request.status)) {
-          throw new TRPCError({ code: "BAD_REQUEST", message: "Permintaan belum berada pada tahap yang dapat diserahkan." });
-        }
+        for (const currentLine of sortedLines) {
+          const approvedQty = approvalByLineId.get(currentLine.id) ?? 0;
 
-        const lines = await tx.select().from(requestItems).where(eq(requestItems.requestId, input.requestId));
-        // Lock item rows in a stable order so concurrent deliveries for the
-        // same item cannot both observe the same available stock.
-        lines.sort((a, b) => a.itemId - b.itemId);
-        const now = new Date();
-
-        for (const line of lines) {
-          if (!line.approvedQty) continue;
-          if (line.deliveredQty > 0) {
-            throw new TRPCError({ code: "CONFLICT", message: `Item pada permintaan ${request.requestNo} sudah pernah diserahkan.` });
-          }
-
-          const lockedItem = await tx
-            .select({ id: items.id })
+          const lockedItemRows = await tx
+            .select({ id: items.id, name: items.name })
             .from(items)
-            .where(and(eq(items.id, line.itemId), eq(items.active, true)))
+            .where(and(
+              eq(items.id, currentLine.itemId),
+              eq(items.active, true),
+            ))
             .limit(1)
             .for("update");
 
-          if (!lockedItem[0]) {
-            throw new TRPCError({ code: "BAD_REQUEST", message: "Barang tidak ditemukan atau sudah tidak aktif." });
+          const lockedItem = lockedItemRows[0];
+          if (!lockedItem) {
+            throw new TRPCError({
+              code: "BAD_REQUEST",
+              message: `Barang ${currentLine.itemId} tidak ditemukan atau sudah tidak aktif.`,
+            });
           }
 
-          const stockRows = await tx
-            .select({ qty: sql<number>`COALESCE(SUM(${stockMovements.quantity}), 0)` })
+          const warehouseStockRows = await tx
+            .select({
+              qty: sql<number>`COALESCE(SUM(${stockMovements.quantity}), 0)`,
+            })
             .from(stockMovements)
-            .where(eq(stockMovements.itemId, line.itemId));
-          const available = Number(stockRows[0]?.qty ?? 0);
+            .where(and(
+              eq(stockMovements.itemId, currentLine.itemId),
+              isNull(stockMovements.roomId),
+            ));
 
-          if (available < line.approvedQty) {
-            throw new TRPCError({ code: "BAD_REQUEST", message: "Stok tidak cukup untuk salah satu item." });
+          const available = Number(warehouseStockRows[0]?.qty ?? 0);
+
+          if (approvedQty > available) {
+            throw new TRPCError({
+              code: "BAD_REQUEST",
+              message: `Stok Gudang Pusat untuk ${lockedItem.name} tidak cukup. Tersedia ${available}, disetujui ${approvedQty}.`,
+            });
           }
 
-          await tx.insert(stockMovements).values({
-            itemId: line.itemId,
-            movementType: "out",
-            quantity: -line.approvedQty,
-            roomId: request.roomId,
-            requestId: request.id,
-            createdBy: ctx.user.id,
-            notes: `Distribusi ${request.requestNo}`,
-          });
+          await tx
+            .update(requestItems)
+            .set({
+              approvedQty,
+              deliveredQty: approvedQty,
+            })
+            .where(and(
+              eq(requestItems.id, currentLine.id),
+              eq(requestItems.requestId, input.requestId),
+            ));
 
-          await tx.update(requestItems)
-            .set({ deliveredQty: line.approvedQty })
-            .where(eq(requestItems.id, line.id));
+          if (approvedQty > 0) {
+            await tx.insert(stockMovements).values({
+              itemId: currentLine.itemId,
+              movementType: "out",
+              quantity: -approvedQty,
+              sourceWarehouseId: centralWarehouse.id,
+              roomId: null,
+              requestId: request.id,
+              createdBy: ctx.user.id,
+              notes: `Distribusi otomatis dari ${centralWarehouse.name} untuk ${request.requestNo}`,
+            });
+
+            await tx.insert(stockMovements).values({
+              itemId: currentLine.itemId,
+              movementType: "in",
+              quantity: approvedQty,
+              sourceWarehouseId: centralWarehouse.id,
+              roomId: request.roomId,
+              requestId: request.id,
+              createdBy: ctx.user.id,
+              notes: `Masuk otomatis ke ruangan dari ${request.requestNo}`,
+            });
+
+            transferred.push({
+              itemId: currentLine.itemId,
+              quantity: approvedQty,
+            });
+          }
         }
 
-        await tx.update(requests)
-          .set({ status: "delivered", deliveredAt: now })
+        const totalApproved = transferred.reduce((sum, line) => sum + line.quantity, 0);
+        if (totalApproved <= 0) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "Jumlah yang disetujui harus lebih dari 0.",
+          });
+        }
+
+        const nextStatus = input.status === "partial" ? "partial" : "approved";
+        await tx
+          .update(requests)
+          .set({ status: nextStatus, verifiedAt: new Date() })
           .where(eq(requests.id, input.requestId));
 
-        return { request, deliveredAt: now };
+        return {
+          request,
+          status: nextStatus,
+          lines: currentLines.map((line) => ({
+            lineId: line.id,
+            approvedQty: approvalByLineId.get(line.id) ?? 0,
+          })),
+          transferred,
+        };
       });
 
       await writeAudit(
         ctx.user.id,
-        "deliver",
+        "verify",
         "request",
         input.requestId,
         result.request,
-        { status: "delivered", deliveredAt: result.deliveredAt },
-        "Barang diserahkan ke ruangan"
+        {
+          status: result.status,
+          lines: result.lines,
+          transferred: result.transferred,
+        },
+        result.status === "rejected"
+          ? "Permintaan ditolak kepala gudang"
+          : "Permintaan disetujui dan stok Gudang Pusat dipindahkan otomatis ke ruangan",
       );
 
-      return { success: true };
-    }),
-    receive: protectedProcedure.input(z.object({ requestId: z.number().int() })).mutation(async ({ input, ctx }) => {
-      const db = await getDb(); if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database belum tersedia." });
-
-      const existing = await db.select().from(requests).where(eq(requests.id, input.requestId)).limit(1);
-      const request = existing[0];
-
-      if (!request) {
-        throw new TRPCError({ code: "NOT_FOUND", message: "Permintaan tidak ditemukan." });
-      }
-
-      if (ctx.user.role !== "admin" && request.createdBy !== ctx.user.id) {
-        throw new TRPCError({ code: "FORBIDDEN", message: "Anda hanya dapat menerima permintaan yang Anda ajukan sendiri." });
-      }
-
-      if (request.status !== "delivered") {
-        throw new TRPCError({ code: "BAD_REQUEST", message: "Barang belum berstatus diserahkan." });
-      }
-
-      const result = await db.update(requests)
-        .set({ status: "received", receivedAt: new Date() })
-        .where(and(eq(requests.id, input.requestId), eq(requests.status, "delivered")))
-        .returning({ id: requests.id });
-
-      if (result.length !== 1) {
-        throw new TRPCError({ code: "CONFLICT", message: "Status permintaan berubah. Silakan muat ulang halaman." });
-      }
-
-      await writeAudit(ctx.user.id, "receive", "request", input.requestId, request, { status: "received" }, "Penerimaan barang dikonfirmasi");
-      return { success: true };
+      return {
+        success: true,
+        status: result.status,
+        transferred: result.transferred,
+      };
     }),
   }),
   adjustments: router({
@@ -434,7 +570,14 @@ export const appRouter = router({
         if (!roomRows[0]) throw new TRPCError({ code: "BAD_REQUEST", message: "Ruangan tidak ditemukan atau sedang tidak aktif." });
       }
 
-      const systemQty = await getStockQty(input.itemId);
+      if (input.reasonType === "stocktake" && input.roomId !== null && input.roomId !== undefined) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Stock opname Golog.Irin hanya berlaku untuk Gudang Pusat.",
+        });
+      }
+
+      const systemQty = await getStockQty(input.itemId, input.roomId ?? null);
       let difference: number;
       try {
         difference = calculateStockDifference(systemQty, input.physicalQty);

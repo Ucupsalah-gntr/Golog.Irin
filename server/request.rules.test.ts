@@ -4,10 +4,12 @@ import { canTransitionRequestStatus, validateApprovedQuantity } from "../shared/
 describe("request workflow rules", () => {
   it("allows only valid request status transitions", () => {
     expect(canTransitionRequestStatus("submitted", "approved")).toBe(true);
-    expect(canTransitionRequestStatus("approved", "ready")).toBe(true);
-    expect(canTransitionRequestStatus("ready", "delivered")).toBe(false);
-    expect(canTransitionRequestStatus("delivered", "received")).toBe(false);
-    expect(canTransitionRequestStatus("received", "approved")).toBe(false);
+    expect(canTransitionRequestStatus("submitted", "partial")).toBe(true);
+    expect(canTransitionRequestStatus("submitted", "rejected")).toBe(true);
+    expect(canTransitionRequestStatus("submitted", "ready")).toBe(false);
+    expect(canTransitionRequestStatus("approved", "ready")).toBe(false);
+    expect(canTransitionRequestStatus("partial", "ready")).toBe(false);
+    expect(canTransitionRequestStatus("approved", "rejected")).toBe(false);
   });
 
   it("rejects an approved quantity greater than requested quantity", () => {
