@@ -142,12 +142,14 @@ export const appRouter = router({
     }),
   }),
   dashboard: router({
-    summary: protectedProcedure.query(async ({ ctx }) => {
+    summary: protectedProcedure.input(
+      z.object({ roomId: z.number().int().positive().nullable().optional() }).optional(),
+    ).query(async ({ input, ctx }) => {
       if (ctx.user.role === "admin") {
         return getDashboardData("admin", null, ctx.user.id);
       }
 
-      let roomId = ctx.user.roomId ?? null;
+      let roomId = input?.roomId ?? ctx.user.roomId ?? null;
       if (roomId === null) {
         const todayLock = await dbSafeFindTodayRoomLock(ctx.user.id);
         roomId = todayLock?.roomId ?? null;
@@ -315,6 +317,8 @@ export const appRouter = router({
         });
       }
 
+      await ensureCatalog();
+
       const result = await db.transaction(async (tx) => {
         const requestRows = await tx
           .select()
@@ -397,7 +401,6 @@ export const appRouter = router({
           approvalByLineId.set(line.lineId, line.approvedQty);
         }
 
-        await ensureCatalog();
         const centralWarehouseRows = await tx
           .select({ id: warehouses.id, name: warehouses.name })
           .from(warehouses)
