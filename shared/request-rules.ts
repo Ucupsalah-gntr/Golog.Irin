@@ -11,9 +11,9 @@ export type RequestStatus =
 
 const allowedTransitions: Record<RequestStatus, readonly RequestStatus[]> = {
   draft: ["submitted", "cancelled"],
-  submitted: ["approved", "partial", "rejected", "ready"],
-  approved: ["ready"],
-  partial: ["ready"],
+  submitted: ["approved", "partial", "rejected"],
+  approved: [],
+  partial: [],
   rejected: [],
   ready: [],
   delivered: [],
