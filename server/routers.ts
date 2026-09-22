@@ -12,6 +12,8 @@ import {
   getDashboardData,
   getDb,
   getReportMovements,
+  getMonthlyReportData,
+  getRoomStockRows,
   getStockQty,
   getStockRows,
   writeAudit,
@@ -173,6 +175,175 @@ export const appRouter = router({
       if (!id) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Barang masuk gagal disimpan." });
       await writeAudit(ctx.user.id, "create", "stock_movement", id, null, input, "Barang masuk dicatat");
       return { id };
+    }),
+  }),
+  usage: router({
+    stock: protectedProcedure.input(
+      z.object({ roomId: z.number().int().positive().nullable().optional() }).optional(),
+    ).query(async ({ input, ctx }) => {
+      let roomId = input?.roomId ?? null;
+
+      if (ctx.user.role !== "admin" && roomId === null) {
+        roomId = ctx.user.roomId ?? null;
+        if (roomId === null) {
+          const todayLock = await dbSafeFindTodayRoomLock(ctx.user.id);
+          roomId = todayLock?.roomId ?? null;
+        }
+      }
+
+      if (roomId === null) return [];
+      return getRoomStockRows(roomId);
+    }),
+
+    list: protectedProcedure.input(z.object({
+      roomId: z.number().int().positive().nullable().optional(),
+      from: z.coerce.date().optional(),
+      to: z.coerce.date().optional(),
+      limit: z.number().int().min(1).max(500).default(200),
+    }).optional()).query(async ({ input, ctx }) => {
+      const db = await getDb();
+      if (!db) return [];
+
+      let roomId = input?.roomId ?? null;
+      if (ctx.user.role !== "admin" && roomId === null) {
+        roomId = ctx.user.roomId ?? null;
+        if (roomId === null) {
+          const todayLock = await dbSafeFindTodayRoomLock(ctx.user.id);
+          roomId = todayLock?.roomId ?? null;
+        }
+      }
+
+      if (ctx.user.role !== "admin" && roomId === null) return [];
+
+      const filters = [
+        eq(stockMovements.movementType, "out"),
+        sql`${stockMovements.roomId} IS NOT NULL`,
+      ];
+
+      if (roomId !== null) filters.push(eq(stockMovements.roomId, roomId));
+      if (input?.from) filters.push(gte(stockMovements.occurredAt, input.from));
+      if (input?.to) filters.push(lte(stockMovements.occurredAt, input.to));
+
+      return db
+        .select({
+          movement: stockMovements,
+          item: items,
+          room: rooms,
+        })
+        .from(stockMovements)
+        .leftJoin(items, eq(stockMovements.itemId, items.id))
+        .leftJoin(rooms, eq(stockMovements.roomId, rooms.id))
+        .where(and(...filters))
+        .orderBy(desc(stockMovements.occurredAt))
+        .limit(input?.limit ?? 200);
+    }),
+
+    create: operatorProcedure.input(z.object({
+      roomId: z.number().int().positive(),
+      itemId: z.number().int().positive(),
+      quantity: z.number().int().positive(),
+      occurredAt: z.coerce.date().optional(),
+      notes: z.string().max(500).optional(),
+    })).mutation(async ({ input, ctx }) => {
+      const db = await getDb();
+      if (!db) {
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Database belum tersedia.",
+        });
+      }
+
+      const result = await db.transaction(async (tx) => {
+        const roomRows = await tx
+          .select({ id: rooms.id, name: rooms.name })
+          .from(rooms)
+          .where(and(eq(rooms.id, input.roomId), eq(rooms.active, true)))
+          .limit(1);
+
+        if (!roomRows[0]) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "Ruangan tidak ditemukan atau sedang tidak aktif.",
+          });
+        }
+
+        const itemRows = await tx
+          .select({ id: items.id, name: items.name, unit: items.unit })
+          .from(items)
+          .where(and(eq(items.id, input.itemId), eq(items.active, true)))
+          .limit(1)
+          .for("update");
+
+        const item = itemRows[0];
+        if (!item) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "Barang tidak ditemukan atau sudah tidak aktif.",
+          });
+        }
+
+        const stockRows = await tx
+          .select({
+            qty: sql<number>`COALESCE(SUM(${stockMovements.quantity}), 0)`,
+          })
+          .from(stockMovements)
+          .where(and(
+            eq(stockMovements.itemId, input.itemId),
+            eq(stockMovements.roomId, input.roomId),
+          ));
+
+        const available = Number(stockRows[0]?.qty ?? 0);
+        if (input.quantity > available) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: `Stok ${item.name} di ${roomRows[0].name} tidak cukup. Tersedia ${available} ${item.unit}, dipakai ${input.quantity}.`,
+          });
+        }
+
+        const inserted = await tx.insert(stockMovements).values({
+          itemId: input.itemId,
+          movementType: "out",
+          quantity: -input.quantity,
+          roomId: input.roomId,
+          sourceWarehouseId: null,
+          requestId: null,
+          notes: input.notes,
+          occurredAt: input.occurredAt ?? new Date(),
+          createdBy: ctx.user.id,
+        }).returning({ id: stockMovements.id });
+
+        const movementId = inserted[0]?.id;
+        if (!movementId) {
+          throw new TRPCError({
+            code: "INTERNAL_SERVER_ERROR",
+            message: "Pemakaian gagal disimpan.",
+          });
+        }
+
+        return {
+          movementId,
+          room: roomRows[0],
+          item,
+          availableBefore: available,
+        };
+      });
+
+      await writeAudit(
+        ctx.user.id,
+        "create",
+        "room_usage",
+        result.movementId,
+        { roomId: input.roomId, itemId: input.itemId, availableBefore: result.availableBefore },
+        { quantity: input.quantity, occurredAt: input.occurredAt ?? new Date(), notes: input.notes ?? null },
+        `Pemakaian ${result.item.name} dicatat untuk ${result.room.name}`,
+      );
+
+      return {
+        movementId: result.movementId,
+        roomId: input.roomId,
+        itemId: input.itemId,
+        quantity: input.quantity,
+      };
     }),
   }),
   requests: router({
@@ -601,7 +772,19 @@ export const appRouter = router({
     }),
   }),
   reports: router({
-    movements: adminProcedure.input(z.object({ from: z.coerce.date().optional(), to: z.coerce.date().optional() }).optional()).query(({ input }) => getReportMovements(input?.from, input?.to)),
+    movements: adminProcedure.input(
+      z.object({ from: z.coerce.date().optional(), to: z.coerce.date().optional() }).optional(),
+    ).query(({ input }) => getReportMovements(input?.from, input?.to)),
+    monthly: adminProcedure.input(
+      z.object({ month: z.string().regex(/^\\d{4}-\\d{2}$/) }),
+    ).query(async ({ input }) => {
+      try {
+        return await getMonthlyReportData(input.month);
+      } catch (error) {
+        const message = error instanceof Error ? error.message : "Laporan bulanan gagal disiapkan.";
+        throw new TRPCError({ code: "BAD_REQUEST", message });
+      }
+    }),
   }),
 });
 
