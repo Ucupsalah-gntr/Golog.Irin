@@ -730,12 +730,14 @@ function ReportsView({ report, month, onMonthChange }: any) {
   const rooms = data.rooms ?? [];
   const movements = data.movements ?? [];
   const daysInMonth = Number(data.daysInMonth ?? 0);
-  const openingWarehouse = new Map<number, number>(
-    (data.openingWarehouse ?? []).map((row: any): [number, number] => [Number(row.itemId), Number(row.quantity ?? 0)]),
-  );
-  const openingRooms = new Map<string, number>(
-    (data.openingRooms ?? []).map((row: any): [string, number] => [`${Number(row.roomId)}:${Number(row.itemId)}`, Number(row.quantity ?? 0)]),
-  );
+  const openingWarehouse = new Map<number, number>();
+  for (const row of data.openingWarehouse ?? []) {
+    openingWarehouse.set(Number((row as any).itemId), Number((row as any).quantity ?? 0));
+  }
+  const openingRooms = new Map<string, number>();
+  for (const row of data.openingRooms ?? []) {
+    openingRooms.set(`${Number((row as any).roomId)}:${Number((row as any).itemId)}`, Number((row as any).quantity ?? 0));
+  }
 
   const warehouseStats = new Map<number, { opening: number; inbound: number; distributed: number; adjustment: number }>();
   const roomStats = new Map<string, { roomId: number; itemId: number; distributed: number; used: number; adjustment: number }>();
@@ -745,7 +747,8 @@ function ReportsView({ report, month, onMonthChange }: any) {
   const movementRows: ExcelCell[][] = [];
 
   for (const item of items) {
-    warehouseStats.set(Number(item.id), { opening: openingWarehouse.get(Number(item.id)) ?? 0, inbound: 0, distributed: 0, adjustment: 0 });
+    const opening = Number(openingWarehouse.get(Number((item as any).id)) ?? 0);
+    warehouseStats.set(Number((item as any).id), { opening, inbound: 0, distributed: 0, adjustment: 0 });
   }
 
   for (const row of movements) {
