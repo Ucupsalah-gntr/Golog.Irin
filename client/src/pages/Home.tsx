@@ -474,6 +474,9 @@ function Overview({ dashboard, isAdmin, onGo, report }: { dashboard: any; isAdmi
 function StockView({ stock, isAdmin, items, warehouses, onCreateItem, busy, onImport, importBusy }: any) {
   const [show, setShow] = useState(false);
   const [showImport, setShowImport] = useState(false);
+  const [expanded, setExpanded] = useState<number | null>(null);
+  const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState<"all" | "safe" | "low">("all");
   const [form, setForm] = useState({ sku: "", name: "", unit: "box", category: "", sourceWarehouseId: "", minStock: "0" });
   const [preview, setPreview] = useState<ImportPreview | null>(null);
   const [fileName, setFileName] = useState("");
@@ -495,18 +498,44 @@ function StockView({ stock, isAdmin, items, warehouses, onCreateItem, busy, onIm
   function downloadTemplate() {
     const blob = new Blob([importTemplateCsv()], { type: "text/csv;charset=utf-8" });
     const url = URL.createObjectURL(blob);
-    const anchor = document.createElement("a"); anchor.href = url; anchor.download = "template-master-barang.csv"; anchor.click(); URL.revokeObjectURL(url);
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = "template-master-barang.csv";
+    anchor.click();
+    URL.revokeObjectURL(url);
   }
 
+  const rows = Array.isArray(stock) ? stock : [];
+  const normalizedSearch = search.trim().toLowerCase();
+  const filtered = rows.filter((row: any) => {
+    const low = Number(row.movementQty) <= Number(row.minStock);
+    const matchesStatus = statusFilter === "all" || (statusFilter === "low" ? low : !low);
+    const matchesSearch = !normalizedSearch || [row.name, row.sku, row.category].some((value) => String(value ?? "").toLowerCase().includes(normalizedSearch));
+    return matchesStatus && matchesSearch;
+  });
+
+  const lowCount = rows.filter((row: any) => Number(row.movementQty) <= Number(row.minStock)).length;
+  const totalQty = rows.reduce((sum: number, row: any) => sum + Number(row.movementQty || 0), 0);
   const canImport = Boolean(preview && preview.rows.length && preview.errors.length === 0);
+
   return <Card className="border-slate-200/80 shadow-sm">
     <CardHeader className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-      <div><CardTitle>{isAdmin ? "Stok Gudang Pusat" : "Stok Ruangan"}</CardTitle><p className="mt-1 text-sm text-slate-500">{isAdmin ? "Saldo bersih stok yang tersedia di Gudang Pusat." : "Saldo stok yang saat ini tercatat di ruangan Anda."}</p></div>
-      {isAdmin && <div className="flex flex-wrap gap-2"><Button variant="outline" onClick={() => setShowImport(!showImport)}><Upload size={16} className="mr-2" />Impor Excel</Button><Button onClick={() => setShow(!show)}><PackagePlus size={16} className="mr-2" />Tambah barang</Button></div>}
+      <div>
+        <CardTitle>{isAdmin ? "Stok Gudang Pusat" : "Stok Ruangan"}</CardTitle>
+        <p className="mt-1 text-sm text-slate-500">{isAdmin ? "Pantau saldo stok gudang tanpa perlu membuka detail transaksi." : "Pantau stok yang sudah berada di ruangan Anda."}</p>
+      </div>
+      {isAdmin && <div className="flex flex-wrap gap-2">
+        <Button variant="outline" onClick={() => setShowImport(!showImport)}><Upload size={16} className="mr-2" />Impor Excel</Button>
+        <Button onClick={() => setShow(!show)}><PackagePlus size={16} className="mr-2" />Tambah barang</Button>
+      </div>}
     </CardHeader>
+
     <CardContent>
       {showImport && isAdmin && <div className="mb-6 rounded-2xl border border-teal-100 bg-teal-50/60 p-5">
-        <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between"><div><p className="font-semibold">Impor master barang</p><p className="text-xs leading-5 text-slate-500">Upload .xlsx, .xls, atau .csv. Data divalidasi dulu sebelum disimpan.</p></div><Button variant="outline" size="sm" onClick={downloadTemplate}>Unduh template CSV</Button></div>
+        <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+          <div><p className="font-semibold">Impor master barang</p><p className="text-xs leading-5 text-slate-500">Upload .xlsx, .xls, atau .csv. Data divalidasi dulu sebelum disimpan.</p></div>
+          <Button variant="outline" size="sm" onClick={downloadTemplate}>Unduh template CSV</Button>
+        </div>
         <div className="mt-4 flex flex-wrap items-center gap-3"><Input type="file" accept=".xlsx,.xls,.csv" onChange={(e) => e.target.files?.[0] && handleImportFile(e.target.files[0])} />{fileName && <span className="text-xs text-slate-500">{fileName}</span>}</div>
         {preview && <div className="mt-4 space-y-3">
           <div className="grid gap-3 sm:grid-cols-3"><div className="rounded-xl bg-white p-3"><p className="text-xs text-slate-400">Baris terbaca</p><p className="mt-1 text-lg font-semibold">{preview.rows.length}</p></div><div className="rounded-xl bg-white p-3"><p className="text-xs text-slate-400">Error</p><p className="mt-1 text-lg font-semibold">{preview.errors.length}</p></div><div className="rounded-xl bg-white p-3"><p className="text-xs text-slate-400">SKU duplikat</p><p className="mt-1 text-lg font-semibold">{preview.duplicateSkus.length}</p></div></div>
@@ -514,12 +543,60 @@ function StockView({ stock, isAdmin, items, warehouses, onCreateItem, busy, onIm
           {canImport && <div className="flex flex-col gap-3 rounded-xl border border-emerald-200 bg-emerald-50 p-3 sm:flex-row sm:items-center sm:justify-between"><p className="text-sm text-emerald-700">Semua {preview.rows.length} baris lolos validasi dan siap diimpor.</p><Button disabled={importBusy} onClick={() => onImport(preview.rows)}>{importBusy ? "Mengimpor…" : "Impor ke master barang"}</Button></div>}
         </div>}
       </div>}
-      {show && <div className="mb-6 grid gap-3 rounded-2xl bg-slate-50 p-4 md:grid-cols-3"><Field label="SKU"><Input value={form.sku} onChange={(e) => setForm({ ...form, sku: e.target.value })} placeholder="FAR-001" /></Field><Field label="Nama barang"><Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Sarung tangan" /></Field><Field label="Satuan"><Input value={form.unit} onChange={(e) => setForm({ ...form, unit: e.target.value })} /></Field><Field label="Kategori"><Input value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })} placeholder="Alat kesehatan" /></Field><Field label="Batas minimum"><Input type="number" value={form.minStock} onChange={(e) => setForm({ ...form, minStock: e.target.value })} /></Field><div className="flex items-end"><Button disabled={busy || !form.sku || !form.name} onClick={() => onCreateItem({ ...form, minStock: Number(form.minStock), sourceWarehouseId: form.sourceWarehouseId ? Number(form.sourceWarehouseId) : null })}>Simpan master barang</Button></div></div>}
-      <div className="overflow-x-auto"><table className="w-full min-w-[680px] text-left text-sm"><thead className="border-b border-slate-200 text-xs uppercase tracking-wider text-slate-400"><tr><th className="px-3 py-3">Barang</th><th className="px-3 py-3">Kategori</th><th className="px-3 py-3">Stok</th><th className="px-3 py-3">Minimum</th><th className="px-3 py-3">Status</th></tr></thead><tbody className="divide-y divide-slate-100">{stock.map((row: any) => <tr key={row.itemId}><td className="px-3 py-4"><p className="font-medium">{row.name}</p><p className="text-xs text-slate-400">{row.sku} · per {row.unit}</p></td><td className="px-3 py-4 text-slate-500">{row.category || "Umum"}</td><td className="px-3 py-4 text-lg font-semibold">{formatNumber(row.movementQty)} <span className="text-xs font-normal text-slate-400">{row.unit}</span></td><td className="px-3 py-4 text-slate-500">{formatNumber(row.minStock)}</td><td className="px-3 py-4"><Badge className={Number(row.movementQty) <= row.minStock ? "border-amber-200 bg-amber-50 text-amber-700" : "border-emerald-200 bg-emerald-50 text-emerald-700"}>{Number(row.movementQty) <= row.minStock ? "Perlu cek" : "Aman"}</Badge></td></tr>)}{!stock.length && <tr><td colSpan={5}><EmptyState title="Master barang masih kosong" text={isAdmin ? "Tambahkan master barang terlebih dahulu." : "Belum ada data stok."} /></td></tr>}</tbody></table></div>
+
+      {show && <div className="mb-6 grid gap-3 rounded-2xl bg-slate-50 p-4 md:grid-cols-3">
+        <Field label="SKU"><Input value={form.sku} onChange={(e) => setForm({ ...form, sku: e.target.value })} placeholder="FAR-001" /></Field>
+        <Field label="Nama barang"><Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Sarung tangan" /></Field>
+        <Field label="Satuan"><Input value={form.unit} onChange={(e) => setForm({ ...form, unit: e.target.value })} /></Field>
+        <Field label="Kategori"><Input value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })} placeholder="Alat kesehatan" /></Field>
+        <Field label="Batas minimum"><Input type="number" value={form.minStock} onChange={(e) => setForm({ ...form, minStock: e.target.value })} /></Field>
+        <div className="flex items-end"><Button disabled={busy || !form.sku || !form.name} onClick={() => onCreateItem({ ...form, minStock: Number(form.minStock), sourceWarehouseId: form.sourceWarehouseId ? Number(form.sourceWarehouseId) : null })}>Simpan master barang</Button></div>
+      </div>}
+
+      <div className="grid gap-3 sm:grid-cols-3">
+        <div className="rounded-2xl border border-slate-200 bg-white p-4"><p className="text-xs font-medium text-slate-400">Jenis barang</p><p className="mt-1 text-2xl font-semibold">{formatNumber(rows.length)}</p><p className="mt-1 text-xs text-slate-400">SKU aktif</p></div>
+        <div className="rounded-2xl border border-slate-200 bg-white p-4"><p className="text-xs font-medium text-slate-400">Total stok</p><p className="mt-1 text-2xl font-semibold">{formatNumber(totalQty)}</p><p className="mt-1 text-xs text-slate-400">seluruh satuan tercatat</p></div>
+        <button type="button" onClick={() => setStatusFilter(statusFilter === "low" ? "all" : "low")} className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-left transition hover:bg-amber-100"><p className="text-xs font-medium text-amber-700">Perlu cek</p><p className="mt-1 text-2xl font-semibold text-amber-900">{formatNumber(lowCount)}</p><p className="mt-1 text-xs text-amber-700/70">stok ≤ minimum</p></button>
+      </div>
+
+      <div className="mt-5 flex flex-col gap-3 md:flex-row">
+        <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Cari nama barang, SKU, atau kategori…" className="h-11 md:flex-1" />
+        <div className="flex rounded-xl border border-slate-200 bg-white p-1">
+          {([["all", "Semua"], ["safe", "Aman"], ["low", "Perlu cek"]] as const).map(([value, label]) => <button key={value} type="button" onClick={() => setStatusFilter(value)} className={`rounded-lg px-3 py-2 text-xs font-medium transition ${statusFilter === value ? "bg-[#102a2b] text-white" : "text-slate-500 hover:bg-slate-50"}`}>{label}</button>)}
+        </div>
+      </div>
+
+      <div className="mt-4 space-y-2">
+        {filtered.map((row: any) => {
+          const low = Number(row.movementQty) <= Number(row.minStock);
+          const open = expanded === Number(row.itemId);
+          return <div key={row.itemId} className="overflow-hidden rounded-2xl border border-slate-200 bg-white transition">
+            <button type="button" onClick={() => setExpanded(open ? null : Number(row.itemId))} className="flex w-full items-center justify-between gap-4 p-4 text-left hover:bg-slate-50/70">
+              <div className="min-w-0 flex-1">
+                <p className="truncate font-semibold text-slate-800">{row.name}</p>
+                <p className="mt-1 truncate text-xs text-slate-400">{row.sku} · {row.category || "Umum"} · {row.unit}</p>
+              </div>
+              <div className="flex shrink-0 items-center gap-3">
+                <div className="text-right"><p className={`text-lg font-bold ${low ? "text-amber-700" : "text-slate-800"}`}>{formatNumber(row.movementQty)}</p><p className="text-[11px] text-slate-400">{row.unit}</p></div>
+                <Badge className={low ? "border-amber-200 bg-amber-50 text-amber-700" : "border-emerald-200 bg-emerald-50 text-emerald-700"}>{low ? "Perlu cek" : "Aman"}</Badge>
+              </div>
+            </button>
+            {open && <div className="border-t border-slate-100 bg-slate-50/70 px-4 pb-4 pt-3">
+              <div className="grid gap-2 sm:grid-cols-3">
+                <div className="rounded-xl bg-white p-3"><p className="text-[11px] uppercase tracking-wider text-slate-400">SKU</p><p className="mt-1 text-sm font-semibold">{row.sku}</p></div>
+                <div className="rounded-xl bg-white p-3"><p className="text-[11px] uppercase tracking-wider text-slate-400">Minimum</p><p className="mt-1 text-sm font-semibold">{formatNumber(row.minStock)} {row.unit}</p></div>
+                <div className="rounded-xl bg-white p-3"><p className="text-[11px] uppercase tracking-wider text-slate-400">Status stok</p><p className="mt-1 text-sm font-semibold">{low ? "Perlu pemeriksaan" : "Masih di atas minimum"}</p></div>
+              </div>
+              <div className="mt-3 flex items-center justify-between text-xs text-slate-400"><span>{isAdmin ? "Lokasi: Gudang Pusat" : "Lokasi: Ruangan Anda"}</span><span>Saldo saat ini</span></div>
+            </div>}
+          </div>;
+        })}
+        {!filtered.length && <EmptyState title={rows.length ? "Barang tidak ditemukan" : "Master barang masih kosong"} text={rows.length ? "Coba ubah kata pencarian atau filter status." : isAdmin ? "Tambahkan master barang terlebih dahulu." : "Belum ada data stok."} />}
+      </div>
+      {rows.length > 0 && <p className="mt-4 text-xs text-slate-400">Tip: klik satu barang untuk melihat detail minimum dan statusnya. Tampilan ini hanya memantau saldo; perpindahan stok tetap dilakukan melalui Permintaan.</p>}
     </CardContent>
   </Card>;
 }
-
 function InboundView({ items, warehouses, onSubmit, busy }: any) { const [form, setForm] = useState({ itemId: "", quantity: "", sourceWarehouseId: "", notes: "", occurredAt: new Date().toISOString().slice(0, 10) }); return <Card className="max-w-3xl border-slate-200/80 shadow-sm"><CardHeader><CardTitle>Catat barang masuk</CardTitle><p className="mt-1 text-sm text-slate-500">Penerimaan dari Gudang Farmasi, Gudang RT, CSSD, atau Laboratorium.</p></CardHeader><CardContent><div className="grid gap-4 md:grid-cols-2"><Field label="Barang"><select className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm" value={form.itemId} onChange={(e) => setForm({ ...form, itemId: e.target.value })}><option value="">Pilih barang</option>{items.map((item: any) => <option key={item.id} value={item.id}>{item.name} · {item.sku}</option>)}</select></Field><Field label="Sumber gudang"><select className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm" value={form.sourceWarehouseId} onChange={(e) => setForm({ ...form, sourceWarehouseId: e.target.value })}><option value="">Pilih gudang sumber</option>{warehouses.filter((w: any) => w.kind === "source").map((w: any) => <option key={w.id} value={w.id}>{w.name}</option>)}</select></Field><Field label="Jumlah"><Input type="number" min="1" value={form.quantity} onChange={(e) => setForm({ ...form, quantity: e.target.value })} placeholder="0" /></Field><Field label="Tanggal kejadian"><Input type="date" value={form.occurredAt} onChange={(e) => setForm({ ...form, occurredAt: e.target.value })} /></Field><div className="md:col-span-2"><Field label="Catatan"><Textarea value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} placeholder="Nomor dokumen, nota, atau keterangan penerimaan" /></Field></div></div><Button className="mt-6" disabled={busy || !form.itemId || !form.quantity || !form.sourceWarehouseId} onClick={() => onSubmit({ itemId: Number(form.itemId), quantity: Number(form.quantity), sourceWarehouseId: Number(form.sourceWarehouseId), occurredAt: new Date(form.occurredAt) })}><ArrowDownToLine size={16} className="mr-2" />Simpan barang masuk</Button></CardContent></Card> }
 
 function RequestsView({ requests, rooms, items, isAdmin, currentUserId, todayRoomLocks, selectedRoom, selectedRoomName, setSelectedRoom, lines, setLines, total, onCreate, onVerify, busy }: any) {
