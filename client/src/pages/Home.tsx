@@ -603,14 +603,65 @@ function RequestsView({ requests, rooms, items, isAdmin, currentUserId, todayRoo
   const [priority, setPriority] = useState("normal");
   const [notes, setNotes] = useState("");
   const [filter, setFilter] = useState("all");
+  const [approvalQty, setApprovalQty] = useState<Record<string, number>>({});
   const filtered = filter === "all" ? requests : requests.filter((row: any) => row.request.status === filter);
   const getRoomLock = (roomId: number) => todayRoomLocks.find((lock: any) => lock.roomId === roomId);
   const selectedLock = selectedRoom ? getRoomLock(selectedRoom) : null;
   const selectedLockedByOther = Boolean(selectedLock && selectedLock.requesterId !== currentUserId);
 
+  function getApprovalQty(requestId: number, line: any) {
+    const key = `${requestId}:${line.line.id}`;
+    return approvalQty[key] ?? Number(line.line.requestedQty);
+  }
+
+  function setQty(requestId: number, lineId: number, value: string) {
+    const key = `${requestId}:${lineId}`;
+    const parsed = value === "" ? 0 : Number(value);
+    setApprovalQty((current) => ({ ...current, [key]: Number.isFinite(parsed) ? parsed : 0 }));
+  }
+
+  function submitApproval(row: any) {
+    const approvalLines = row.lines.map((line: any) => ({
+      lineId: Number(line.line.id),
+      requestedQty: Number(line.line.requestedQty),
+      approvedQty: Math.max(0, Math.trunc(getApprovalQty(row.request.id, line))),
+    }));
+
+    const invalid = approvalLines.some((line: any) =>
+      !Number.isInteger(line.approvedQty) ||
+      line.approvedQty < 0 ||
+      line.approvedQty > line.requestedQty
+    );
+    if (invalid) {
+      toast.error("Jumlah distribusi tidak valid. Periksa kembali tiap item.");
+      return;
+    }
+
+    const totalApproved = approvalLines.reduce((sum: number, line: any) => sum + line.approvedQty, 0);
+    if (totalApproved <= 0) {
+      toast.error("Minimal satu item harus dipindahkan.");
+      return;
+    }
+
+    const full = approvalLines.every((line: any) => line.approvedQty === line.requestedQty);
+    onVerify({
+      requestId: row.request.id,
+      status: full ? "approved" : "partial",
+      lines: approvalLines.map(({ lineId, approvedQty }: any) => ({ lineId, approvedQty })),
+    });
+  }
+
+  function fillFullApproval(row: any) {
+    const next = { ...approvalQty };
+    for (const line of row.lines) {
+      next[`${row.request.id}:${line.line.id}`] = Number(line.line.requestedQty);
+    }
+    setApprovalQty(next);
+  }
+
   return <div className="grid gap-6 xl:grid-cols-[.85fr_1.5fr]">
     <Card className="border-slate-200/80 shadow-sm">
-      <CardHeader><CardTitle>{isAdmin ? "Verifikasi permintaan" : "Buat permintaan"}</CardTitle><p className="mt-1 text-sm text-slate-500">{isAdmin ? "Periksa jumlah lalu setujui untuk langsung memindahkan stok Gudang Pusat ke ruangan." : "Pilih ruangan yang sedang Anda layani hari ini. Stok Gudang Pusat ditampilkan sebelum mengajukan."}</p></CardHeader>
+      <CardHeader><CardTitle>{isAdmin ? "Verifikasi permintaan" : "Buat permintaan"}</CardTitle><p className="mt-1 text-sm text-slate-500">{isAdmin ? "Tentukan jumlah yang benar-benar dipindahkan. Permintaan dapat disetujui penuh atau sebagian sesuai ketersediaan stok." : "Pilih ruangan yang sedang Anda layani hari ini. Stok Gudang Pusat ditampilkan sebelum mengajukan."}</p></CardHeader>
       <CardContent>{!isAdmin && <>
         <Field label="Ruangan yang dilayani *"><select className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm" value={selectedRoom ?? ""} onChange={(e) => setSelectedRoom(Number(e.target.value) || null)}><option value="">Pilih ruangan sebelum lanjut</option>{rooms.map((room: any) => { const lock = getRoomLock(room.id); const lockedByOther = Boolean(lock && lock.requesterId !== currentUserId); return <option key={room.id} value={room.id} disabled={lockedByOther}>{room.name}{lock ? lock.requesterId === currentUserId ? " — Anda" : ` — ${lock.requesterName || "petugas lain"}` : " — belum ada PIC"} </option>; })}</select></Field>
         <div className={`mt-4 rounded-xl p-3 text-sm ${selectedLockedByOther ? "bg-rose-50 text-rose-800" : selectedLock ? "bg-emerald-50 text-emerald-800" : "bg-teal-50 text-teal-800"}`}>{selectedLock ? selectedLock.requesterId === currentUserId ? <>Anda adalah PIC request <strong>{selectedRoomName}</strong> hari ini. Anda dapat membuat request susulan.</> : <>Ruangan <strong>{selectedRoomName}</strong> sudah memiliki PIC request hari ini: <strong>{selectedLock.requesterName || "petugas lain"}</strong>.</> : <>Permintaan akan menjadi request pertama untuk <strong>{selectedRoomName || "ruangan yang dipilih"}</strong> hari ini.</>}</div>
@@ -637,13 +688,36 @@ function RequestsView({ requests, rooms, items, isAdmin, currentUserId, todayRoo
     </Card>
 
     <Card className="border-slate-200/80 shadow-sm">
-      <CardHeader className="flex flex-row items-center justify-between"><div><CardTitle>Daftar permintaan</CardTitle><p className="mt-1 text-sm text-slate-500">{isAdmin ? "Semua ruangan · verifikasi dan distribusi otomatis" : "Riwayat permintaan yang Anda buat"}</p></div><select className="h-9 rounded-lg border border-input bg-background px-2 text-xs" value={filter} onChange={(e) => setFilter(e.target.value)}><option value="all">Semua status</option><option value="submitted">Diajukan</option><option value="approved">Disetujui</option><option value="partial">Sebagian</option><option value="rejected">Ditolak</option></select></CardHeader>
-      <CardContent><div className="space-y-3">{filtered.map((row: any) => <div key={row.request.id} className="rounded-2xl border border-slate-200 p-4">
-        <div className="flex flex-wrap items-start justify-between gap-3"><div><div className="flex items-center gap-2"><span className="font-semibold">{row.request.requestNo}</span><Badge className={statusTone(row.request.status)}>{statusLabel(row.request.status)}</Badge></div><p className="mt-1 text-sm text-slate-500">{row.room?.name || "Ruangan"} · {formatDate(row.request.createdAt)} · <span className="capitalize">{row.request.priority}</span></p></div>
-          {isAdmin && row.request.status === "submitted" && <div className="flex gap-2"><Button size="sm" onClick={() => onVerify({ requestId: row.request.id, status: "approved", lines: row.lines.map((line: any) => ({ lineId: line.line.id, approvedQty: line.line.requestedQty })) })}>Setujui & pindahkan stok</Button><Button size="sm" variant="outline" onClick={() => onVerify({ requestId: row.request.id, status: "rejected" })}>Tolak</Button></div>}
-        </div>
-        <div className="mt-4 grid gap-2 border-t border-slate-100 pt-3 text-sm">{row.lines.map((line: any) => <div key={line.line.id} className="flex justify-between gap-4"><span>{line.item?.name || "Item"}</span><span className="font-medium">{line.line.requestedQty} diminta · {line.line.approvedQty} dipindahkan</span></div>)}</div>
-      </div>)}{!filtered.length && <EmptyState title="Belum ada permintaan" text={isAdmin ? "Permintaan dari ruangan akan muncul di sini." : "Buat permintaan pertama untuk memulai."} />}</div></CardContent>
+      <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"><div><CardTitle>Daftar permintaan</CardTitle><p className="mt-1 text-sm text-slate-500">{isAdmin ? "Semua ruangan · verifikasi dan distribusi otomatis" : "Riwayat permintaan yang Anda buat"}</p></div><select className="h-9 rounded-lg border border-input bg-background px-2 text-xs" value={filter} onChange={(e) => setFilter(e.target.value)}><option value="all">Semua status</option><option value="submitted">Diajukan</option><option value="approved">Disetujui</option><option value="partial">Sebagian</option><option value="rejected">Ditolak</option></select></CardHeader>
+      <CardContent><div className="space-y-3">{filtered.map((row: any) => {
+        const isSubmitted = row.request.status === "submitted";
+        return <div key={row.request.id} className="rounded-2xl border border-slate-200 p-4">
+          <div className="flex flex-wrap items-start justify-between gap-3"><div><div className="flex items-center gap-2"><span className="font-semibold">{row.request.requestNo}</span><Badge className={statusTone(row.request.status)}>{statusLabel(row.request.status)}</Badge></div><p className="mt-1 text-sm text-slate-500">{row.room?.name || "Ruangan"} · {formatDate(row.request.createdAt)} · <span className="capitalize">{row.request.priority}</span></p></div>
+            {isAdmin && isSubmitted && <div className="flex flex-wrap gap-2">
+              <Button size="sm" variant="outline" onClick={() => fillFullApproval(row)}>Isi penuh</Button>
+              <Button size="sm" onClick={() => submitApproval(row)} disabled={busy}>Terapkan distribusi</Button>
+              <Button size="sm" variant="outline" onClick={() => onVerify({ requestId: row.request.id, status: "rejected" })} disabled={busy}>Tolak</Button>
+            </div>}
+          </div>
+
+          <div className="mt-4 space-y-2 border-t border-slate-100 pt-3">
+            {row.lines.map((line: any) => {
+              const requestedQty = Number(line.line.requestedQty);
+              const currentQty = getApprovalQty(row.request.id, line);
+              const item = line.item;
+              const warehouseQty = Number(items.find((candidate: any) => Number(candidate.id) === Number(line.line.itemId))?.warehouseStockQty ?? 0);
+              const exceedsWarehouse = currentQty > warehouseQty;
+              return <div key={line.line.id} className={`rounded-xl border p-3 ${isSubmitted && isAdmin ? "border-slate-200 bg-slate-50/70" : "border-transparent bg-slate-50/50"}`}>
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div className="min-w-0"><p className="truncate font-medium">{item?.name || "Item"}</p><p className="mt-1 text-xs text-slate-400">{item?.sku || ""} · {item?.unit || "unit"} · stok gudang saat ini {formatNumber(warehouseQty)}</p></div>
+                  {isSubmitted && isAdmin ? <div className="w-full sm:w-44"><Label className="text-[11px] text-slate-500">Dipindahkan</Label><Input type="number" min="0" max={requestedQty} step="1" value={currentQty} onChange={(e) => setQty(row.request.id, line.line.id, e.target.value)} className={exceedsWarehouse ? "border-amber-400 bg-amber-50" : ""} /></div> : <div className="text-right text-sm font-medium">{requestedQty} diminta · {line.line.approvedQty} dipindahkan</div>}
+                </div>
+                {isSubmitted && isAdmin && <div className={`mt-2 text-xs ${exceedsWarehouse ? "text-amber-700" : "text-slate-400"}`}>{currentQty <= requestedQty ? `Diminta ${formatNumber(requestedQty)} ${item?.unit || "unit"} · akan dipindahkan ${formatNumber(currentQty)}` : "Jumlah tidak boleh melebihi permintaan."}{exceedsWarehouse ? " · melebihi stok saat ini; sistem akan menolak jika stok sudah tidak cukup." : ""}</div>}
+              </div>;
+            })}
+          </div>
+        </div>;
+      })}{!filtered.length && <EmptyState title="Belum ada permintaan" text={isAdmin ? "Permintaan dari ruangan akan muncul di sini." : "Buat permintaan pertama untuk memulai."} />}</div></CardContent>
     </Card>
   </div>;
 }
