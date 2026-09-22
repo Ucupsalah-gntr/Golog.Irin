@@ -604,7 +604,33 @@ function RequestsView({ requests, rooms, items, isAdmin, currentUserId, todayRoo
   const [notes, setNotes] = useState("");
   const [filter, setFilter] = useState("all");
   const [approvalQty, setApprovalQty] = useState<Record<string, number>>({});
-  const filtered = filter === "all" ? requests : requests.filter((row: any) => row.request.status === filter);
+  const filtered = filter === "all"
+    ? requests
+    : filter === "pending"
+      ? requests.filter((row: any) => row.request.status === "submitted")
+      : requests.filter((row: any) => row.request.status === filter);
+
+  const priorityRank: Record<string, number> = { darurat: 0, mendesak: 1, normal: 2 };
+  const sortedRequests = [...filtered].sort((a: any, b: any) => {
+    if (!isAdmin) return new Date(b.request.createdAt).getTime() - new Date(a.request.createdAt).getTime();
+    const aPending = a.request.status === "submitted" ? 0 : 1;
+    const bPending = b.request.status === "submitted" ? 0 : 1;
+    if (aPending !== bPending) return aPending - bPending;
+    if (aPending === 0) {
+      const priorityDiff = (priorityRank[a.request.priority] ?? 9) - (priorityRank[b.request.priority] ?? 9);
+      if (priorityDiff !== 0) return priorityDiff;
+    }
+    return new Date(b.request.createdAt).getTime() - new Date(a.request.createdAt).getTime();
+  });
+
+  const requestCounts = {
+    all: requests.length,
+    pending: requests.filter((row: any) => row.request.status === "submitted").length,
+    partial: requests.filter((row: any) => row.request.status === "partial").length,
+    approved: requests.filter((row: any) => row.request.status === "approved").length,
+    rejected: requests.filter((row: any) => row.request.status === "rejected").length,
+  };
+
   const getRoomLock = (roomId: number) => todayRoomLocks.find((lock: any) => lock.roomId === roomId);
   const selectedLock = selectedRoom ? getRoomLock(selectedRoom) : null;
   const selectedLockedByOther = Boolean(selectedLock && selectedLock.requesterId !== currentUserId);
@@ -659,13 +685,154 @@ function RequestsView({ requests, rooms, items, isAdmin, currentUserId, todayRoo
     setApprovalQty(next);
   }
 
+  function priorityMeta(priorityValue: string) {
+    if (priorityValue === "darurat") return { label: "DARURAT", className: "border-rose-200 bg-rose-50 text-rose-700" };
+    if (priorityValue === "mendesak") return { label: "MENDESAK", className: "border-amber-200 bg-amber-50 text-amber-700" };
+    return { label: "NORMAL", className: "border-slate-200 bg-slate-50 text-slate-600" };
+  }
+
+  function stockAfterTone(afterQty: number, minimumQty: number) {
+    if (afterQty < 0) return "text-rose-700";
+    if (afterQty <= minimumQty) return "text-amber-700";
+    return "text-emerald-700";
+  }
+
+  function stockAfterLabel(afterQty: number, minimumQty: number) {
+    if (afterQty < 0) return "Tidak cukup";
+    if (afterQty <= minimumQty) return "Menyentuh minimum";
+    return "Masih aman";
+  }
+
+  if (isAdmin) {
+    return <div className="space-y-5">
+      <Card className="border-slate-200/80 shadow-sm">
+        <CardHeader className="pb-4">
+          <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
+            <div>
+              <CardTitle>Antrean permintaan</CardTitle>
+              <p className="mt-1 max-w-3xl text-sm text-slate-500">Prioritas permintaan ditampilkan lebih dulu. Kepala gudang menentukan jumlah yang benar-benar dipindahkan berdasarkan stok yang tersedia.</p>
+            </div>
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+              <button type="button" onClick={() => setFilter("all")} className={`rounded-xl border px-4 py-3 text-left transition ${filter === "all" ? "border-[#102a2b] bg-[#102a2b] text-white" : "border-slate-200 bg-white hover:bg-slate-50"}`}><p className="text-[11px] opacity-70">Semua</p><p className="mt-1 text-xl font-semibold">{formatNumber(requestCounts.all)}</p></button>
+              <button type="button" onClick={() => setFilter("pending")} className={`rounded-xl border px-4 py-3 text-left transition ${filter === "pending" ? "border-amber-500 bg-amber-50 text-amber-900" : "border-slate-200 bg-white hover:bg-slate-50"}`}><p className="text-[11px] opacity-70">Menunggu</p><p className="mt-1 text-xl font-semibold">{formatNumber(requestCounts.pending)}</p></button>
+              <button type="button" onClick={() => setFilter("partial")} className={`rounded-xl border px-4 py-3 text-left transition ${filter === "partial" ? "border-amber-500 bg-amber-50 text-amber-900" : "border-slate-200 bg-white hover:bg-slate-50"}`}><p className="text-[11px] opacity-70">Sebagian</p><p className="mt-1 text-xl font-semibold">{formatNumber(requestCounts.partial)}</p></button>
+              <button type="button" onClick={() => setFilter("approved")} className={`rounded-xl border px-4 py-3 text-left transition ${filter === "approved" ? "border-emerald-500 bg-emerald-50 text-emerald-900" : "border-slate-200 bg-white hover:bg-slate-50"}`}><p className="text-[11px] opacity-70">Disetujui</p><p className="mt-1 text-xl font-semibold">{formatNumber(requestCounts.approved)}</p></button>
+            </div>
+          </div>
+        </CardHeader>
+      </Card>
+
+      <div className="space-y-4">
+        {sortedRequests.map((row: any) => {
+          const isSubmitted = row.request.status === "submitted";
+          const meta = priorityMeta(row.request.priority);
+
+          return <Card key={row.request.id} className={`overflow-hidden border-slate-200/80 shadow-sm ${isSubmitted ? "ring-1 ring-slate-100" : ""}`}>
+            <CardContent className="p-0">
+              <div className="flex flex-col gap-4 border-b border-slate-100 px-5 py-4 lg:flex-row lg:items-center lg:justify-between">
+                <div className="min-w-0">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Badge className={meta.className}>{meta.label}</Badge>
+                    <span className="font-semibold text-slate-800">{row.request.requestNo}</span>
+                    <Badge className={statusTone(row.request.status)}>{statusLabel(row.request.status)}</Badge>
+                  </div>
+                  <p className="mt-1 text-sm text-slate-500">{row.room?.name || "Ruangan"} · {formatDate(row.request.createdAt)}</p>
+                  {row.request.notes && <p className="mt-2 text-xs leading-5 text-slate-500">{row.request.notes}</p>}
+                </div>
+
+                {isSubmitted && <div className="flex flex-wrap gap-2">
+                  <Button size="sm" variant="outline" onClick={() => fillFullApproval(row)}>Isi penuh</Button>
+                  <Button size="sm" onClick={() => submitApproval(row)} disabled={busy}><Truck size={15} className="mr-2" />Terapkan distribusi</Button>
+                  <Button size="sm" variant="outline" onClick={() => onVerify({ requestId: row.request.id, status: "rejected" })} disabled={busy}>Tolak</Button>
+                </div>}
+              </div>
+
+              <div className="hidden overflow-x-auto md:block">
+                <table className="w-full min-w-[900px] text-left text-sm">
+                  <thead className="bg-slate-50 text-[11px] uppercase tracking-wider text-slate-400">
+                    <tr>
+                      <th className="px-5 py-3">Barang</th>
+                      <th className="px-4 py-3 text-right">Diminta</th>
+                      <th className="px-4 py-3 text-right">Stok gudang</th>
+                      <th className="px-4 py-3 text-right">Dipindahkan</th>
+                      <th className="px-5 py-3 text-right">Sisa gudang</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {row.lines.map((line: any) => {
+                      const item = line.item;
+                      const warehouseItem = items.find((candidate: any) => Number(candidate.id) === Number(line.line.itemId));
+                      const warehouseQty = Number(warehouseItem?.warehouseStockQty ?? 0);
+                      const minimumQty = Number(warehouseItem?.minStock ?? 0);
+                      const currentQty = getApprovalQty(row.request.id, line);
+                      const afterQty = warehouseQty - currentQty;
+                      const exceedsWarehouse = currentQty > warehouseQty;
+                      return <tr key={line.line.id} className={isSubmitted ? "bg-white" : "bg-slate-50/30"}>
+                        <td className="px-5 py-4">
+                          <p className="font-medium text-slate-800">{item?.name || "Item"}</p>
+                          <p className="mt-1 text-xs text-slate-400">{item?.sku || ""} · {item?.unit || "unit"}</p>
+                        </td>
+                        <td className="px-4 py-4 text-right font-medium">{formatNumber(line.line.requestedQty)}</td>
+                        <td className="px-4 py-4 text-right">
+                          <p className="font-semibold text-slate-700">{formatNumber(warehouseQty)}</p>
+                          {isSubmitted && <p className="mt-1 text-[11px] text-slate-400">min {formatNumber(minimumQty)}</p>}
+                        </td>
+                        <td className="px-4 py-4">
+                          {isSubmitted ? <Input type="number" min="0" max={line.line.requestedQty} step="1" value={currentQty} onChange={(e) => setQty(row.request.id, line.line.id, e.target.value)} className={exceedsWarehouse ? "border-amber-400 bg-amber-50" : ""} /> : <p className="text-right font-semibold">{formatNumber(line.line.approvedQty)}</p>}
+                        </td>
+                        <td className="px-5 py-4 text-right">
+                          {isSubmitted ? <><p className={`font-semibold ${stockAfterTone(afterQty, minimumQty)}`}>{afterQty < 0 ? "−" : formatNumber(afterQty)}</p><p className={`mt-1 text-[11px] ${stockAfterTone(afterQty, minimumQty)}`}>{stockAfterLabel(afterQty, minimumQty)}</p></> : <p className="text-slate-400">—</p>}
+                        </td>
+                      </tr>;
+                    })}
+                  </tbody>
+                </table>
+              </div>
+
+              <div className="divide-y divide-slate-100 md:hidden">
+                {row.lines.map((line: any) => {
+                  const item = line.item;
+                  const warehouseItem = items.find((candidate: any) => Number(candidate.id) === Number(line.line.itemId));
+                  const warehouseQty = Number(warehouseItem?.warehouseStockQty ?? 0);
+                  const minimumQty = Number(warehouseItem?.minStock ?? 0);
+                  const currentQty = getApprovalQty(row.request.id, line);
+                  const afterQty = warehouseQty - currentQty;
+                  const exceedsWarehouse = currentQty > warehouseQty;
+
+                  return <div key={line.line.id} className="space-y-3 p-4">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0"><p className="font-medium text-slate-800">{item?.name || "Item"}</p><p className="mt-1 text-xs text-slate-400">{item?.sku || ""} · {item?.unit || "unit"}</p></div>
+                      <span className="shrink-0 rounded-lg bg-slate-50 px-2.5 py-1 text-xs font-medium text-slate-600">{formatNumber(line.line.requestedQty)} diminta</span>
+                    </div>
+                    <div className="grid grid-cols-3 gap-2">
+                      <div className="rounded-xl bg-slate-50 p-3"><p className="text-[10px] uppercase tracking-wider text-slate-400">Stok</p><p className="mt-1 font-semibold">{formatNumber(warehouseQty)}</p></div>
+                      <div className="rounded-xl bg-slate-50 p-3"><p className="text-[10px] uppercase tracking-wider text-slate-400">Min</p><p className="mt-1 font-semibold">{formatNumber(minimumQty)}</p></div>
+                      <div className="rounded-xl bg-slate-50 p-3"><p className="text-[10px] uppercase tracking-wider text-slate-400">Sisa</p><p className={`mt-1 font-semibold ${stockAfterTone(afterQty, minimumQty)}`}>{afterQty < 0 ? "−" : formatNumber(afterQty)}</p></div>
+                    </div>
+                    {isSubmitted && <div className="rounded-xl border border-slate-200 bg-white p-3">
+                      <Label className="text-[11px] text-slate-500">Jumlah dipindahkan</Label>
+                      <Input type="number" min="0" max={line.line.requestedQty} step="1" value={currentQty} onChange={(e) => setQty(row.request.id, line.line.id, e.target.value)} className={exceedsWarehouse ? "mt-2 border-amber-400 bg-amber-50" : "mt-2"} />
+                    </div>}
+                    {isSubmitted && <div className={`text-xs ${stockAfterTone(afterQty, minimumQty)}`}>{exceedsWarehouse ? "Jumlah melebihi stok gudang saat ini; verifikasi akhir tetap dilakukan oleh server." : stockAfterLabel(afterQty, minimumQty)}</div>}
+                    {!isSubmitted && <p className="text-right text-sm font-semibold text-slate-700">{formatNumber(line.line.approvedQty)} dipindahkan</p>}
+                  </div>;
+                })}
+              </div>
+            </CardContent>
+          </Card>;
+        })}
+        {!sortedRequests.length && <Card className="border-slate-200/80 shadow-sm"><CardContent><EmptyState title="Tidak ada permintaan pada filter ini" text="Permintaan baru dari ruangan akan muncul di antrean ini." /></CardContent></Card>}
+      </div>
+    </div>;
+  }
+
   return <div className="grid gap-6 xl:grid-cols-[.85fr_1.5fr]">
     <Card className="border-slate-200/80 shadow-sm">
-      <CardHeader><CardTitle>{isAdmin ? "Verifikasi permintaan" : "Buat permintaan"}</CardTitle><p className="mt-1 text-sm text-slate-500">{isAdmin ? "Tentukan jumlah yang benar-benar dipindahkan. Permintaan dapat disetujui penuh atau sebagian sesuai ketersediaan stok." : "Pilih ruangan yang sedang Anda layani hari ini. Stok Gudang Pusat ditampilkan sebelum mengajukan."}</p></CardHeader>
-      <CardContent>{!isAdmin && <>
+      <CardHeader><CardTitle>Buat permintaan</CardTitle><p className="mt-1 text-sm text-slate-500">Pilih ruangan yang sedang Anda layani hari ini. Stok Gudang Pusat ditampilkan sebelum mengajukan.</p></CardHeader>
+      <CardContent>
         <Field label="Ruangan yang dilayani *"><select className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm" value={selectedRoom ?? ""} onChange={(e) => setSelectedRoom(Number(e.target.value) || null)}><option value="">Pilih ruangan sebelum lanjut</option>{rooms.map((room: any) => { const lock = getRoomLock(room.id); const lockedByOther = Boolean(lock && lock.requesterId !== currentUserId); return <option key={room.id} value={room.id} disabled={lockedByOther}>{room.name}{lock ? lock.requesterId === currentUserId ? " — Anda" : ` — ${lock.requesterName || "petugas lain"}` : " — belum ada PIC"} </option>; })}</select></Field>
         <div className={`mt-4 rounded-xl p-3 text-sm ${selectedLockedByOther ? "bg-rose-50 text-rose-800" : selectedLock ? "bg-emerald-50 text-emerald-800" : "bg-teal-50 text-teal-800"}`}>{selectedLock ? selectedLock.requesterId === currentUserId ? <>Anda adalah PIC request <strong>{selectedRoomName}</strong> hari ini. Anda dapat membuat request susulan.</> : <>Ruangan <strong>{selectedRoomName}</strong> sudah memiliki PIC request hari ini: <strong>{selectedLock.requesterName || "petugas lain"}</strong>.</> : <>Permintaan akan menjadi request pertama untuk <strong>{selectedRoomName || "ruangan yang dipilih"}</strong> hari ini.</>}</div>
-        <div className="mt-5"><Field label="Prioritas"><select className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm" value={priority} onChange={(e) => setPriority(e.target.value)}><option value="normal">Normal</option><option value="mendesak">Mendesak</option><option value="darurat">Darurat</option></select></Field></div>
+        <div className="mt-5"><Field label="Prioritas"><select className="h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm" value={priority} onChange={(e) => setPriority(e.target.value)}><option value="normal">Normal</option><option value="mendesak">Mendesak</option><option value="darurat">Darurat</option></select></Field></div>
         <div className="mt-5 space-y-3">
           {lines.map((line: Line, index: number) => {
             const selectedItem = items.find((item: any) => Number(item.id) === Number(line.itemId));
@@ -684,40 +851,15 @@ function RequestsView({ requests, rooms, items, isAdmin, currentUserId, todayRoo
         </div>
         <div className="mt-5"><Field label="Catatan"><Textarea value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Keperluan atau keterangan permintaan" /></Field></div>
         <Button className="mt-5 w-full" disabled={busy || !selectedRoom || selectedLockedByOther || lines.some((x: Line) => !x.itemId || x.requestedQty < 1)} onClick={() => onCreate({ roomId: selectedRoom, priority, notes, lines })}><Truck size={16} className="mr-2" />Ajukan {total} unit</Button>
-      </>}</CardContent>
+      </CardContent>
     </Card>
 
     <Card className="border-slate-200/80 shadow-sm">
-      <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"><div><CardTitle>Daftar permintaan</CardTitle><p className="mt-1 text-sm text-slate-500">{isAdmin ? "Semua ruangan · verifikasi dan distribusi otomatis" : "Riwayat permintaan yang Anda buat"}</p></div><select className="h-9 rounded-lg border border-input bg-background px-2 text-xs" value={filter} onChange={(e) => setFilter(e.target.value)}><option value="all">Semua status</option><option value="submitted">Diajukan</option><option value="approved">Disetujui</option><option value="partial">Sebagian</option><option value="rejected">Ditolak</option></select></CardHeader>
-      <CardContent><div className="space-y-3">{filtered.map((row: any) => {
-        const isSubmitted = row.request.status === "submitted";
-        return <div key={row.request.id} className="rounded-2xl border border-slate-200 p-4">
-          <div className="flex flex-wrap items-start justify-between gap-3"><div><div className="flex items-center gap-2"><span className="font-semibold">{row.request.requestNo}</span><Badge className={statusTone(row.request.status)}>{statusLabel(row.request.status)}</Badge></div><p className="mt-1 text-sm text-slate-500">{row.room?.name || "Ruangan"} · {formatDate(row.request.createdAt)} · <span className="capitalize">{row.request.priority}</span></p></div>
-            {isAdmin && isSubmitted && <div className="flex flex-wrap gap-2">
-              <Button size="sm" variant="outline" onClick={() => fillFullApproval(row)}>Isi penuh</Button>
-              <Button size="sm" onClick={() => submitApproval(row)} disabled={busy}>Terapkan distribusi</Button>
-              <Button size="sm" variant="outline" onClick={() => onVerify({ requestId: row.request.id, status: "rejected" })} disabled={busy}>Tolak</Button>
-            </div>}
-          </div>
-
-          <div className="mt-4 space-y-2 border-t border-slate-100 pt-3">
-            {row.lines.map((line: any) => {
-              const requestedQty = Number(line.line.requestedQty);
-              const currentQty = getApprovalQty(row.request.id, line);
-              const item = line.item;
-              const warehouseQty = Number(items.find((candidate: any) => Number(candidate.id) === Number(line.line.itemId))?.warehouseStockQty ?? 0);
-              const exceedsWarehouse = currentQty > warehouseQty;
-              return <div key={line.line.id} className={`rounded-xl border p-3 ${isSubmitted && isAdmin ? "border-slate-200 bg-slate-50/70" : "border-transparent bg-slate-50/50"}`}>
-                <div className="flex flex-wrap items-center justify-between gap-3">
-                  <div className="min-w-0"><p className="truncate font-medium">{item?.name || "Item"}</p><p className="mt-1 text-xs text-slate-400">{item?.sku || ""} · {item?.unit || "unit"} · stok gudang saat ini {formatNumber(warehouseQty)}</p></div>
-                  {isSubmitted && isAdmin ? <div className="w-full sm:w-44"><Label className="text-[11px] text-slate-500">Dipindahkan</Label><Input type="number" min="0" max={requestedQty} step="1" value={currentQty} onChange={(e) => setQty(row.request.id, line.line.id, e.target.value)} className={exceedsWarehouse ? "border-amber-400 bg-amber-50" : ""} /></div> : <div className="text-right text-sm font-medium">{requestedQty} diminta · {line.line.approvedQty} dipindahkan</div>}
-                </div>
-                {isSubmitted && isAdmin && <div className={`mt-2 text-xs ${exceedsWarehouse ? "text-amber-700" : "text-slate-400"}`}>{currentQty <= requestedQty ? `Diminta ${formatNumber(requestedQty)} ${item?.unit || "unit"} · akan dipindahkan ${formatNumber(currentQty)}` : "Jumlah tidak boleh melebihi permintaan."}{exceedsWarehouse ? " · melebihi stok saat ini; sistem akan menolak jika stok sudah tidak cukup." : ""}</div>}
-              </div>;
-            })}
-          </div>
-        </div>;
-      })}{!filtered.length && <EmptyState title="Belum ada permintaan" text={isAdmin ? "Permintaan dari ruangan akan muncul di sini." : "Buat permintaan pertama untuk memulai."} />}</div></CardContent>
+      <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"><div><CardTitle>Daftar permintaan</CardTitle><p className="mt-1 text-sm text-slate-500">Riwayat permintaan yang Anda buat</p></div><select className="h-9 rounded-lg border border-input bg-background px-2 text-xs" value={filter} onChange={(e) => setFilter(e.target.value)}><option value="all">Semua status</option><option value="submitted">Diajukan</option><option value="approved">Disetujui</option><option value="partial">Sebagian</option><option value="rejected">Ditolak</option></select></CardHeader>
+      <CardContent><div className="space-y-3">{sortedRequests.map((row: any) => <div key={row.request.id} className="rounded-2xl border border-slate-200 p-4">
+        <div className="flex flex-wrap items-start justify-between gap-3"><div><div className="flex items-center gap-2"><span className="font-semibold">{row.request.requestNo}</span><Badge className={statusTone(row.request.status)}>{statusLabel(row.request.status)}</Badge></div><p className="mt-1 text-sm text-slate-500">{row.room?.name || "Ruangan"} · {formatDate(row.request.createdAt)} · <span className="capitalize">{row.request.priority}</span></p></div></div>
+        <div className="mt-4 grid gap-2 border-t border-slate-100 pt-3 text-sm">{row.lines.map((line: any) => <div key={line.line.id} className="flex justify-between gap-4"><span>{line.item?.name || "Item"}</span><span className="font-medium">{line.line.requestedQty} diminta · {line.line.approvedQty} dipindahkan</span></div>)}</div>
+      </div>)}{!sortedRequests.length && <EmptyState title="Belum ada permintaan" text="Buat permintaan pertama untuk memulai." />}</div></CardContent>
     </Card>
   </div>;
 }
