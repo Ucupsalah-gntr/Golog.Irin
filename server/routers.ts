@@ -3,7 +3,7 @@ import { and, desc, eq, gte, inArray, isNull, lte, sql } from "drizzle-orm";
 import { z } from "zod";
 import { systemRouter } from "./_core/systemRouter.ts";
 import { adminProcedure, protectedProcedure, publicProcedure, router } from "./_core/trpc.ts";
-import { canTransitionRequestStatus, validateApprovedQuantity } from "../shared/request-rules.ts";
+import { canTransitionRequestStatus, validateApprovedQuantity, validateApprovalStatus } from "../shared/request-rules.ts";
 import { canReuseRequestDayLock, getJakartaDateKey } from "../shared/request-day-lock.ts";
 import { calculateStockDifference } from "../shared/stock-reconciliation.ts";
 import type { ImportItemRow } from "../shared/item-import.ts";
