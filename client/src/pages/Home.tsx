@@ -41,7 +41,6 @@ import {
 const nav = [
   { key: "overview", label: "Ringkasan", icon: BarChart3, adminOnly: false },
   { key: "requests", label: "Permintaan", icon: ClipboardList, adminOnly: false },
-  { key: "usage", label: "Pemakaian Ruangan", icon: ArrowUpFromLine, adminOnly: false },
   { key: "stock", label: "Stok barang", icon: Boxes, adminOnly: false },
   { key: "inbound", label: "Barang masuk", icon: ArrowDownToLine, adminOnly: true },
   { key: "adjustments", label: "Penyesuaian", icon: SlidersHorizontal, adminOnly: true },
@@ -108,8 +107,6 @@ export default function Home() {
   const dashboard = trpc.dashboard.summary.useQuery({ roomId: selectedRoom }, { enabled: isAuthenticated });
   const requests = trpc.requests.list.useQuery({}, { enabled: isAuthenticated });
   const todayRoomLocks = trpc.requests.todayLocks.useQuery(undefined, { enabled: isAuthenticated });
-  const usage = trpc.usage.list.useQuery({ roomId: selectedRoom }, { enabled: isAuthenticated && active === "usage" });
-  const usageStock = trpc.usage.stock.useQuery({ roomId: selectedRoom }, { enabled: isAuthenticated && active === "usage" && selectedRoom !== null });
   const adjustments = trpc.adjustments.list.useQuery(undefined, { enabled: isAuthenticated && user?.role === "admin" });
   const monthlyReport = trpc.reports.monthly.useQuery(
     { month: reportMonth },
@@ -121,14 +118,6 @@ export default function Home() {
       requests.refetch();
       todayRoomLocks.refetch();
       setRequestLines([{ itemId: 0, requestedQty: 1 }]);
-    },
-  });
-  const createUsage = trpc.usage.create.useMutation({
-    onSuccess: () => {
-      toast.success("Pemakaian ruangan berhasil dicatat");
-      usage.refetch();
-      usageStock.refetch();
-      dashboard.refetch();
     },
   });
   const verifyRequest = trpc.requests.verify.useMutation({
@@ -175,10 +164,6 @@ export default function Home() {
     todayRoomLocks.refetch();
     catalog.refetch();
     if (isAdmin) adjustments.refetch();
-    if (active === "usage") {
-      usage.refetch();
-      usageStock.refetch();
-    }
     if (isAdmin && active === "reports") monthlyReport.refetch();
   }
   function go(key: NavKey) { setActive(key); setMobileOpen(false); }
@@ -202,7 +187,6 @@ export default function Home() {
             {active === "stock" && <StockView stock={stock} isAdmin={isAdmin} items={items} warehouses={warehouses} onCreateItem={(input: any) => createItem.mutate(input)} busy={createItem.isPending} onImport={(rows: any[]) => importItems.mutate({ rows })} importBusy={importItems.isPending} />}
             {active === "inbound" && <InboundView items={items} warehouses={warehouses} onSubmit={(input: any) => createInbound.mutate(input)} busy={createInbound.isPending} />}
             {active === "requests" && <RequestsView requests={requests.data ?? []} rooms={rooms} items={items} isAdmin={isAdmin} currentUserId={user?.id} todayRoomLocks={todayRoomLocks.data ?? []} selectedRoom={selectedRoom} selectedRoomName={selectedRoomName} setSelectedRoom={setSelectedRoom} lines={requestLines} setLines={setRequestLines} total={requestTotal} onCreate={(input: any) => createRequest.mutate(input)} onVerify={(input: any) => verifyRequest.mutate(input)} busy={createRequest.isPending || verifyRequest.isPending} />}
-            {active === "usage" && <UsageView usages={usage.data ?? []} stock={usageStock.data ?? []} rooms={rooms} items={items} isAdmin={isAdmin} selectedRoom={selectedRoom} setSelectedRoom={setSelectedRoom} onSubmit={(input: any) => createUsage.mutate(input)} busy={createUsage.isPending} />}
             {active === "adjustments" && <AdjustmentsView adjustments={adjustments.data ?? []} items={items} rooms={rooms} onSubmit={(input: any) => createAdjustment.mutate(input)} busy={createAdjustment.isPending} />}
             {active === "stocktake" && <StockOpnameView stock={stock} items={items} rooms={rooms} onSubmit={(input: any) => createAdjustment.mutate(input)} busy={createAdjustment.isPending} />}
             {active === "reports" && <ReportsView report={monthlyReport.data} month={reportMonth} onMonthChange={setReportMonth} />}
@@ -615,130 +599,6 @@ function StockOpnameView({ stock, items, onSubmit, busy }: any) {
   </div>;
 }
 function AdjustmentsView({ adjustments, items, rooms, onSubmit, busy }: any) { const [form, setForm] = useState({ itemId: "", roomId: "", adjustmentType: "subtract", quantity: "", physicalQty: "", reasonType: "holiday_pickup", reason: "", incidentDate: new Date().toISOString().slice(0, 10) }); return <div className="grid gap-6 xl:grid-cols-[.9fr_1.4fr]"><Card className="border-slate-200/80 shadow-sm"><CardHeader><CardTitle>Penyesuaian stok</CardTitle><p className="mt-1 text-sm text-slate-500">Untuk selisih fisik, pengambilan hari libur, rusak, atau darurat.</p></CardHeader><CardContent><div className="grid gap-4"><Field label="Barang *"><select className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm" value={form.itemId} onChange={(e) => setForm({ ...form, itemId: e.target.value })}><option value="">Pilih barang</option>{items.map((item: any) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></Field><div className="grid grid-cols-2 gap-3"><Field label="Jenis"><select className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm" value={form.adjustmentType} onChange={(e) => setForm({ ...form, adjustmentType: e.target.value })}><option value="subtract">Pengurangan</option><option value="add">Penambahan</option></select></Field><Field label="Jumlah"><Input type="number" min="1" value={form.quantity} onChange={(e) => setForm({ ...form, quantity: e.target.value })} /></Field></div><Field label="Ruangan terkait"><select className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm" value={form.roomId} onChange={(e) => setForm({ ...form, roomId: e.target.value })}><option value="">Tidak ada / umum</option>{rooms.map((room: any) => <option key={room.id} value={room.id}>{room.name}</option>)}</select></Field><Field label="Stok fisik setelah kejadian"><Input type="number" min="0" value={form.physicalQty} onChange={(e) => setForm({ ...form, physicalQty: e.target.value })} /></Field><Field label="Jenis kejadian"><select className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm" value={form.reasonType} onChange={(e) => setForm({ ...form, reasonType: e.target.value })}><option value="holiday_pickup">Pengambilan hari libur</option><option value="forgotten_entry">Lupa tercatat</option><option value="emergency">Pengeluaran darurat</option><option value="damaged">Barang rusak</option><option value="expired">Kedaluwarsa</option><option value="stocktake">Stock opname</option><option value="other">Lainnya</option></select></Field><Field label="Tanggal kejadian"><Input type="date" value={form.incidentDate} onChange={(e) => setForm({ ...form, incidentDate: e.target.value })} /></Field><Field label="Alasan wajib (minimal 10 karakter)"><Textarea value={form.reason} onChange={(e) => setForm({ ...form, reason: e.target.value })} placeholder="Contoh: 10 box diambil ICU Garuda saat hari libur…" /></Field><Button disabled={busy || !form.itemId || !form.quantity || !form.physicalQty || form.reason.length < 10} onClick={() => onSubmit({ ...form, itemId: Number(form.itemId), roomId: form.roomId ? Number(form.roomId) : null, quantity: Number(form.quantity), physicalQty: Number(form.physicalQty), incidentDate: new Date(form.incidentDate) })}><ClipboardCheck size={16} className="mr-2" />Terapkan penyesuaian</Button><p className="text-xs leading-5 text-slate-400">Penyesuaian langsung menerapkan stok dan mencatat self-verification kepala gudang.</p></div></CardContent></Card><Card className="border-slate-200/80 shadow-sm"><CardHeader><CardTitle>Riwayat penyesuaian</CardTitle></CardHeader><CardContent><div className="space-y-3">{adjustments.map((row: any) => <div key={row.adjustment.id} className="rounded-xl border border-slate-200 p-4"><div className="flex justify-between gap-3"><div><p className="font-semibold">{row.adjustment.adjustmentNo}</p><p className="mt-1 text-sm text-slate-500">{row.item?.name} · {row.room?.name || "umum"}</p></div><Badge className="border-violet-200 bg-violet-50 text-violet-700">Self-verified</Badge></div><p className="mt-3 text-sm">{row.adjustment.reason}</p><p className="mt-2 text-xs text-slate-400">{formatDate(row.adjustment.incidentDate)} · {row.adjustment.adjustmentType === "add" ? "+" : "−"}{row.adjustment.quantity} unit</p></div>)}{!adjustments.length && <EmptyState title="Belum ada penyesuaian" text="Setiap koreksi stok akan tercatat di sini." />}</div></CardContent></Card></div> }
-
-function UsageView({ usages, stock, rooms, items, isAdmin, selectedRoom, setSelectedRoom, onSubmit, busy }: any) {
-  const [form, setForm] = useState({
-    roomId: selectedRoom ? String(selectedRoom) : "",
-    itemId: "",
-    quantity: "",
-    occurredAt: getJakartaDateKeyClient(),
-    notes: "",
-  });
-
-  useEffect(() => {
-    if (selectedRoom !== null) {
-      setForm((current) => ({ ...current, roomId: String(selectedRoom) }));
-    }
-  }, [selectedRoom]);
-
-  const selectedStock = stock.find((row: any) => Number(row.itemId) === Number(form.itemId));
-  const available = Number(selectedStock?.movementQty ?? 0);
-  const quantity = form.quantity === "" ? 0 : Number(form.quantity);
-  const validQuantity = Number.isInteger(quantity) && quantity > 0;
-  const canSubmit = Boolean(
-    form.roomId &&
-    form.itemId &&
-    validQuantity &&
-    quantity <= available &&
-    form.occurredAt,
-  );
-
-  function submit() {
-    if (!canSubmit) return;
-    onSubmit({
-      roomId: Number(form.roomId),
-      itemId: Number(form.itemId),
-      quantity,
-      occurredAt: new Date(`${form.occurredAt}T00:00:00+07:00`),
-      notes: form.notes.trim() || undefined,
-    });
-    setForm((current) => ({ ...current, itemId: "", quantity: "", notes: "" }));
-  }
-
-  return <div className="grid gap-6 xl:grid-cols-[.9fr_1.2fr]">
-    <Card className="border-slate-200/80 shadow-sm">
-      <CardHeader>
-        <CardTitle>Catat Pemakaian Ruangan</CardTitle>
-        <p className="mt-1 text-sm text-slate-500">Setiap pemakaian akan mengurangi stok ruangan dan masuk ke laporan BMHP bulanan.</p>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        <Field label="Ruangan *">
-          <select className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm" value={form.roomId} onChange={(e) => {
-            const value = e.target.value;
-            setForm((current) => ({ ...current, roomId: value, itemId: "", quantity: "" }));
-            setSelectedRoom(value ? Number(value) : null);
-          }}>
-            <option value="">Pilih ruangan</option>
-            {rooms.map((room: any) => <option key={room.id} value={room.id}>{room.name}</option>)}
-          </select>
-        </Field>
-
-        <Field label="Barang *">
-          <select className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm" value={form.itemId} onChange={(e) => setForm((current) => ({ ...current, itemId: e.target.value, quantity: "" }))} disabled={!form.roomId}>
-            <option value="">{form.roomId ? "Pilih barang" : "Pilih ruangan terlebih dahulu"}</option>
-            {items.map((item: any) => {
-              const row = stock.find((candidate: any) => Number(candidate.itemId) === Number(item.id));
-              const qty = Number(row?.movementQty ?? 0);
-              return <option key={item.id} value={item.id}>{item.name} · stok {formatNumber(qty)} {item.unit}</option>;
-            })}
-          </select>
-        </Field>
-
-        <div className="grid gap-3 sm:grid-cols-2">
-          <Field label="Jumlah dipakai *">
-            <Input type="number" min="1" step="1" value={form.quantity} onChange={(e) => setForm((current) => ({ ...current, quantity: e.target.value }))} placeholder="Contoh 5" />
-          </Field>
-          <Field label="Tanggal pemakaian *">
-            <Input type="date" value={form.occurredAt} onChange={(e) => setForm((current) => ({ ...current, occurredAt: e.target.value }))} />
-          </Field>
-        </div>
-
-        {form.itemId && <div className={`rounded-xl p-3 text-sm ${validQuantity && quantity <= available ? "bg-emerald-50 text-emerald-800" : "bg-amber-50 text-amber-800"}`}>
-          Stok tersedia: <strong>{formatNumber(available)} {selectedStock?.unit || ""}</strong>
-          {validQuantity && quantity > available && <span className="ml-2">Jumlah pemakaian melebihi stok.</span>}
-          {validQuantity && quantity <= available && <span className="ml-2">Sisa setelah pemakaian: <strong>{formatNumber(available - quantity)} {selectedStock?.unit || ""}</strong></span>}
-        </div>}
-
-        <Field label="Catatan">
-          <Textarea value={form.notes} onChange={(e) => setForm((current) => ({ ...current, notes: e.target.value }))} placeholder="Contoh: pemakaian tindakan / shift / keterangan..." />
-        </Field>
-
-        <Button className="w-full" disabled={busy || !canSubmit} onClick={submit}>
-          <ArrowUpFromLine size={16} className="mr-2" />Simpan pemakaian
-        </Button>
-
-        {!isAdmin && <p className="text-xs leading-5 text-slate-400">Pilih ruangan yang sedang Anda layani. Golog.Irin akan menolak transaksi yang membuat stok ruangan menjadi negatif.</p>}
-      </CardContent>
-    </Card>
-
-    <Card className="border-slate-200/80 shadow-sm">
-      <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <CardTitle>Riwayat pemakaian</CardTitle>
-          <p className="mt-1 text-sm text-slate-500">Transaksi terbaru pada ruangan yang dipilih.</p>
-        </div>
-        <Badge className="border-slate-200 bg-slate-50 text-slate-600">{usages.length} transaksi</Badge>
-      </CardHeader>
-      <CardContent>
-        <div className="space-y-3">
-          {usages.map((row: any) => (
-            <div key={row.movement.id} className="rounded-xl border border-slate-200 p-4">
-              <div className="flex flex-wrap items-start justify-between gap-3">
-                <div>
-                  <p className="font-semibold">{row.item?.name || "Barang"}</p>
-                  <p className="mt-1 text-xs text-slate-400">{row.item?.sku || "—"} · {row.room?.name || "Ruangan"}</p>
-                </div>
-                <p className="font-semibold text-rose-700">−{formatNumber(Math.abs(Number(row.movement.quantity)))} {row.item?.unit || ""}</p>
-              </div>
-              <p className="mt-2 text-sm text-slate-500">{formatDate(row.movement.occurredAt)}{row.movement.notes ? ` · ${row.movement.notes}` : ""}</p>
-            </div>
-          ))}
-          {!usages.length && <EmptyState title="Belum ada pemakaian" text="Catatan pemakaian barang dari ruangan akan muncul di sini." />}
-        </div>
-      </CardContent>
-    </Card>
-  </div>;
-}
 
 function ReportsView({ report, month, onMonthChange }: any) {
   const data = report ?? {};
