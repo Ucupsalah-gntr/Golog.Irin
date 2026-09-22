@@ -549,6 +549,7 @@ export const appRouter = router({
         transferred: result.transferred,
       };
     }),
+  }),
   adjustments: router({
     list: adminProcedure.query(async () => {
       const db = await getDb(); if (!db) return [];
