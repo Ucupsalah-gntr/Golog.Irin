@@ -149,7 +149,7 @@ export function computeMonthlyPivot(input: MonthlyPivotInput): MonthlyPivotResul
   }
 
   const byCategory = new Map<string, ItemPivotRow[]>();
-  for (const pivotRow of perItem.values()) {
+  for (const pivotRow of Array.from(perItem.values())) {
     const list = byCategory.get(pivotRow.category) ?? [];
     list.push(pivotRow);
     byCategory.set(pivotRow.category, list);
