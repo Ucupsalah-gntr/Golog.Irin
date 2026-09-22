@@ -1,4 +1,4 @@
-import { and, desc, eq, gte, lte, sql } from "drizzle-orm";
+import { and, desc, eq, gte, isNull, lte, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/node-postgres";
 import { Pool } from "pg";
 import {
@@ -136,9 +136,13 @@ export async function ensureCatalog() {
   }
 }
 
-export async function getStockRows() {
+async function getStockRowsForRoom(roomId: number | null) {
   const db = await getDb();
   if (!db) return [];
+  const locationFilter = roomId === null
+    ? isNull(stockMovements.roomId)
+    : eq(stockMovements.roomId, roomId);
+
   return db
     .select({
       itemId: items.id,
@@ -150,31 +154,116 @@ export async function getStockRows() {
       movementQty: sql<number>`COALESCE(SUM(${stockMovements.quantity}), 0)`,
     })
     .from(items)
-    .leftJoin(stockMovements, eq(stockMovements.itemId, items.id))
+    .leftJoin(stockMovements, and(
+      eq(stockMovements.itemId, items.id),
+      locationFilter,
+    ))
     .where(eq(items.active, true))
     .groupBy(items.id, items.sku, items.name, items.category, items.unit, items.minStock)
     .orderBy(items.name);
 }
 
-export async function getStockQty(itemId: number) {
+export async function getStockRows() {
+  return getStockRowsForRoom(null);
+}
+
+export async function getWarehouseStockRows() {
+  return getStockRowsForRoom(null);
+}
+
+export async function getRoomStockRows(roomId: number) {
+  return getStockRowsForRoom(roomId);
+}
+
+export async function getStockQty(itemId: number, roomId: number | null = null) {
   const db = await getDb();
   if (!db) return 0;
+
+  const locationFilter = roomId === null
+    ? isNull(stockMovements.roomId)
+    : eq(stockMovements.roomId, roomId);
+
   const rows = await db
     .select({ qty: sql<number>`COALESCE(SUM(${stockMovements.quantity}), 0)` })
     .from(stockMovements)
-    .where(eq(stockMovements.itemId, itemId));
+    .where(and(eq(stockMovements.itemId, itemId), locationFilter));
+
   return Number(rows[0]?.qty ?? 0);
 }
 
-export async function getDashboardData() {
+export async function getDashboardData(
+  role: "admin" | "user",
+  roomId: number | null = null,
+  userId?: number,
+) {
   const db = await getDb();
-  if (!db) return { stats: { items: 0, lowStock: 0, pending: 0, todayIn: 0 }, stock: [], recent: [] };
-  const stock = await getStockRows();
-  const pendingRows = await db.select({ count: sql<number>`COUNT(*)` }).from(requests).where(eq(requests.status, "submitted"));
-  const todayStart = new Date(); todayStart.setHours(0, 0, 0, 0);
-  const incomingToday = await db.select({ qty: sql<number>`COALESCE(SUM(${stockMovements.quantity}), 0)` }).from(stockMovements).where(and(eq(stockMovements.movementType, "in"), gte(stockMovements.createdAt, todayStart)));
-  const recent = await db.select({ movement: stockMovements, item: items }).from(stockMovements).leftJoin(items, eq(stockMovements.itemId, items.id)).orderBy(desc(stockMovements.createdAt)).limit(10);
+  if (!db) {
+    return {
+      scope: role === "admin" ? "warehouse" : "room",
+      roomId,
+      roomName: null,
+      stats: { items: 0, lowStock: 0, pending: 0, todayIn: 0 },
+      stock: [],
+      recent: [],
+    };
+  }
+
+  const stock = role === "admin"
+    ? await getWarehouseStockRows()
+    : roomId === null
+      ? []
+      : await getRoomStockRows(roomId);
+
+  const pendingFilters = [eq(requests.status, "submitted")];
+  if (role !== "admin" && userId) pendingFilters.push(eq(requests.createdBy, userId));
+
+  const pendingRows = await db
+    .select({ count: sql<number>`COUNT(*)` })
+    .from(requests)
+    .where(and(...pendingFilters));
+
+  const todayStart = new Date();
+  todayStart.setHours(0, 0, 0, 0);
+
+  const incomingFilter = [
+    eq(stockMovements.movementType, "in"),
+    gte(stockMovements.createdAt, todayStart),
+    role === "admin" ? isNull(stockMovements.roomId) : roomId === null ? sql`FALSE` : eq(stockMovements.roomId, roomId),
+  ];
+
+  const incomingToday = await db
+    .select({ qty: sql<number>`COALESCE(SUM(${stockMovements.quantity}), 0)` })
+    .from(stockMovements)
+    .where(and(...incomingFilter));
+
+  const recentFilter = role === "admin"
+    ? isNull(stockMovements.roomId)
+    : roomId === null
+      ? sql`FALSE`
+      : eq(stockMovements.roomId, roomId);
+
+  const recent = await db
+    .select({ movement: stockMovements, item: items })
+    .from(stockMovements)
+    .leftJoin(items, eq(stockMovements.itemId, items.id))
+    .where(recentFilter)
+    .orderBy(desc(stockMovements.createdAt))
+    .limit(10);
+
+  let roomName: string | null = null;
+  if (role !== "admin" && roomId !== null) {
+    const roomRows = await db
+      .select({ name: rooms.name })
+      .from(rooms)
+      .where(eq(rooms.id, roomId))
+      .limit(1);
+    roomName = roomRows[0]?.name ?? null;
+  }
+
   return {
+    scope: role === "admin" ? "warehouse" : "room",
+    roomId,
+    roomName,
     stats: {
       items: stock.length,
       lowStock: stock.filter((row) => isLowStock(Number(row.movementQty), row.minStock)).length,
