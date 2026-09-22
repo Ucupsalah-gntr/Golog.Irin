@@ -305,7 +305,7 @@ export async function getMonthlyReportData(monthKey: string) {
     };
   }
 
-  if (!/^\\d{4}-\\d{2}$/.test(monthKey)) {
+  if (!/^\d{4}-\d{2}$/.test(monthKey)) {
     throw new Error("Format bulan harus YYYY-MM");
   }
 
