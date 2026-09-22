@@ -153,7 +153,7 @@ export default function CategoryPivotTable({ report }: CategoryPivotTableProps) 
         </div>
       </div>
 
-      <div className="overflow-x-auto overscroll-x-contain">
+      <div className="hidden md:block overflow-x-auto overscroll-x-contain">
         <table className="min-w-max border-collapse text-[12px] leading-4">
           <thead>
             <tr>
@@ -177,12 +177,83 @@ export default function CategoryPivotTable({ report }: CategoryPivotTableProps) 
         </table>
       </div>
 
+      <div className="md:hidden divide-y divide-slate-100">
+        {active?.rows.map((row, index) => {
+          const identityBg = row.isLowStock ? "bg-rose-50/60" : "bg-white";
+          return (
+            <article key={row.itemId} className={`p-4 ${identityBg}`}>
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <div className="flex items-start gap-2">
+                    <span className="mt-0.5 shrink-0 text-[11px] font-semibold text-slate-400">{index + 1}.</span>
+                    <div className="min-w-0">
+                      <p className={`text-sm font-semibold leading-5 ${row.isLowStock ? "text-rose-900" : "text-slate-800"}`}>{row.name}</p>
+                      <p className="mt-0.5 text-[11px] text-slate-400">{row.sku} · {row.unit}</p>
+                    </div>
+                  </div>
+                </div>
+                <div className="shrink-0 text-right">
+                  <p className="text-[10px] font-medium uppercase tracking-wide text-slate-400">Sisa akhir</p>
+                  <p className={`mt-0.5 text-lg font-bold ${row.isLowStock ? "text-rose-600" : "text-slate-900"}`}>{formatNumber(row.sisaAkhir)}</p>
+                </div>
+              </div>
+
+              <div className="mt-3 grid grid-cols-2 gap-2">
+                <div className="rounded-lg bg-slate-50 px-3 py-2">
+                  <p className="text-[10px] uppercase tracking-wide text-slate-400">Sisa awal</p>
+                  <p className={`mt-0.5 text-sm font-semibold ${numberTone(row.sisaAwal)}`}>{formatNumber(row.sisaAwal)}</p>
+                </div>
+                <div className="rounded-lg bg-slate-50 px-3 py-2">
+                  <p className="text-[10px] uppercase tracking-wide text-slate-400">Keluar</p>
+                  <p className="mt-0.5 text-sm font-semibold text-slate-700">{formatNumber(row.keluarTotal)}</p>
+                </div>
+              </div>
+
+              <div className="mt-3 rounded-lg border border-slate-100 bg-white px-3 py-2.5">
+                <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">Distribusi mingguan</p>
+                <div className="mt-2 grid grid-cols-4 gap-1.5">
+                  {row.mg.map((value, mgIndex) => (
+                    <div key={mgIndex} className="rounded-md bg-slate-50 px-1.5 py-1.5 text-center">
+                      <p className="text-[9px] font-medium text-slate-400">MG{mgIndex + 1}</p>
+                      <p className={`mt-0.5 text-xs font-semibold ${numberTone(value)}`}>{formatNumber(value)}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {pivot.rooms.length > 0 && (
+                <div className="mt-3 rounded-lg border border-slate-100 bg-white px-3 py-2.5">
+                  <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">Distribusi per ruangan</p>
+                  <div className="mt-2 space-y-1.5">
+                    {pivot.rooms.map((room) => (
+                      <div key={room.id} className="flex items-center justify-between gap-3 text-xs">
+                        <span className="min-w-0 truncate text-slate-500">{room.name}</span>
+                        <span className={`shrink-0 font-semibold ${numberTone(row.perRoom[room.id] ?? 0)}`}>{formatNumber(row.perRoom[room.id] ?? 0)}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {row.isLowStock && (
+                <div className="mt-3 rounded-lg bg-rose-100 px-3 py-2 text-[11px] font-medium text-rose-700">
+                  Stok berada di bawah atau sama dengan batas minimum.
+                </div>
+              )}
+            </article>
+          );
+        })}
+      </div>
+
       <div className="flex flex-wrap items-center justify-between gap-2 border-t border-slate-200 px-4 py-3 text-[11px] text-slate-400 sm:px-5">
         <span>
           Menampilkan {active?.rows.length ?? 0} barang · {activeLow} perlu perhatian.
         </span>
-        <span className="inline-flex items-center gap-1">
+        <span className="hidden md:inline-flex items-center gap-1">
           Geser tabel ke samping untuk melihat seluruh ruangan <ChevronRight size={13} />
+        </span>
+        <span className="md:hidden">
+          Tampilan mobile dioptimalkan sebagai kartu per barang.
         </span>
       </div>
     </section>
