@@ -1,5 +1,6 @@
 import { type FormEvent, useEffect, useMemo, useState } from "react";
 import * as XLSX from "xlsx";
+import { computeMonthlyPivot } from "@shared/monthly-pivot";
 import { importTemplateCsv, validateItemImport, type ImportPreview } from "@shared/item-import";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { supabase, usernameToAuthEmail } from "@/lib/supabase";
@@ -7,6 +8,7 @@ import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import CategoryPivotTable from "@/components/CategoryPivotTable";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -109,7 +111,10 @@ export default function Home() {
   const usage = trpc.usage.list.useQuery({ roomId: selectedRoom }, { enabled: isAuthenticated && active === "usage" });
   const usageStock = trpc.usage.stock.useQuery({ roomId: selectedRoom }, { enabled: isAuthenticated && active === "usage" && selectedRoom !== null });
   const adjustments = trpc.adjustments.list.useQuery(undefined, { enabled: isAuthenticated && user?.role === "admin" });
-  const monthlyReport = trpc.reports.monthly.useQuery({ month: reportMonth }, { enabled: isAuthenticated && user?.role === "admin" && active === "reports" });
+  const monthlyReport = trpc.reports.monthly.useQuery(
+    { month: reportMonth },
+    { enabled: isAuthenticated && user?.role === "admin" && (active === "reports" || active === "overview") },
+  );
   const createRequest = trpc.requests.create.useMutation({
     onSuccess: () => {
       toast.success("Permintaan berhasil diajukan");
@@ -193,7 +198,7 @@ export default function Home() {
         <main className="min-w-0 flex-1">
           <header className="sticky top-0 z-20 flex h-20 items-center justify-between border-b border-slate-200/80 bg-[#f4f7f6]/90 px-5 backdrop-blur md:px-8"><div className="flex items-center gap-3"><button className="rounded-xl p-2 hover:bg-white lg:hidden" onClick={() => setMobileOpen(true)}><Menu size={20} /></button><div><p className="text-xs font-semibold uppercase tracking-[0.18em] text-teal-700">Instalasi Rawat Intensif</p><h1 className="text-xl font-semibold tracking-tight">{visibleNav.find((x) => x.key === active)?.label}</h1></div></div><div className="flex items-center gap-2"><button title="Refresh" onClick={refreshAll} className="rounded-xl border border-slate-200 bg-white p-2.5 text-slate-500 hover:text-teal-700"><RefreshCw size={17} /></button><div className="hidden rounded-xl border border-slate-200 bg-white px-3 py-2 text-right sm:block"><p className="text-xs font-semibold">{user?.name || "Akun aktif"}</p><p className="text-[11px] text-slate-500">{isAdmin ? "Kepala gudang" : "Petugas"}</p></div></div></header>
           <div className="mx-auto max-w-[1500px] space-y-6 p-5 md:p-8">
-            {active === "overview" && <Overview dashboard={dashboard.data} isAdmin={isAdmin} onGo={go} />}
+            {active === "overview" && <Overview dashboard={dashboard.data} isAdmin={isAdmin} onGo={go} report={isAdmin ? monthlyReport.data : null} />}
             {active === "stock" && <StockView stock={stock} isAdmin={isAdmin} items={items} warehouses={warehouses} onCreateItem={(input: any) => createItem.mutate(input)} busy={createItem.isPending} onImport={(rows: any[]) => importItems.mutate({ rows })} importBusy={importItems.isPending} />}
             {active === "inbound" && <InboundView items={items} warehouses={warehouses} onSubmit={(input: any) => createInbound.mutate(input)} busy={createInbound.isPending} />}
             {active === "requests" && <RequestsView requests={requests.data ?? []} rooms={rooms} items={items} isAdmin={isAdmin} currentUserId={user?.id} todayRoomLocks={todayRoomLocks.data ?? []} selectedRoom={selectedRoom} selectedRoomName={selectedRoomName} setSelectedRoom={setSelectedRoom} lines={requestLines} setLines={setRequestLines} total={requestTotal} onCreate={(input: any) => createRequest.mutate(input)} onVerify={(input: any) => verifyRequest.mutate(input)} busy={createRequest.isPending || verifyRequest.isPending} />}
@@ -422,15 +427,25 @@ function LoginScreen({ initialError = "" }: { initialError?: string }) {
   );
 }
 
-function Overview({ dashboard, isAdmin, onGo }: { dashboard: any; isAdmin: boolean; onGo: (key: NavKey) => void }) {
+function Overview({ dashboard, isAdmin, onGo, report }: { dashboard: any; isAdmin: boolean; onGo: (key: NavKey) => void; report?: any }) {
   const stats = dashboard?.stats ?? { items: 0, lowStock: 0, pending: 0, todayIn: 0 };
   const roomName = dashboard?.roomName;
+  const reportSummary = useMemo(() => {
+    if (!report) return { items: stats.items, lowStock: stats.lowStock, distribution: 0, rooms: 0 };
+    const pivot = computeMonthlyPivot(report);
+    return {
+      items: report.items?.length ?? stats.items,
+      lowStock: pivot.categories.reduce((sum: number, category: any) => sum + category.rows.filter((row: any) => row.isLowStock).length, 0),
+      distribution: pivot.categories.reduce((sum: number, category: any) => sum + category.rows.reduce((categorySum: number, row: any) => categorySum + row.keluarTotal, 0), 0),
+      rooms: pivot.rooms.length,
+    };
+  }, [report, stats.items, stats.lowStock]);
   const cards = isAdmin
     ? [
-        { label: "Jenis barang aktif", value: stats.items, hint: "Master item terdaftar", icon: Boxes, tint: "bg-teal-50 text-teal-700" },
-        { label: "Stok perlu perhatian", value: stats.lowStock, hint: "Di bawah batas minimum", icon: Activity, tint: "bg-amber-50 text-amber-700" },
-        { label: "Permintaan menunggu", value: stats.pending, hint: "Perlu verifikasi Anda", icon: ClipboardCheck, tint: "bg-sky-50 text-sky-700" },
-        { label: "Masuk hari ini", value: stats.todayIn, hint: "Unit masuk Gudang Pusat", icon: ArrowDownToLine, tint: "bg-emerald-50 text-emerald-700" },
+        { label: "SKU aktif", value: reportSummary.items, hint: "Master barang aktif", icon: Boxes, tint: "bg-teal-50 text-teal-700" },
+        { label: "Stok rendah", value: reportSummary.lowStock, hint: "Di bawah atau sama dengan minimum", icon: Activity, tint: "bg-rose-50 text-rose-700" },
+        { label: "Distribusi bulan ini", value: reportSummary.distribution, hint: "Total barang keluar ke ruangan", icon: Truck, tint: "bg-sky-50 text-sky-700" },
+        { label: "Ruangan aktif", value: reportSummary.rooms, hint: "Ruangan yang terdaftar aktif", icon: Hospital, tint: "bg-emerald-50 text-emerald-700" },
       ]
     : [
         { label: "Jenis barang di ruangan", value: stats.items, hint: roomName ? roomName : "Belum ada ruangan aktif", icon: Boxes, tint: "bg-teal-50 text-teal-700" },
@@ -460,6 +475,7 @@ function Overview({ dashboard, isAdmin, onGo }: { dashboard: any; isAdmin: boole
         return <Card key={item.label} className="border-slate-200/80 shadow-sm"><CardContent className="flex items-start justify-between p-5"><div><p className="text-sm text-slate-500">{item.label}</p><p className="mt-2 text-3xl font-semibold tracking-tight">{formatNumber(item.value)}</p><p className="mt-1 text-xs text-slate-400">{item.hint}</p></div><div className={`rounded-2xl p-3 ${item.tint}`}><Icon size={20} /></div></CardContent></Card>;
       })}
     </div>
+    {isAdmin && report && <CategoryPivotTable report={report} />}
     <div className="grid gap-6">
       <Card className="border-slate-200/80 shadow-sm">
         <CardHeader className="flex flex-row items-center justify-between">
