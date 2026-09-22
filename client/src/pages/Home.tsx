@@ -88,7 +88,7 @@ export default function Home() {
   const [requestLines, setRequestLines] = useState<Line[]>([{ itemId: 0, requestedQty: 1 }]);
   const utils = trpc.useUtils();
   const catalog = trpc.catalog.all.useQuery(undefined, { enabled: isAuthenticated });
-  const dashboard = trpc.dashboard.summary.useQuery(undefined, { enabled: isAuthenticated });
+  const dashboard = trpc.dashboard.summary.useQuery({ roomId: selectedRoom }, { enabled: isAuthenticated });
   const requests = trpc.requests.list.useQuery({}, { enabled: isAuthenticated });
   const todayRoomLocks = trpc.requests.todayLocks.useQuery(undefined, { enabled: isAuthenticated });
   const adjustments = trpc.adjustments.list.useQuery(undefined, { enabled: isAuthenticated && user?.role === "admin" });
