@@ -730,8 +730,12 @@ function ReportsView({ report, month, onMonthChange }: any) {
   const rooms = data.rooms ?? [];
   const movements = data.movements ?? [];
   const daysInMonth = Number(data.daysInMonth ?? 0);
-  const openingWarehouse = new Map((data.openingWarehouse ?? []).map((row: any) => [Number(row.itemId), Number(row.quantity ?? 0)]));
-  const openingRooms = new Map((data.openingRooms ?? []).map((row: any) => [`${Number(row.roomId)}:${Number(row.itemId)}`, Number(row.quantity ?? 0)]));
+  const openingWarehouse = new Map<number, number>(
+    (data.openingWarehouse ?? []).map((row: any): [number, number] => [Number(row.itemId), Number(row.quantity ?? 0)]),
+  );
+  const openingRooms = new Map<string, number>(
+    (data.openingRooms ?? []).map((row: any): [string, number] => [`${Number(row.roomId)}:${Number(row.itemId)}`, Number(row.quantity ?? 0)]),
+  );
 
   const warehouseStats = new Map<number, { opening: number; inbound: number; distributed: number; adjustment: number }>();
   const roomStats = new Map<string, { roomId: number; itemId: number; distributed: number; used: number; adjustment: number }>();
@@ -900,7 +904,7 @@ function ReportsView({ report, month, onMonthChange }: any) {
             ["Distribusi", totalDistributed],
             ["Pemakaian", totalUsage],
             ["Penyesuaian bersih", totalAdjustment],
-          ].map(([label, value]) => <div key={label} className="rounded-2xl bg-slate-50 p-4"><p className="text-xs text-slate-400">{label}</p><p className="mt-1 text-2xl font-semibold">{formatNumber(value)}</p><p className="mt-1 text-xs text-slate-400">periode {month}</p></div>)}
+          ].map(([label, value]) => <div key={String(label)} className="rounded-2xl bg-slate-50 p-4"><p className="text-xs text-slate-400">{String(label)}</p><p className="mt-1 text-2xl font-semibold">{formatNumber(Number(value))}</p><p className="mt-1 text-xs text-slate-400">periode {month}</p></div>)}
         </div>
       </CardContent>
     </Card>
