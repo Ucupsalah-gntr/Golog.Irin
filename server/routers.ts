@@ -421,6 +421,21 @@ export const appRouter = router({
           });
         }
 
+        try {
+          validateApprovalStatus(
+            input.status,
+            currentLines.map((line) => ({
+              requestedQty: line.requestedQty,
+              approvedQty: approvalByLineId.get(line.id) ?? 0,
+            })),
+          );
+        } catch (error) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: error instanceof Error ? error.message : "Jumlah persetujuan tidak valid.",
+          });
+        }
+
         const sortedLines = [...currentLines].sort((a, b) => a.itemId - b.itemId);
         const transferred: Array<{ itemId: number; quantity: number }> = [];
 
