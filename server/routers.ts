@@ -776,7 +776,7 @@ export const appRouter = router({
       z.object({ from: z.coerce.date().optional(), to: z.coerce.date().optional() }).optional(),
     ).query(({ input }) => getReportMovements(input?.from, input?.to)),
     monthly: adminProcedure.input(
-      z.object({ month: z.string().regex(/^\\d{4}-\\d{2}$/) }),
+      z.object({ month: z.string().regex(/^\d{4}-\d{2}$/) }),
     ).query(async ({ input }) => {
       try {
         return await getMonthlyReportData(input.month);
