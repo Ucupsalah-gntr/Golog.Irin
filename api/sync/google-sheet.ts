@@ -1,6 +1,3 @@
-import "dotenv/config";
-import { getGoogleSheetSyncData } from "../../server/db.ts";
-
 type SyncRequest = {
   method?: string;
   headers: Record<string, string | string[] | undefined>;
@@ -16,7 +13,7 @@ function getSyncToken(req: SyncRequest) {
   if (typeof header === "string" && header.trim()) return header.trim();
 
   const authorization = req.headers.authorization;
-  if (authorization?.startsWith("Bearer ")) {
+  if (typeof authorization === "string" && authorization.startsWith("Bearer ")) {
     return authorization.slice(7).trim();
   }
 
@@ -54,7 +51,11 @@ export default async function handler(req: SyncRequest, res: SyncResponse) {
   }
 
   try {
+    // Dynamic import keeps module-load failures inside the handler so Vercel
+    // returns a readable JSON error instead of FUNCTION_INVOCATION_FAILED.
+    const { getGoogleSheetSyncData } = await import("../../server/db.ts");
     const data = await getGoogleSheetSyncData();
+
     return res.status(200).json({
       ok: true,
       service: "gologirin-google-sheet-sync",
