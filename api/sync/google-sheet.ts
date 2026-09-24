@@ -1,5 +1,5 @@
 import "dotenv/config";
-import { getGoogleSheetSyncData } from "../../../server/db.ts";
+import { getGoogleSheetSyncData } from "../../server/db.ts";
 
 type SyncRequest = {
   method?: string;
