@@ -1,4 +1,4 @@
-import { and, desc, eq, gte, isNull, lt, lte, sql } from "drizzle-orm";
+import { and, desc, eq, gte, inArray, isNull, lt, lte, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/node-postgres";
 import { Pool } from "pg";
 import {
@@ -391,6 +391,117 @@ export async function getMonthlyReportData(monthKey: string) {
       quantity: Number(row.quantity ?? 0),
     })),
     movements: monthlyMovements,
+  };
+}
+
+export async function getGoogleSheetSyncData() {
+  const db = await getDb();
+  if (!db) throw new Error("Database belum tersedia.");
+
+  await ensureCatalog();
+  const historyStart = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000);
+
+  const [stockRows, activeItems, requestRows, movementRows] = await Promise.all([
+    getWarehouseStockRows(),
+    db.select({
+      sku: items.sku,
+      name: items.name,
+      category: items.category,
+      unit: items.unit,
+      minStock: items.minStock,
+    }).from(items).where(eq(items.active, true)).orderBy(items.name),
+    db.select({ request: requests, room: rooms })
+      .from(requests)
+      .leftJoin(rooms, eq(requests.roomId, rooms.id))
+      .where(gte(requests.createdAt, historyStart))
+      .orderBy(desc(requests.createdAt))
+      .limit(100),
+    db.select({
+      movement: stockMovements,
+      item: items,
+      room: rooms,
+      warehouse: warehouses,
+    })
+      .from(stockMovements)
+      .leftJoin(items, eq(stockMovements.itemId, items.id))
+      .leftJoin(rooms, eq(stockMovements.roomId, rooms.id))
+      .leftJoin(warehouses, eq(stockMovements.sourceWarehouseId, warehouses.id))
+      .where(gte(stockMovements.occurredAt, historyStart))
+      .orderBy(desc(stockMovements.occurredAt))
+      .limit(5000),
+  ]);
+
+  const requestIds = requestRows.map((row) => row.request.id);
+  const requestLines = requestIds.length
+    ? await db.select({ line: requestItems, item: items })
+      .from(requestItems)
+      .leftJoin(items, eq(requestItems.itemId, items.id))
+      .where(inArray(requestItems.requestId, requestIds))
+    : [];
+
+  const linesByRequestId = new Map<number, typeof requestLines>();
+  for (const row of requestLines) {
+    const current = linesByRequestId.get(row.line.requestId) ?? [];
+    current.push(row);
+    linesByRequestId.set(row.line.requestId, current);
+  }
+
+  const requestNoById = new Map(requestRows.map((row) => [row.request.id, row.request.requestNo]));
+
+  return {
+    syncVersion: 1,
+    generatedAt: new Date().toISOString(),
+    historyDays: 90,
+    stock: stockRows.map((row) => ({
+      sku: row.sku,
+      name: row.name,
+      category: row.category ?? '',
+      unit: row.unit,
+      stockQty: Number(row.movementQty ?? 0),
+      minStock: Number(row.minStock ?? 0),
+    })),
+    items: activeItems.map((item) => ({
+      sku: item.sku,
+      name: item.name,
+      category: item.category ?? '',
+      unit: item.unit,
+      minStock: Number(item.minStock ?? 0),
+    })),
+    requests: requestRows.flatMap(({ request, room }) => {
+      const lines = linesByRequestId.get(request.id) ?? [];
+      return lines.map(({ line, item }) => ({
+        date: request.createdAt,
+        requestNo: request.requestNo,
+        room: room?.name ?? 'Ruangan',
+        priority: request.priority,
+        sku: item?.sku ?? '',
+        itemName: item?.name ?? '',
+        requestedQty: Number(line.requestedQty),
+        approvedQty: Number(line.approvedQty),
+        status: request.status,
+      }));
+    }),
+    distributions: movementRows
+      .filter(({ movement }) => movement.movementType === 'in' && movement.roomId !== null)
+      .map(({ movement, item, room }) => ({
+        date: movement.occurredAt,
+        requestNo: movement.requestId ? (requestNoById.get(movement.requestId) ?? '') : '',
+        room: room?.name ?? 'Ruangan',
+        sku: item?.sku ?? '',
+        itemName: item?.name ?? '',
+        quantity: Math.abs(Number(movement.quantity)),
+      })),
+    movements: movementRows.map(({ movement, item, room, warehouse }) => ({
+      date: movement.occurredAt,
+      sku: item?.sku ?? '',
+      itemName: item?.name ?? '',
+      movementType: movement.movementType,
+      quantity: Number(movement.quantity),
+      room: room?.name ?? '',
+      warehouse: warehouse?.name ?? 'Gudang Pusat',
+      requestNo: movement.requestId ? (requestNoById.get(movement.requestId) ?? '') : '',
+      notes: movement.notes ?? '',
+    })),
   };
 }
 
