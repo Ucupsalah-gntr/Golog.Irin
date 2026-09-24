@@ -297,6 +297,14 @@ function writeDashboard_(payload) {
   sheet.autoResizeColumns(1, 6);
 }
 
+function showUiMessage_(message) {
+  try {
+    SpreadsheetApp.getUi().alert(message);
+  } catch (error) {
+    Logger.log(message);
+  }
+}
+
 function installGologTriggers() {
   removeGologTriggers();
 
@@ -308,16 +316,18 @@ function installGologTriggers() {
       .create();
   });
 
-  SpreadsheetApp.getUi().alert("Jadwal sinkronisasi dipasang untuk sekitar pukul 07.00, 12.00, dan 18.00.");
+  showUiMessage_("Jadwal sinkronisasi dipasang untuk sekitar pukul 07.00, 12.00, dan 18.00.");
 }
 
 function removeGologTriggers() {
   ScriptApp.getProjectTriggers()
     .filter(trigger => trigger.getHandlerFunction() === "syncGologIrin")
     .forEach(trigger => ScriptApp.deleteTrigger(trigger));
+
+  Logger.log("Jadwal sinkronisasi otomatis dihapus.");
 }
 
 function testGologConnection() {
   syncGologIrin();
-  SpreadsheetApp.getUi().alert("Sinkronisasi berhasil.");
+  showUiMessage_("Sinkronisasi berhasil.");
 }
