@@ -387,17 +387,21 @@ function writeDashboard_(payload) {
 
   cards.forEach(card => {
     const range = sheet.getRange(card.range);
-    range.merge();
-    range.clearFormat();
-    range.setBorder(true, true, true, true, false, false);
-    range.setVerticalAlignment("middle");
-
     const startRow = range.getRow();
     const startCol = range.getColumn();
+    const numCols = range.getNumColumns();
+
+    [0, 1, 2].forEach(offset => {
+      sheet.getRange(startRow + offset, startCol, 1, numCols).merge();
+    });
 
     sheet.getRange(startRow, startCol).setValue(card.label);
     sheet.getRange(startRow + 1, startCol).setValue(card.value);
     sheet.getRange(startRow + 2, startCol).setValue(card.note);
+
+    sheet.getRange(startRow, startCol, 3, numCols)
+      .setBorder(true, true, true, true, false, false)
+      .setVerticalAlignment("middle");
 
     sheet.getRange(startRow, startCol)
       .setFontSize(9)
