@@ -241,23 +241,39 @@ function writeDashboard_(payload) {
   const movements = payload.movements || [];
 
   const sessionTz = Session.getScriptTimeZone() || "Asia/Jakarta";
-  const todayKey = Utilities.formatDate(new Date(), sessionTz, "yyyy-MM-dd");
+  const now = new Date();
+  const todayKey = Utilities.formatDate(now, sessionTz, "yyyy-MM-dd");
+
+  const toDateKey_ = value => {
+    if (!value) return "";
+    const date = new Date(value);
+    return isNaN(date.getTime()) ? "" : Utilities.formatDate(date, sessionTz, "yyyy-MM-dd");
+  };
 
   const lowStock = stock
     .filter(r => Number(r.stockQty || 0) <= Number(r.minStock || 0))
+    .map(r => ({
+      ...r,
+      stockQty: Number(r.stockQty || 0),
+      minStock: Number(r.minStock || 0),
+    }))
     .sort((a, b) => {
-      const gapA = Number(a.stockQty || 0) - Number(a.minStock || 0);
-      const gapB = Number(b.stockQty || 0) - Number(b.minStock || 0);
+      const gapA = a.stockQty - a.minStock;
+      const gapB = b.stockQty - b.minStock;
       return gapA - gapB;
     });
 
+  const criticalStock = lowStock.filter(r => r.stockQty <= 0);
+  const minimumStock = lowStock.filter(r => r.stockQty > 0);
   const safeStockCount = Math.max(stock.length - lowStock.length, 0);
-  const pendingRows = requests.filter(r => r.status === "submitted");
+  const totalWarehouseQty = stock.reduce((sum, r) => sum + Number(r.stockQty || 0), 0);
 
+  const pendingRows = requests.filter(r => r.status === "submitted");
   const pendingMap = {};
   pendingRows.forEach(r => {
     const key = String(r.requestNo || "");
     if (!key) return;
+
     if (!pendingMap[key]) {
       pendingMap[key] = {
         requestNo: key,
@@ -265,9 +281,12 @@ function writeDashboard_(payload) {
         priority: r.priority || "normal",
         date: r.date || "",
         requestedQty: 0,
+        lines: 0,
       };
     }
+
     pendingMap[key].requestedQty += Number(r.requestedQty || 0);
+    pendingMap[key].lines += 1;
   });
 
   const priorityWeight = { darurat: 0, mendesak: 1, normal: 2 };
@@ -280,129 +299,185 @@ function writeDashboard_(payload) {
     })
     .slice(0, 8);
 
-  const distributionToday = distributions
-    .filter(r => r.date && Utilities.formatDate(new Date(r.date), sessionTz, "yyyy-MM-dd") === todayKey)
-    .reduce((sum, r) => sum + Number(r.quantity || 0), 0);
-
-  const totalWarehouseQty = stock.reduce((sum, r) => sum + Number(r.stockQty || 0), 0);
+  const pendingEmergency = pendingRows.filter(r => r.priority === "darurat");
+  const pendingUrgent = pendingRows.filter(r => r.priority === "mendesak");
 
   const todayDistribution = {};
-  distributions
-    .filter(r => r.date && Utilities.formatDate(new Date(r.date), sessionTz, "yyyy-MM-dd") === todayKey)
-    .forEach(r => {
-      const room = r.room || "Ruangan";
-      todayDistribution[room] = (todayDistribution[room] || 0) + Number(r.quantity || 0);
-    });
+  distributions.forEach(r => {
+    if (toDateKey_(r.date) !== todayKey) return;
+    const room = r.room || "Ruangan";
+    todayDistribution[room] = (todayDistribution[room] || 0) + Number(r.quantity || 0);
+  });
+
+  const distributionToday = Object.keys(todayDistribution)
+    .reduce((sum, room) => sum + todayDistribution[room], 0);
+
+  const last7Key = new Date(now.getTime() - 6 * 24 * 60 * 60 * 1000);
+  const distribution7 = distributions
+    .filter(r => {
+      if (!r.date) return false;
+      const date = new Date(r.date);
+      return !isNaN(date.getTime()) && date >= new Date(last7Key.getFullYear(), last7Key.getMonth(), last7Key.getDate());
+    })
+    .reduce((sum, r) => sum + Number(r.quantity || 0), 0);
 
   const distributionRows = Object.keys(todayDistribution)
     .map(room => [room, todayDistribution[room]])
     .sort((a, b) => b[1] - a[1])
     .slice(0, 10);
 
+  const statusCounts = [
+    ["AMAN", safeStockCount],
+    ["PERLU CEK", minimumStock.length],
+    ["KOSONG", criticalStock.length],
+  ];
+
   const sheet = getSheet_(SHEET_NAMES.dashboard);
   sheet.clear();
   sheet.getCharts().forEach(chart => sheet.removeChart(chart));
+  sheet.setConditionalFormatRules([]);
   sheet.setHiddenGridlines(true);
 
-  // Layout.
+  // Canvas.
   sheet.setColumnWidth(1, 105);
-  sheet.setColumnWidth(2, 145);
-  sheet.setColumnWidth(3, 85);
+  sheet.setColumnWidth(2, 150);
+  sheet.setColumnWidth(3, 75);
   sheet.setColumnWidth(4, 105);
-  sheet.setColumnWidth(5, 145);
-  sheet.setColumnWidth(6, 85);
+  sheet.setColumnWidth(5, 150);
+  sheet.setColumnWidth(6, 75);
   sheet.setColumnWidth(7, 20);
   sheet.setColumnWidth(8, 115);
-  sheet.setColumnWidth(9, 155);
-  sheet.setColumnWidth(10, 90);
-  sheet.setColumnWidth(11, 100);
-  sheet.setColumnWidth(12, 95);
+  sheet.setColumnWidth(9, 150);
+  sheet.setColumnWidth(10, 88);
+  sheet.setColumnWidth(11, 105);
+  sheet.setColumnWidth(12, 85);
 
+  for (let r = 1; r <= 42; r++) sheet.setRowHeight(r, 21);
+
+  // Header.
   sheet.getRange("A1:L1").merge();
-  sheet.getRange("A1").setValue("GOLOG.IRIN — MONITORING BMHP ICU");
-  sheet.getRange("A1").setFontSize(20).setFontWeight("bold");
+  sheet.getRange("A1").setValue("GOLOG.IRIN — MONITORING KEPALA GUDANG");
+  sheet.getRange("A1")
+    .setFontSize(20)
+    .setFontWeight("bold")
+    .setVerticalAlignment("middle");
   sheet.setRowHeight(1, 38);
 
   sheet.getRange("A2:L2").merge();
-  sheet.getRange("A2").setValue("Ringkasan gudang, permintaan, dan distribusi • Sumber data utama: Golog.Irin");
-  sheet.getRange("A2").setFontSize(10).setFontColor("#666666");
+  sheet.getRange("A2").setValue(
+    "BMHP ICU • Fokus: kondisi stok, barang kritis, permintaan, dan distribusi"
+  );
+  sheet.getRange("A2")
+    .setFontSize(10)
+    .setFontColor("#666666")
+    .setVerticalAlignment("middle");
   sheet.setRowHeight(2, 24);
 
+  // KPI blocks.
   const cards = [
-    { cols: ["A", "C"], row: 4, label: "JENIS BARANG", value: stock.length, note: "item aktif" },
-    { cols: ["D", "F"], row: 4, label: "STOK GUDANG", value: totalWarehouseQty, note: "total unit" },
-    { cols: ["H", "J"], row: 4, label: "AMAN", value: safeStockCount, note: "di atas minimum" },
-    { cols: ["K", "L"], row: 4, label: "PERLU CEK", value: lowStock.length, note: "menyentuh / di bawah minimum" },
-    { cols: ["A", "C"], row: 8, label: "MENUNGGU", value: Object.keys(pendingMap).length, note: "permintaan aktif" },
-    { cols: ["D", "F"], row: 8, label: "DISTRIBUSI HARI INI", value: distributionToday, note: "unit ke ruangan" },
-    { cols: ["H", "J"], row: 8, label: "HISTORI 90 HARI", value: movements.length, note: "catatan movement" },
-    { cols: ["K", "L"], row: 8, label: "SYNC TERAKHIR", value: payload.generatedAt ? Utilities.formatDate(new Date(payload.generatedAt), sessionTz, "dd MMM HH:mm") : "-", note: "waktu server" },
+    { range: "A4:C6", label: "JENIS BARANG", value: stock.length, note: "item aktif" },
+    { range: "D4:F6", label: "STOK GUDANG", value: totalWarehouseQty, note: "total unit" },
+    { range: "H4:J6", label: "AMAN", value: safeStockCount, note: "di atas minimum" },
+    { range: "K4:L6", label: "KOSONG", value: criticalStock.length, note: "stok = 0" },
+    { range: "A8:C10", label: "PERLU CEK", value: minimumStock.length, note: "menyentuh minimum" },
+    { range: "D8:F10", label: "MENUNGGU", value: Object.keys(pendingMap).length, note: "request aktif" },
+    { range: "H8:J10", label: "DISTRIBUSI HARI INI", value: distributionToday, note: "unit ke ruangan" },
+    { range: "K8:L10", label: "DARURAT / MENDESAK", value: pendingEmergency.length + pendingUrgent.length, note: "baris prioritas tinggi" },
   ];
 
   cards.forEach(card => {
-    const startCol = card.cols[0];
-    const endCol = card.cols[1];
-    sheet.getRange(startCol + card.row + ":" + endCol + card.row).merge();
-    sheet.getRange(startCol + (card.row + 1) + ":" + endCol + (card.row + 1)).merge();
-    sheet.getRange(startCol + (card.row + 2) + ":" + endCol + (card.row + 2)).merge();
+    const range = sheet.getRange(card.range);
+    range.merge();
+    range.clearFormat();
+    range.setBorder(true, true, true, true, false, false);
+    range.setVerticalAlignment("middle");
 
-    sheet.getRange(startCol + card.row).setValue(card.label);
-    sheet.getRange(startCol + (card.row + 1)).setValue(card.value);
-    sheet.getRange(startCol + (card.row + 2)).setValue(card.note);
+    const startRow = range.getRow();
+    const startCol = range.getColumn();
 
-    sheet.getRange(startCol + card.row)
+    sheet.getRange(startRow, startCol).setValue(card.label);
+    sheet.getRange(startRow + 1, startCol).setValue(card.value);
+    sheet.getRange(startRow + 2, startCol).setValue(card.note);
+
+    sheet.getRange(startRow, startCol)
       .setFontSize(9)
       .setFontWeight("bold")
-      .setFontColor("#666666")
-      .setVerticalAlignment("middle");
-    sheet.getRange(startCol + (card.row + 1))
-      .setFontSize(18)
-      .setFontWeight("bold")
-      .setVerticalAlignment("middle");
-    sheet.getRange(startCol + (card.row + 2))
-      .setFontSize(8)
-      .setFontColor("#777777")
-      .setVerticalAlignment("middle");
+      .setFontColor("#666666");
 
-    sheet.getRange(startCol + card.row + ":" + endCol + (card.row + 2))
-      .setBorder(true, true, true, true, false, false);
+    sheet.getRange(startRow + 1, startCol)
+      .setFontSize(18)
+      .setFontWeight("bold");
+
+    sheet.getRange(startRow + 2, startCol)
+      .setFontSize(8)
+      .setFontColor("#777777");
   });
 
-  sheet.setRowHeights(4, 3, 21);
-  sheet.setRowHeights(8, 3, 21);
+  // Operational summary.
+  sheet.getRange("A12:F12").merge();
+  sheet.getRange("A12").setValue("RINGKASAN OPERASIONAL");
+  sheet.getRange("A12").setFontSize(12).setFontWeight("bold");
+
+  sheet.getRange("A13:F16").setValues([
+    ["Indikator", "Nilai", "Keterangan", "", "", ""],
+    ["Distribusi 7 hari", distribution7, "akumulasi unit", "", "", ""],
+    ["Histori 90 hari", movements.length, "catatan movement", "", "", ""],
+    ["Sync terakhir", payload.generatedAt ? new Date(payload.generatedAt) : "", "waktu server", "", "", ""],
+  ]);
+  sheet.getRange("A13:C16").setBorder(true, true, true, true, true, true);
+  sheet.getRange("A13:C13").setFontWeight("bold");
+  sheet.getRange("B15").setNumberFormat("0");
+  sheet.getRange("B16").setNumberFormat("dd MMM yyyy HH:mm");
+
+  sheet.getRange("H12:L12").merge();
+  sheet.getRange("H12").setValue("PRIORITAS TINDAKAN");
+  sheet.getRange("H12").setFontSize(12).setFontWeight("bold");
+
+  sheet.getRange("H13:L16").setValues([
+    ["Kondisi", "Jumlah", "Makna", "", ""],
+    ["KOSONG", criticalStock.length, "perlu tindakan segera", "", ""],
+    ["DARURAT", pendingEmergency.length, "permintaan prioritas tinggi", "", ""],
+    ["MENDESAK", pendingUrgent.length, "permintaan prioritas", "", ""],
+  ]);
+  sheet.getRange("H13:L16").setBorder(true, true, true, true, true, true);
+  sheet.getRange("H13:J13").setFontWeight("bold");
 
   // Attention list.
-  sheet.getRange("A12:F12").merge();
-  sheet.getRange("A12").setValue("BARANG PERLU PERHATIAN");
-  sheet.getRange("A12").setFontWeight("bold").setFontSize(12);
+  sheet.getRange("A18:F18").merge();
+  sheet.getRange("A18").setValue("BARANG PERLU PERHATIAN");
+  sheet.getRange("A18").setFontSize(12).setFontWeight("bold");
 
-  sheet.getRange("A13:F13").setValues([["SKU", "BARANG", "STOK", "MINIMUM", "STATUS", "SATUAN"]]);
-  sheet.getRange("A13:F13").setFontWeight("bold").setHorizontalAlignment("center");
+  sheet.getRange("A19:F19").setValues([
+    ["SKU", "BARANG", "STOK", "MINIMUM", "SELISIH", "STATUS"],
+  ]);
+  sheet.getRange("A19:F19").setFontWeight("bold").setHorizontalAlignment("center");
 
   const attention = lowStock.slice(0, 10).map(r => [
     r.sku || "",
     r.name || "",
-    Number(r.stockQty || 0),
-    Number(r.minStock || 0),
-    Number(r.stockQty || 0) <= 0 ? "KOSONG" : "PERLU CEK",
-    r.unit || "",
+    r.stockQty,
+    r.minStock,
+    r.stockQty - r.minStock,
+    r.stockQty <= 0 ? "KOSONG" : "PERLU CEK",
   ]);
 
   if (attention.length) {
-    sheet.getRange(14, 1, attention.length, 6).setValues(attention);
-    sheet.getRange(14, 3, attention.length, 2).setNumberFormat("0");
+    sheet.getRange(20, 1, attention.length, 6).setValues(attention);
+    sheet.getRange(20, 3, attention.length, 3).setNumberFormat("0");
   } else {
-    sheet.getRange("A14:F14").merge().setValue("Tidak ada barang yang perlu perhatian.");
-    sheet.getRange("A14").setFontColor("#38761d");
+    sheet.getRange("A20:F20").merge().setValue("Semua stok berada di atas minimum.");
+    sheet.getRange("A20").setFontColor("#38761d");
   }
 
   // Pending requests.
-  sheet.getRange("H12:L12").merge();
-  sheet.getRange("H12").setValue("PERMINTAAN MENUNGGU");
-  sheet.getRange("H12").setFontWeight("bold").setFontSize(12);
+  sheet.getRange("H18:L18").merge();
+  sheet.getRange("H18").setValue("PERMINTAAN MENUNGGU");
+  sheet.getRange("H18").setFontSize(12).setFontWeight("bold");
 
-  sheet.getRange("H13:L13").setValues([["NO REQUEST", "RUANGAN", "PRIORITAS", "TANGGAL", "QTY DIMINTA"]]);
-  sheet.getRange("H13:L13").setFontWeight("bold").setHorizontalAlignment("center");
+  sheet.getRange("H19:L19").setValues([
+    ["NO REQUEST", "RUANGAN", "PRIORITAS", "TGL", "QTY"],
+  ]);
+  sheet.getRange("H19:L19").setFontWeight("bold").setHorizontalAlignment("center");
 
   const pendingOutput = pendingList.map(r => [
     r.requestNo,
@@ -413,73 +488,67 @@ function writeDashboard_(payload) {
   ]);
 
   if (pendingOutput.length) {
-    sheet.getRange(14, 8, pendingOutput.length, 5).setValues(pendingOutput);
-    sheet.getRange(14, 11, pendingOutput.length, 1).setNumberFormat("0");
-    sheet.getRange(14, 11, pendingOutput.length, 1).setHorizontalAlignment("center");
+    sheet.getRange(20, 8, pendingOutput.length, 5).setValues(pendingOutput);
+    sheet.getRange(20, 11, pendingOutput.length, 1).setNumberFormat("0");
+    sheet.getRange(20, 10, pendingOutput.length, 1).setNumberFormat("dd MMM");
   } else {
-    sheet.getRange("H14:L14").merge().setValue("Tidak ada permintaan yang menunggu.");
-    sheet.getRange("H14").setFontColor("#38761d");
+    sheet.getRange("H20:L20").merge().setValue("Tidak ada permintaan yang menunggu.");
+    sheet.getRange("H20").setFontColor("#38761d");
   }
 
-  // Distribution today.
-  sheet.getRange("A27:F27").merge();
-  sheet.getRange("A27").setValue("DISTRIBUSI HARI INI");
-  sheet.getRange("A27").setFontWeight("bold").setFontSize(12);
+  // Distribution today + chart source.
+  sheet.getRange("A32:F32").merge();
+  sheet.getRange("A32").setValue("DISTRIBUSI HARI INI PER RUANGAN");
+  sheet.getRange("A32").setFontSize(12).setFontWeight("bold");
 
-  sheet.getRange("A28:B28").setValues([["RUANGAN", "JUMLAH"]]);
-  sheet.getRange("A28:B28").setFontWeight("bold");
+  sheet.getRange("A33:B33").setValues([["RUANGAN", "JUMLAH"]]);
+  sheet.getRange("A33:B33").setFontWeight("bold");
+
   if (distributionRows.length) {
-    sheet.getRange(29, 1, distributionRows.length, 2).setValues(distributionRows);
-    sheet.getRange(29, 2, distributionRows.length, 1).setNumberFormat("0");
+    sheet.getRange(34, 1, distributionRows.length, 2).setValues(distributionRows);
+    sheet.getRange(34, 2, distributionRows.length, 1).setNumberFormat("0");
   } else {
-    sheet.getRange("A29:B29").merge().setValue("Belum ada distribusi hari ini.");
-    sheet.getRange("A29").setFontColor("#777777");
+    sheet.getRange("A34:B34").merge().setValue("Belum ada distribusi hari ini.");
+    sheet.getRange("A34").setFontColor("#777777");
   }
 
-  // Stock status chart.
-  sheet.getRange("D27:E27").setValues([["STATUS STOK", "JUMLAH"]]);
-  sheet.getRange("D27:E27").setFontWeight("bold");
-  sheet.getRange("D28:E29").setValues([
-    ["AMAN", safeStockCount],
-    ["PERLU CEK", lowStock.length],
-  ]);
+  sheet.getRange("D32:E32").setValues([["STATUS STOK", "JUMLAH"]]);
+  sheet.getRange("D32:E32").setFontWeight("bold");
+  sheet.getRange("D33:E35").setValues(statusCounts);
 
   try {
     const chart = sheet.newChart()
       .setChartType(Charts.ChartType.PIE)
-      .addRange(sheet.getRange("D27:E29"))
-      .setPosition(27, 7, 0, 0)
-      .setOption("title", "Status Stok Gudang")
-      .setOption("pieHole", 0.45)
+      .addRange(sheet.getRange("D32:E35"))
+      .setPosition(32, 7, 0, 0)
+      .setOption("title", "Komposisi Status Stok")
+      .setOption("pieHole", 0.48)
       .setOption("legend", { position: "right" })
       .setOption("width", 500)
-      .setOption("height", 260)
+      .setOption("height", 255)
       .build();
     sheet.insertChart(chart);
   } catch (error) {
     Logger.log("Dashboard chart skipped: " + error);
   }
 
-  sheet.getRange("H27:L27").merge();
-  sheet.getRange("H27").setValue("CATATAN");
-  sheet.getRange("H27").setFontWeight("bold").setFontSize(12);
-
-  sheet.getRange("H28:L31").merge();
-  sheet.getRange("H28").setValue(
-    "Golog.Irin adalah sumber data utama. Google Sheet digunakan untuk monitoring dan analitik.\n\n" +
+  sheet.getRange("A42:L42").merge();
+  sheet.getRange("A42").setValue(
+    "Catatan: Golog.Irin adalah sumber data utama. Google Sheet digunakan untuk monitoring dan analitik. " +
     "Status stok: Stok ≤ Minimum Stok = PERLU CEK."
   );
-  sheet.getRange("H28").setWrap(true).setVerticalAlignment("top");
-
-  // General formatting.
-  sheet.getRange("A1:L31")
-    .setVerticalAlignment("middle")
+  sheet.getRange("A42")
+    .setFontSize(9)
+    .setFontColor("#666666")
     .setWrap(true);
-  sheet.getRange("A13:L13").setFontSize(9);
+
+  // Number/date formatting + freeze.
+  sheet.getRange("A1:L42").setVerticalAlignment("middle").setWrap(true);
   sheet.setFrozenRows(2);
 
-  const statusRange = sheet.getRange("E14:E23");
+  // Attention status highlighting.
   if (attention.length) {
+    const statusRange = sheet.getRange(20, 6, attention.length, 1);
     const rules = [
       SpreadsheetApp.newConditionalFormatRule()
         .whenTextEqualTo("KOSONG")
@@ -495,6 +564,17 @@ function writeDashboard_(payload) {
         .build(),
     ];
     sheet.setConditionalFormatRules(rules);
+  }
+
+  // Light emphasis for action numbers.
+  if (criticalStock.length) {
+    sheet.getRange("K5:L5").setFontColor("#990000");
+  }
+  if (minimumStock.length) {
+    sheet.getRange("A9:C9").setFontColor("#7f6000");
+  }
+  if (pendingList.length) {
+    sheet.getRange("D9:F9").setFontColor("#b45f06");
   }
 }
 function showUiMessage_(message) {
