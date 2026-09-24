@@ -1,3 +1,5 @@
+import { getGoogleSheetSyncData } from "../../server/db.ts";
+
 type SyncRequest = {
   method?: string;
   headers: Record<string, string | string[] | undefined>;
@@ -51,9 +53,6 @@ export default async function handler(req: SyncRequest, res: SyncResponse) {
   }
 
   try {
-    // Dynamic import keeps module-load failures inside the handler so Vercel
-    // returns a readable JSON error instead of FUNCTION_INVOCATION_FAILED.
-    const { getGoogleSheetSyncData } = await import("../../server/db.ts");
     const data = await getGoogleSheetSyncData();
 
     return res.status(200).json({
