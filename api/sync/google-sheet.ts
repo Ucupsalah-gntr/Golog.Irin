@@ -1,8 +1,17 @@
 import "dotenv/config";
-import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { getGoogleSheetSyncData } from "../../../server/db.ts";
 
-function getSyncToken(req: VercelRequest) {
+type SyncRequest = {
+  method?: string;
+  headers: Record<string, string | string[] | undefined>;
+};
+
+type SyncResponse = {
+  setHeader: (name: string, value: string) => void;
+  status: (code: number) => { json: (body: unknown) => unknown };
+};
+
+function getSyncToken(req: SyncRequest) {
   const header = req.headers["x-golog-sync-token"];
   if (typeof header === "string" && header.trim()) return header.trim();
 
@@ -14,7 +23,7 @@ function getSyncToken(req: VercelRequest) {
   return "";
 }
 
-export default async function handler(req: VercelRequest, res: VercelResponse) {
+export default async function handler(req: SyncRequest, res: SyncResponse) {
   res.setHeader("Cache-Control", "no-store");
 
   if (req.method !== "GET" && req.method !== "POST") {
