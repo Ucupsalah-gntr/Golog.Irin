@@ -616,6 +616,160 @@ export const appRouter = router({
       await writeAudit(ctx.user.id, "apply", "stock_adjustment", adjustmentId, { systemQty }, { ...input, adjustmentNo, adjustmentType, quantity, difference, finalQty: input.physicalQty, status: "applied", verifiedBy: ctx.user.id }, "Rekonsiliasi stok berdasarkan hasil fisik");
       return { adjustmentId, adjustmentNo, systemQty, physicalQty: input.physicalQty, difference, finalQty: input.physicalQty };
     }),
+    applyBulkStocktake: adminProcedure.input(z.object({
+      lines: z.array(z.object({
+        itemId: z.number().int().positive(),
+        physicalQty: z.number().int().min(0),
+      })).min(1).max(5000),
+      reason: z.string().min(10).max(1000),
+      incidentDate: z.coerce.date(),
+    })).mutation(async ({ input, ctx }) => {
+      const db = await getDb();
+      if (!db) {
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Database belum tersedia.",
+        });
+      }
+
+      const uniqueItemIds = new Set(input.lines.map((line) => line.itemId));
+      if (uniqueItemIds.size !== input.lines.length) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Barang yang sama tidak boleh muncul dua kali dalam satu stock opname.",
+        });
+      }
+
+      const applied = await db.transaction(async (tx) => {
+        const results: Array<{
+          adjustmentId: number;
+          adjustmentNo: string;
+          itemId: number;
+          systemQty: number;
+          physicalQty: number;
+          difference: number;
+        }> = [];
+
+        for (const line of input.lines) {
+          const itemRows = await tx
+            .select({ id: items.id, name: items.name })
+            .from(items)
+            .where(and(eq(items.id, line.itemId), eq(items.active, true)))
+            .limit(1)
+            .for("update");
+
+          const item = itemRows[0];
+          if (!item) {
+            throw new TRPCError({
+              code: "BAD_REQUEST",
+              message: `Barang dengan ID ${line.itemId} tidak ditemukan atau sudah tidak aktif.`,
+            });
+          }
+
+          const stockRows = await tx
+            .select({
+              quantity: sql<number>`COALESCE(SUM(${stockMovements.quantity}), 0)`,
+            })
+            .from(stockMovements)
+            .where(and(
+              eq(stockMovements.itemId, line.itemId),
+              isNull(stockMovements.roomId),
+            ));
+
+          const systemQty = Number(stockRows[0]?.quantity ?? 0);
+          const difference = calculateStockDifference(systemQty, line.physicalQty);
+
+          if (difference === 0) {
+            continue;
+          }
+
+          const adjustmentType = difference > 0 ? "add" : "subtract";
+          const quantity = Math.abs(difference);
+          const adjustmentNo = nowNo("ADJ");
+
+          const inserted = await tx
+            .insert(stockAdjustments)
+            .values({
+              itemId: line.itemId,
+              roomId: null,
+              adjustmentType,
+              quantity,
+              systemQty,
+              physicalQty: line.physicalQty,
+              reasonType: "stocktake",
+              reason: input.reason,
+              incidentDate: input.incidentDate,
+              adjustmentNo,
+              status: "applied",
+              createdBy: ctx.user.id,
+              verifiedBy: ctx.user.id,
+              appliedAt: new Date(),
+            })
+            .returning({ id: stockAdjustments.id });
+
+          const adjustmentId = inserted[0]?.id;
+          if (!adjustmentId) {
+            throw new TRPCError({
+              code: "INTERNAL_SERVER_ERROR",
+              message: `Penyesuaian ${item.name} gagal disimpan.`,
+            });
+          }
+
+          await tx.insert(stockMovements).values({
+            itemId: line.itemId,
+            movementType: "adjustment",
+            quantity: difference,
+            roomId: null,
+            adjustmentId,
+            createdBy: ctx.user.id,
+            notes: input.reason,
+            occurredAt: input.incidentDate,
+          });
+
+          results.push({
+            adjustmentId,
+            adjustmentNo,
+            itemId: line.itemId,
+            systemQty,
+            physicalQty: line.physicalQty,
+            difference,
+          });
+        }
+
+        return results;
+      });
+
+      await writeAudit(
+        ctx.user.id,
+        "bulk_apply",
+        "stocktake",
+        null,
+        { itemCount: input.lines.length },
+        {
+          itemCount: input.lines.length,
+          adjusted: applied.length,
+          noDifference: input.lines.length - applied.length,
+          adjustments: applied,
+        },
+        "Stock opname gudang pusat diproses sekaligus",
+      );
+
+      const increase = applied
+        .filter((row) => row.difference > 0)
+        .reduce((sum, row) => sum + row.difference, 0);
+      const decrease = applied
+        .filter((row) => row.difference < 0)
+        .reduce((sum, row) => sum + Math.abs(row.difference), 0);
+
+      return {
+        checked: input.lines.length,
+        adjusted: applied.length,
+        noDifference: input.lines.length - applied.length,
+        increase,
+        decrease,
+        adjustments: applied,
+      };
+    }),
   }),
   reports: router({
     movements: adminProcedure.input(
