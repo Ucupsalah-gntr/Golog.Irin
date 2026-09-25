@@ -16,18 +16,20 @@ const TAB_STORAGE_KEY =
     ? globalThis.crypto.randomUUID()
     : `tab-${Date.now()}-${Math.random().toString(36).slice(2)}`;
 
+const getTabStorageKeys = () =>
+  Object.keys(sessionStorage).filter((keyName) => keyName.startsWith(TAB_STORAGE_PREFIX));
+
 const tabSessionStorage: Storage = {
   get length() {
-    return sessionStorage.length;
+    return getTabStorageKeys().length;
   },
   clear() {
-    sessionStorage.clear();
+    for (const keyName of getTabStorageKeys()) {
+      sessionStorage.removeItem(keyName);
+    }
   },
   key(index: number) {
-    const keys = Object.keys(sessionStorage).filter((keyName) =>
-      keyName.startsWith(TAB_STORAGE_PREFIX),
-    );
-    return keys[index]?.slice(TAB_STORAGE_PREFIX.length) ?? null;
+    return getTabStorageKeys()[index]?.slice(TAB_STORAGE_PREFIX.length) ?? null;
   },
   getItem(keyName: string) {
     return sessionStorage.getItem(TAB_STORAGE_PREFIX + keyName);
