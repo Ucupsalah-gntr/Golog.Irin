@@ -1090,11 +1090,13 @@ function StockOpnameView({ stock, items, onSubmit, busy }: any) {
                     const status =
                       physical === null
                         ? { label: "Belum diisi", className: "border-slate-200 bg-slate-50 text-slate-500" }
-                        : difference === 0
-                          ? { label: "Sesuai", className: "border-emerald-200 bg-emerald-50 text-emerald-700" }
-                          : difference > 0
-                            ? { label: "Tambah", className: "border-sky-200 bg-sky-50 text-sky-700" }
-                            : { label: "Kurang", className: "border-rose-200 bg-rose-50 text-rose-700" };
+                        : difference === null
+                          ? { label: "Belum diisi", className: "border-slate-200 bg-slate-50 text-slate-500" }
+                          : difference === 0
+                            ? { label: "Sesuai", className: "border-emerald-200 bg-emerald-50 text-emerald-700" }
+                            : difference > 0
+                              ? { label: "Tambah", className: "border-sky-200 bg-sky-50 text-sky-700" }
+                              : { label: "Kurang", className: "border-rose-200 bg-rose-50 text-rose-700" };
 
                     return (
                       <tr key={row.itemId} className={difference !== null && difference !== 0 ? "bg-amber-50/30" : "bg-white"}>
