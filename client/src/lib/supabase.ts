@@ -17,6 +17,18 @@ const TAB_STORAGE_KEY =
     : `tab-${Date.now()}-${Math.random().toString(36).slice(2)}`;
 
 const tabSessionStorage: Storage = {
+  get length() {
+    return sessionStorage.length;
+  },
+  clear() {
+    sessionStorage.clear();
+  },
+  key(index: number) {
+    const keys = Object.keys(sessionStorage).filter((keyName) =>
+      keyName.startsWith(TAB_STORAGE_PREFIX),
+    );
+    return keys[index]?.slice(TAB_STORAGE_PREFIX.length) ?? null;
+  },
   getItem(keyName: string) {
     return sessionStorage.getItem(TAB_STORAGE_PREFIX + keyName);
   },
