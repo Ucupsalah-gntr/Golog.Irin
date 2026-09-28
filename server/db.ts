@@ -222,8 +222,13 @@ export async function getDashboardData(
     .from(requests)
     .where(and(...pendingFilters));
 
-  const todayStart = new Date();
-  todayStart.setHours(0, 0, 0, 0);
+  const jakartaDateKey = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Jakarta",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(new Date());
+  const todayStart = new Date(`${jakartaDateKey}T00:00:00+07:00`);
 
   const incomingFilter = [
     eq(stockMovements.movementType, "in"),
