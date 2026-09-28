@@ -232,7 +232,7 @@ export async function getDashboardData(
 
   const incomingFilter = [
     eq(stockMovements.movementType, "in"),
-    gte(stockMovements.createdAt, todayStart),
+    gte(stockMovements.occurredAt, todayStart),
     role === "admin" ? isNull(stockMovements.roomId) : roomId === null ? sql`FALSE` : eq(stockMovements.roomId, roomId),
   ];
 
