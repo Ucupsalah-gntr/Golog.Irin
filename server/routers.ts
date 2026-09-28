@@ -37,7 +37,7 @@ const roleGuard = (role: "admin" | "user") => protectedProcedure.use(({ ctx, nex
 const operatorProcedure = roleGuard("user");
 
 function nowNo(prefix: string) {
-  return `${prefix}-${new Date().toISOString().slice(0, 10).replaceAll("-", "")}-${Date.now().toString().slice(-5)}`;
+  return `${prefix}-${getJakartaDateKey().replaceAll("-", "")}-${Date.now().toString().slice(-5)}`;
 }
 
 async function dbSafeFindTodayRoomLock(userId: number) {
