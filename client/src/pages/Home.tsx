@@ -472,7 +472,7 @@ function Overview({
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
           {cards.map((item) => {
             const Icon = item.icon;
-            return <Card key={item.label} className="border-slate-200/80 shadow-sm"><CardContent className="flex items-start justify-between p-5"><div><p className="text-sm text-slate-500">{item.label}</p><p className="mt-2 text-3xl font-semibold tracking-tight">{formatNumber(item.value)}</p><p className="mt-1 text-xs text-slate-400">{item.hint}</p></div><div className={\`rounded-2xl p-3 \${item.tint}\`}><Icon size={20} /></div></CardContent></Card>;
+            return <Card key={item.label} className="border-slate-200/80 shadow-sm"><CardContent className="flex items-start justify-between p-5"><div><p className="text-sm text-slate-500">{item.label}</p><p className="mt-2 text-3xl font-semibold tracking-tight">{formatNumber(item.value)}</p><p className="mt-1 text-xs text-slate-400">{item.hint}</p></div><div className={`rounded-2xl p-3 ${item.tint}`}><Icon size={20} /></div></CardContent></Card>;
           })}
         </div>
         {report && <CategoryPivotTable report={report} />}
@@ -482,7 +482,7 @@ function Overview({
               <div><CardTitle>Aktivitas Gudang Pusat</CardTitle><p className="mt-1 text-sm text-slate-500">Pergerakan terakhir di Gudang Pusat.</p></div>
               <Button variant="outline" size="sm" onClick={() => onGo("reports")}><FileDown size={15} className="mr-2" />Laporan</Button>
             </CardHeader>
-            <CardContent><div className="divide-y divide-slate-100">{(dashboard?.recent ?? []).length ? dashboard.recent.map((row: any) => <div key={row.movement.id} className="flex items-center justify-between gap-4 py-4"><div className="flex min-w-0 items-center gap-3"><div className={\`rounded-xl p-2 \${row.movement.quantity >= 0 ? "bg-emerald-50 text-emerald-700" : "bg-rose-50 text-rose-700"}\`}>{row.movement.quantity >= 0 ? <ArrowDownToLine size={16} /> : <ArrowUpFromLine size={16} />}</div><div className="min-w-0"><p className="truncate text-sm font-medium">{row.item?.name ?? "Item"}</p><p className="text-xs text-slate-400">{row.movement.movementType === "in" ? "Barang masuk" : row.movement.movementType === "out" ? "Keluar gudang" : "Penyesuaian"} · {formatDate(row.movement.occurredAt)}</p></div></div><p className={\`shrink-0 text-sm font-semibold \${row.movement.quantity >= 0 ? "text-emerald-700" : "text-rose-700"}\`}>{row.movement.quantity >= 0 ? "+" : ""}{formatNumber(row.movement.quantity)}</p></div>) : <EmptyState title="Belum ada aktivitas" text="Catat barang masuk untuk memulai kartu stok." />}</div></CardContent>
+            <CardContent><div className="divide-y divide-slate-100">{(dashboard?.recent ?? []).length ? dashboard.recent.map((row: any) => <div key={row.movement.id} className="flex items-center justify-between gap-4 py-4"><div className="flex min-w-0 items-center gap-3"><div className={`rounded-xl p-2 ${row.movement.quantity >= 0 ? "bg-emerald-50 text-emerald-700" : "bg-rose-50 text-rose-700"}`}>{row.movement.quantity >= 0 ? <ArrowDownToLine size={16} /> : <ArrowUpFromLine size={16} />}</div><div className="min-w-0"><p className="truncate text-sm font-medium">{row.item?.name ?? "Item"}</p><p className="text-xs text-slate-400">{row.movement.movementType === "in" ? "Barang masuk" : row.movement.movementType === "out" ? "Keluar gudang" : "Penyesuaian"} · {formatDate(row.movement.occurredAt)}</p></div></div><p className={`shrink-0 text-sm font-semibold ${row.movement.quantity >= 0 ? "text-emerald-700" : "text-rose-700"}`}>{row.movement.quantity >= 0 ? "+" : ""}{formatNumber(row.movement.quantity)}</p></div>) : <EmptyState title="Belum ada aktivitas" text="Catat barang masuk untuk memulai kartu stok." />}</div></CardContent>
           </Card>
         </div>
       </div>
@@ -511,16 +511,16 @@ function Overview({
         { label: "Masuk hari ini", value: stats.todayIn, hint: "Unit masuk ke ruangan", icon: ArrowDownToLine, tint: "bg-emerald-50 text-emerald-700" },
       ].map((item) => {
         const Icon = item.icon;
-        return <Card key={item.label} className="border-slate-200/80 shadow-sm"><CardContent className="flex items-start justify-between p-5"><div><p className="text-sm text-slate-500">{item.label}</p><p className="mt-2 text-3xl font-semibold tracking-tight">{formatNumber(item.value)}</p><p className="mt-1 text-xs text-slate-400">{item.hint}</p></div><div className={\`rounded-2xl p-3 \${item.tint}\`}><Icon size={20} /></div></CardContent></Card>;
+        return <Card key={item.label} className="border-slate-200/80 shadow-sm"><CardContent className="flex items-start justify-between p-5"><div><p className="text-sm text-slate-500">{item.label}</p><p className="mt-2 text-3xl font-semibold tracking-tight">{formatNumber(item.value)}</p><p className="mt-1 text-xs text-slate-400">{item.hint}</p></div><div className={`rounded-2xl p-3 ${item.tint}`}><Icon size={20} /></div></CardContent></Card>;
       })}
     </div>
 
     <div className="grid gap-6">
       <Card className="border-slate-200/80 shadow-sm">
         <CardHeader className="flex flex-row items-center justify-between">
-          <div><CardTitle>Aktivitas ruangan</CardTitle><p className="mt-1 text-sm text-slate-500">{roomName ? \`Pergerakan terakhir di \${roomName}.\` : "Belum ada ruangan aktif."}</p></div>
+          <div><CardTitle>Aktivitas ruangan</CardTitle><p className="mt-1 text-sm text-slate-500">{roomName ? `Pergerakan terakhir di ${roomName}.` : "Belum ada ruangan aktif."}</p></div>
         </CardHeader>
-        <CardContent><div className="divide-y divide-slate-100">{(dashboard?.recent ?? []).length ? dashboard.recent.map((row: any) => <div key={row.movement.id} className="flex items-center justify-between gap-4 py-4"><div className="flex min-w-0 items-center gap-3"><div className={\`rounded-xl p-2 \${row.movement.quantity >= 0 ? "bg-emerald-50 text-emerald-700" : "bg-rose-50 text-rose-700"}\`}>{row.movement.quantity >= 0 ? <ArrowDownToLine size={16} /> : <ArrowUpFromLine size={16} />}</div><div className="min-w-0"><p className="truncate text-sm font-medium">{row.item?.name ?? "Item"}</p><p className="text-xs text-slate-400">{row.movement.movementType === "in" ? "Barang masuk" : row.movement.movementType === "out" ? "Keluar" : "Penyesuaian"} · {formatDate(row.movement.occurredAt)}</p></div></div><p className={\`shrink-0 text-sm font-semibold \${row.movement.quantity >= 0 ? "text-emerald-700" : "text-rose-700"}\`}>{row.movement.quantity >= 0 ? "+" : ""}{formatNumber(row.movement.quantity)}</p></div>) : <EmptyState title="Belum ada aktivitas" text={roomName ? "Belum ada barang masuk ke ruangan." : "Belum ada ruangan aktif."} />}</div></CardContent>
+        <CardContent><div className="divide-y divide-slate-100">{(dashboard?.recent ?? []).length ? dashboard.recent.map((row: any) => <div key={row.movement.id} className="flex items-center justify-between gap-4 py-4"><div className="flex min-w-0 items-center gap-3"><div className={`rounded-xl p-2 ${row.movement.quantity >= 0 ? "bg-emerald-50 text-emerald-700" : "bg-rose-50 text-rose-700"}`}>{row.movement.quantity >= 0 ? <ArrowDownToLine size={16} /> : <ArrowUpFromLine size={16} />}</div><div className="min-w-0"><p className="truncate text-sm font-medium">{row.item?.name ?? "Item"}</p><p className="text-xs text-slate-400">{row.movement.movementType === "in" ? "Barang masuk" : row.movement.movementType === "out" ? "Keluar" : "Penyesuaian"} · {formatDate(row.movement.occurredAt)}</p></div></div><p className={`shrink-0 text-sm font-semibold ${row.movement.quantity >= 0 ? "text-emerald-700" : "text-rose-700"}`}>{row.movement.quantity >= 0 ? "+" : ""}{formatNumber(row.movement.quantity)}</p></div>) : <EmptyState title="Belum ada aktivitas" text={roomName ? "Belum ada barang masuk ke ruangan." : "Belum ada ruangan aktif."} />}</div></CardContent>
       </Card>
     </div>
   </>;
@@ -670,7 +670,7 @@ function MobileAdminOverview({
                   className="w-full rounded-2xl border-l-4 border-amber-400 bg-white p-4 text-left shadow-sm ring-1 ring-slate-200/70"
                 >
                   <div className="flex items-center justify-between gap-3">
-                    <span className={\`text-[10px] font-extrabold uppercase tracking-[0.12em] \${priorityClass}\`}>{priority} · priority</span>
+                    <span className={`text-[10px] font-extrabold uppercase tracking-[0.12em] ${priorityClass}`}>{priority} · priority</span>
                     <span className="text-[10px] italic text-slate-400">{formatDate(row.request.createdAt)}</span>
                   </div>
                   <p className="mt-2 truncate text-sm font-semibold text-[#152b46]">{row.request.requestNo}</p>
@@ -719,7 +719,7 @@ function MobileAdminOverview({
                     </div>
                   </div>
                   <div className="shrink-0 text-right">
-                    <p className={\`text-sm font-bold \${positive ? "text-emerald-600" : "text-rose-500"}\`}>
+                    <p className={`text-sm font-bold ${positive ? "text-emerald-600" : "text-rose-500"}`}>
                       {positive ? "+" : ""}{formatNumber(row.movement.quantity)}
                     </p>
                     <p className="mt-1 text-[10px] text-slate-400">{formatDate(row.movement.occurredAt)}</p>
