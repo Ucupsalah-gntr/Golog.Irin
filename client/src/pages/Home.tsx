@@ -231,7 +231,7 @@ export default function Home() {
     } else {
       for (const row of requests.data ?? []) {
         const status = row?.request?.status;
-        if (!status || status === "draft") continue;
+        if (!status) continue;
         const title =
           status === "submitted"
             ? "Permintaan sedang diproses"
@@ -2072,7 +2072,7 @@ function ReportsView({ report, month, onMonthChange }: any) {
       ["Transaksi bulan berjalan", movements.length],
       ["Barang masuk Gudang Pusat", totalInbound],
       ["Distribusi ke ruangan", totalDistributed],
-      ["Pemakaian ruangan", totalUsage],
+      ["Pengeluaran ruangan (historis)", totalUsage],
       ["Penyesuaian bersih", totalAdjustment],
       ["Jumlah master barang aktif", items.length],
       ["Jumlah ruangan aktif", rooms.length],
@@ -2091,8 +2091,8 @@ function ReportsView({ report, month, onMonthChange }: any) {
 
     for (const sheet of roomSheetRows) {
       sheets.push({
-        name: `Pemakaian ${String(sheet.room.name)}`,
-        rows: [[`Pemakaian BHP - ${sheet.room.name}`], sheet.headers, ...sheet.rows],
+        name: `Pengeluaran ${String(sheet.room.name)}`,
+        rows: [[`Pengeluaran BHP (historis) - ${sheet.room.name}`], sheet.headers, ...sheet.rows],
       });
     }
 
@@ -2105,7 +2105,7 @@ function ReportsView({ report, month, onMonthChange }: any) {
       <CardHeader className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div>
           <CardTitle>Laporan BMHP Bulanan</CardTitle>
-          <p className="mt-1 text-sm text-slate-500">Format mengikuti pola laporan penerimaan, distribusi, pemakaian harian ruangan, dan rekap stok.</p>
+          <p className="mt-1 text-sm text-slate-500">Format mengikuti pola penerimaan, distribusi, riwayat pengeluaran ruangan, dan rekap stok.</p>
         </div>
         <div className="flex flex-col gap-2 sm:flex-row">
           <Input type="month" value={month} onChange={(e) => onMonthChange(e.target.value)} className="h-10 sm:w-40" />
@@ -2117,7 +2117,7 @@ function ReportsView({ report, month, onMonthChange }: any) {
           {[
             ["Barang masuk", totalInbound],
             ["Distribusi", totalDistributed],
-            ["Pemakaian", totalUsage],
+            ["Pengeluaran historis", totalUsage],
             ["Penyesuaian bersih", totalAdjustment],
           ].map(([label, value]) => <div key={String(label)} className="rounded-2xl bg-slate-50 p-4"><p className="text-xs text-slate-400">{String(label)}</p><p className="mt-1 text-2xl font-semibold">{formatNumber(Number(value))}</p><p className="mt-1 text-xs text-slate-400">periode {month}</p></div>)}
         </div>
