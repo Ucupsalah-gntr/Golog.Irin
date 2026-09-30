@@ -525,6 +525,260 @@ function Overview({
   </>;
 }
 
+function MobileAdminOverview({
+  dashboard,
+  requests,
+  userName,
+  onGo,
+}: {
+  dashboard: any;
+  requests: any[];
+  userName: string;
+  onGo: (key: NavKey) => void;
+}) {
+  const stats = dashboard?.stats ?? { items: 0, lowStock: 0, pending: 0, todayIn: 0 };
+  const pendingRequests = requests.filter((row) => row?.request?.status === "submitted");
+  const initials = userName
+    .split(/\s+/)
+    .filter(Boolean)
+    .map((part) => part[0])
+    .slice(0, 2)
+    .join("")
+    .toUpperCase() || "GI";
+
+  return (
+    <div className="min-h-[100vh] bg-[#f3f7fb] px-4 pt-7 sm:px-6">
+      <div className="mx-auto max-w-xl space-y-5">
+        <div className="flex items-center justify-between px-1">
+          <div className="flex min-w-0 items-center gap-3">
+            <div className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-[#102a2b] text-sm font-bold text-white shadow-sm">
+              {initials}
+            </div>
+            <div className="min-w-0">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">Welcome back,</p>
+              <p className="truncate text-[18px] font-semibold tracking-tight text-[#152b46]">{userName}</p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={() => onGo("requests")}
+            className="relative grid h-11 w-11 shrink-0 place-items-center rounded-full bg-white text-[#152b46] shadow-sm ring-1 ring-slate-200/70"
+            aria-label="Permintaan"
+          >
+            <Bell size={20} />
+            {pendingRequests.length > 0 && <span className="absolute right-2 top-2 h-2 w-2 rounded-full bg-rose-500 ring-2 ring-white" />}
+          </button>
+        </div>
+
+        <button
+          type="button"
+          onClick={() => onGo("stock")}
+          className="flex w-full items-center gap-3 rounded-2xl bg-[#eaf0f7] px-4 py-3.5 text-left shadow-inner ring-1 ring-slate-200/70"
+        >
+          <Search size={21} className="text-[#42566d]" />
+          <span className="text-sm text-slate-500">Cari SKU atau nama barang</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => onGo("requests")}
+          className="flex w-full items-center justify-between rounded-2xl border border-amber-200 bg-[#fffaf0] px-4 py-3.5 text-left shadow-sm"
+        >
+          <div className="flex items-center gap-3">
+            <div className="grid h-10 w-10 place-items-center rounded-xl bg-amber-100 text-amber-700"><ClipboardCheck size={18} /></div>
+            <div>
+              <p className="text-xs font-semibold text-amber-800">{pendingRequests.length} Permintaan menunggu</p>
+              <p className="mt-0.5 text-[11px] text-amber-700/80">Perlu ditinjau Kepala Gudang</p>
+            </div>
+          </div>
+          <span className="rounded-full bg-amber-100 px-3 py-1 text-[11px] font-bold text-amber-800">Review</span>
+        </button>
+
+        <div className="rounded-[1.8rem] bg-[#0db889] p-5 text-white shadow-[0_18px_45px_rgba(13,184,137,0.24)]">
+          <div className="flex items-center justify-between gap-4">
+            <div>
+              <p className="text-[20px] font-semibold tracking-tight">Quick Actions</p>
+              <p className="mt-1 text-sm text-emerald-50/90">Akses cepat untuk pekerjaan gudang.</p>
+            </div>
+            <button
+              type="button"
+              onClick={() => onGo("stocktake")}
+              className="grid h-14 w-14 shrink-0 place-items-center rounded-2xl bg-white/15 ring-1 ring-white/20 transition hover:bg-white/20"
+              aria-label="Buka stock opname"
+            >
+              <ScanLine size={25} />
+            </button>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 gap-3">
+          <button
+            type="button"
+            onClick={() => onGo("inbound")}
+            className="rounded-2xl bg-white p-4 text-left shadow-sm ring-1 ring-slate-200/70"
+          >
+            <div className="grid h-11 w-11 place-items-center rounded-2xl bg-emerald-50 text-emerald-600"><ArrowDownToLine size={22} /></div>
+            <p className="mt-3 text-sm font-semibold text-[#152b46]">Barang Masuk</p>
+            <p className="mt-1 text-xs text-slate-400">Catat penerimaan</p>
+          </button>
+          <button
+            type="button"
+            onClick={() => onGo("requests")}
+            className="rounded-2xl bg-white p-4 text-left shadow-sm ring-1 ring-slate-200/70"
+          >
+            <div className="grid h-11 w-11 place-items-center rounded-2xl bg-orange-50 text-orange-500"><Truck size={22} /></div>
+            <p className="mt-3 text-sm font-semibold text-[#152b46]">Distribusi</p>
+            <p className="mt-1 text-xs text-slate-400">Kelola permintaan</p>
+          </button>
+        </div>
+
+        <div className="grid grid-cols-2 gap-3">
+          <div className="rounded-2xl bg-white p-4 shadow-sm ring-1 ring-slate-200/70">
+            <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-slate-400">Total SKU</p>
+            <p className="mt-2 text-[27px] font-bold tracking-tight text-[#152b46]">{formatNumber(stats.items)}</p>
+            <span className="mt-1 inline-flex rounded-full bg-emerald-50 px-2 py-1 text-[10px] font-bold text-emerald-600">Aktif</span>
+          </div>
+          <div className="rounded-2xl bg-white p-4 shadow-sm ring-1 ring-slate-200/70">
+            <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-slate-400">Stok Rendah</p>
+            <p className="mt-2 text-[27px] font-bold tracking-tight text-[#152b46]">{formatNumber(stats.lowStock)}</p>
+            <span className="mt-1 inline-flex rounded-full bg-rose-50 px-2 py-1 text-[10px] font-bold text-rose-600">{stats.lowStock ? "Perlu cek" : "Aman"}</span>
+          </div>
+        </div>
+
+        <div>
+          <div className="mb-3 flex items-center justify-between px-1">
+            <h2 className="text-[17px] font-semibold tracking-tight text-[#152b46]">Pending Approvals</h2>
+            <button type="button" onClick={() => onGo("requests")} className="text-xs font-bold text-emerald-600">
+              {pendingRequests.length} Required
+            </button>
+          </div>
+          <div className="space-y-3">
+            {pendingRequests.slice(0, 3).map((row: any) => {
+              const priority = row.request.priority;
+              const priorityClass =
+                priority === "darurat"
+                  ? "text-rose-600"
+                  : priority === "mendesak"
+                    ? "text-amber-600"
+                    : "text-slate-500";
+              return (
+                <button
+                  key={row.request.id}
+                  type="button"
+                  onClick={() => onGo("requests")}
+                  className="w-full rounded-2xl border-l-4 border-amber-400 bg-white p-4 text-left shadow-sm ring-1 ring-slate-200/70"
+                >
+                  <div className="flex items-center justify-between gap-3">
+                    <span className={`text-[10px] font-extrabold uppercase tracking-[0.12em] ${priorityClass}`}>{priority} · priority</span>
+                    <span className="text-[10px] italic text-slate-400">{formatDate(row.request.createdAt)}</span>
+                  </div>
+                  <p className="mt-2 truncate text-sm font-semibold text-[#152b46]">{row.request.requestNo}</p>
+                  <p className="mt-1 truncate text-xs text-slate-500">{row.room?.name || "Ruangan"} · {row.lines?.length || 0} item</p>
+                  <div className="mt-3 flex items-center justify-between text-xs font-semibold">
+                    <span className="text-slate-500">Buka antrean approval</span>
+                    <span className="inline-flex items-center gap-1 text-emerald-600">Review <ChevronRight size={14} /></span>
+                  </div>
+                </button>
+              );
+            })}
+            {!pendingRequests.length && (
+              <div className="rounded-2xl bg-white p-5 text-center shadow-sm ring-1 ring-slate-200/70">
+                <ClipboardCheck className="mx-auto text-emerald-500" size={22} />
+                <p className="mt-2 text-sm font-semibold text-[#152b46]">Tidak ada approval tertunda</p>
+                <p className="mt-1 text-xs text-slate-400">Antrean gudang sedang bersih.</p>
+              </div>
+            )}
+          </div>
+        </div>
+
+        <div>
+          <div className="mb-3 flex items-center justify-between px-1">
+            <h2 className="text-[17px] font-semibold tracking-tight text-[#152b46]">Recent Activity</h2>
+            <button type="button" onClick={() => onGo("reports")} className="text-xs font-bold text-emerald-600">See all</button>
+          </div>
+          <div className="space-y-2.5">
+            {(dashboard?.recent ?? []).slice(0, 5).map((row: any) => {
+              const positive = Number(row.movement.quantity) >= 0;
+              return (
+                <button
+                  type="button"
+                  key={row.movement.id}
+                  onClick={() => onGo("stock")}
+                  className="flex w-full items-center justify-between gap-3 rounded-2xl bg-white px-3.5 py-3 shadow-sm ring-1 ring-slate-200/70"
+                >
+                  <div className="flex min-w-0 items-center gap-3">
+                    <div className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-slate-100 text-slate-500">
+                      {positive ? <ArrowDownToLine size={19} /> : <ArrowUpFromLine size={19} />}
+                    </div>
+                    <div className="min-w-0 text-left">
+                      <p className="truncate text-sm font-semibold text-[#152b46]">{row.item?.name || "Item"}</p>
+                      <p className="truncate text-[11px] text-slate-400">
+                        {row.movement.movementType === "in" ? "Barang masuk" : row.movement.movementType === "out" ? "Keluar gudang" : "Penyesuaian"} · {formatDate(row.movement.occurredAt)}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="shrink-0 text-right">
+                    <p className={`text-sm font-bold ${positive ? "text-emerald-600" : "text-rose-500"}`}>
+                      {positive ? "+" : ""}{formatNumber(row.movement.quantity)}
+                    </p>
+                    <p className="mt-1 text-[10px] text-slate-400">{formatDate(row.movement.occurredAt)}</p>
+                  </div>
+                </button>
+              );
+            })}
+            {!dashboard?.recent?.length && (
+              <div className="rounded-2xl bg-white p-5 text-center shadow-sm ring-1 ring-slate-200/70">
+                <History className="mx-auto text-slate-300" size={23} />
+                <p className="mt-2 text-sm font-semibold text-[#152b46]">Belum ada aktivitas</p>
+                <p className="mt-1 text-xs text-slate-400">Aktivitas gudang akan tampil di sini.</p>
+              </div>
+            )}
+          </div>
+        </div>
+
+        <div className="px-1 text-xs text-slate-400">
+          <div className="flex items-center gap-2">
+            <Settings2 size={14} />
+            <span>Gudang IR · Mobile workspace</span>
+          </div>
+        </div>
+      </div>
+
+      <nav className="fixed bottom-0 left-0 right-0 z-40 mx-auto max-w-xl bg-[#18263a] px-4 pb-[calc(env(safe-area-inset-bottom)+10px)] pt-3 shadow-[0_-14px_30px_rgba(20,39,61,0.12)]">
+        <div className="relative grid grid-cols-5 items-end">
+          <button type="button" onClick={() => onGo("overview")} className="flex flex-col items-center gap-1 text-[10px] font-semibold text-emerald-400">
+            <BarChart3 size={19} />
+            Home
+          </button>
+          <button type="button" onClick={() => onGo("stock")} className="flex flex-col items-center gap-1 text-[10px] font-semibold text-slate-400">
+            <Boxes size={19} />
+            Stok
+          </button>
+          <div className="flex justify-center">
+            <button
+              type="button"
+              onClick={() => onGo("stocktake")}
+              className="relative -mt-9 grid h-16 w-16 place-items-center rounded-full border-4 border-[#f3f7fb] bg-[#0db889] text-white shadow-[0_12px_28px_rgba(13,184,137,0.35)]"
+              aria-label="Stock Opname"
+            >
+              <ScanLine size={25} />
+            </button>
+          </div>
+          <button type="button" onClick={() => onGo("requests")} className="flex flex-col items-center gap-1 text-[10px] font-semibold text-slate-400">
+            <ClipboardList size={19} />
+            Permintaan
+          </button>
+          <button type="button" onClick={() => onGo("reports")} className="flex flex-col items-center gap-1 text-[10px] font-semibold text-slate-400">
+            <FileDown size={19} />
+            Laporan
+          </button>
+        </div>
+      </nav>
+    </div>
+  );
+}
+
+
 function MobileUserOverview({
   dashboard,
   requests,
