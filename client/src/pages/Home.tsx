@@ -736,9 +736,7 @@ function RoomDemandPanel({
   data: any;
   items: any[];
 }) {
-  const pageSize = 15;
   const [search, setSearch] = useState("");
-  const [page, setPage] = useState(1);
   const [selectedSourceWarehouseId, setSelectedSourceWarehouseId] = useState<number | "all">("all");
 
   const roomSummary = Array.isArray(data?.roomSummary) ? data.roomSummary : [];
@@ -824,18 +822,7 @@ function RoomDemandPanel({
       .sort((a, b) => String(a.name).localeCompare(String(b.name), "id"));
   }, [activityByItem, itemMap, search, selectedSourceWarehouseId]);
 
-  const totalPages = Math.max(1, Math.ceil(rows.length / pageSize));
-  const safePage = Math.min(page, totalPages);
-  const pagedRows = rows.slice((safePage - 1) * pageSize, safePage * pageSize);
   const searched = Boolean(search.trim());
-
-  useEffect(() => {
-    setPage(1);
-  }, [search, selectedSourceWarehouseId]);
-
-  useEffect(() => {
-    if (page !== safePage) setPage(safePage);
-  }, [page, safePage]);
 
   const sourceLabel =
     selectedSourceWarehouseId === "all"
@@ -915,11 +902,11 @@ function RoomDemandPanel({
           </div>
         </div>
 
-        <div className="overflow-x-auto rounded-2xl border border-[#d8c9a8]">
+        <div className="max-h-[805px] overflow-auto rounded-2xl border border-[#d8c9a8]">
           <table className="w-full min-w-[860px] text-sm">
-            <thead className="bg-[#f7efd7] text-left text-xs uppercase tracking-[0.1em] text-[#8b7b67]">
+            <thead className="sticky top-0 z-10 bg-[#f7efd7] text-left text-xs uppercase tracking-[0.1em] text-[#8b7b67]">
               <tr>
-                <th className="sticky left-0 z-10 min-w-[220px] border-r border-[#d8c9a8] bg-[#f7efd7] px-3 py-2.5">Barang</th>
+                <th className="sticky left-0 top-0 z-20 min-w-[220px] border-r border-[#d8c9a8] bg-[#f7efd7] px-3 py-2.5">Barang</th>
                 <th className="min-w-[82px] px-3 py-3">Unit</th>
                 {roomColumns.map((room: any) => (
                   <th key={room.id} className="min-w-[110px] border-l border-[#e0d4b8] px-3 py-3 text-right">{room.name}</th>
@@ -929,7 +916,7 @@ function RoomDemandPanel({
             </thead>
 
             <tbody className="divide-y divide-[#e4d9be] bg-[#fffaf0]">
-              {pagedRows.map((item: any) => {
+              {rows.map((item: any) => {
                 const byRoom = activityByItem.get(item.id) ?? new Map();
                 const totalQty = roomColumns.reduce((sum: number, room: any) => sum + Number(byRoom.get(room.id)?.totalQty ?? 0), 0);
                 const totalActiveDays = roomColumns.reduce((sum: number, room: any) => sum + Number(byRoom.get(room.id)?.activeDays ?? 0), 0);
@@ -975,7 +962,7 @@ function RoomDemandPanel({
                 );
               })}
 
-              {!pagedRows.length && (
+              {!rows.length && (
                 <tr>
                   <td colSpan={roomColumns.length + 3} className="px-5 py-12 text-center">
                     <Search className="mx-auto text-[#b4a58c]" size={24} />
@@ -992,33 +979,17 @@ function RoomDemandPanel({
           </table>
         </div>
 
-        <div className="mt-3 flex flex-col gap-2 border-t border-[#e0d4b8] pt-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="mt-3 flex items-center justify-between gap-3 border-t border-[#e0d4b8] pt-3">
           <div className="text-xs text-[#8b7b67]">
             {rows.length
-              ? "Menampilkan " + formatNumber((safePage - 1) * pageSize + 1) + "–" + formatNumber(Math.min(safePage * pageSize, rows.length)) + " dari " + formatNumber(rows.length) + " barang · maks. 15 baris per halaman"
+              ? "Menampilkan " + formatNumber(rows.length) + " barang · tabel menampilkan maksimal 15 baris sekaligus"
               : "Tidak ada baris untuk ditampilkan"}
           </div>
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              disabled={safePage <= 1}
-              onClick={() => setPage((current) => Math.max(1, current - 1))}
-              className="rounded-lg border border-[#d0be97] bg-[#fffaf0] px-3 py-2 text-xs font-semibold text-[#7e6b57] hover:bg-[#eee2bd] disabled:cursor-not-allowed disabled:opacity-40"
-            >
-              ‹ Sebelumnya
-            </button>
-            <span className="rounded-lg border border-[#d8c9a8] bg-[#f7efd7] px-3 py-2 text-xs font-semibold text-[#5a4738]">
-              {safePage} / {totalPages}
-            </span>
-            <button
-              type="button"
-              disabled={safePage >= totalPages}
-              onClick={() => setPage((current) => Math.min(totalPages, current + 1))}
-              className="rounded-lg border border-[#d0be97] bg-[#fffaf0] px-3 py-2 text-xs font-semibold text-[#7e6b57] hover:bg-[#eee2bd] disabled:cursor-not-allowed disabled:opacity-40"
-            >
-              Berikutnya ›
-            </button>
-          </div>
+          {rows.length > 15 && (
+            <div className="shrink-0 text-[11px] font-semibold text-[#7e6b57]">
+              ↕ Gulir tabel untuk melihat barang lainnya
+            </div>
+          )}
         </div>
 
         <div className="mt-3 rounded-xl border border-[#d8c9a8] bg-[#eee2bd]/45 px-3 py-2.5 text-xs leading-5 text-[#7e6b57]">
