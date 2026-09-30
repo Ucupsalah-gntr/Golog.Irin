@@ -65,7 +65,7 @@ export const requests = pgTable("requests", {
   roomId: integer("roomId").notNull(),
   createdBy: integer("createdBy").notNull(),
   priority: text("priority").$type<"normal" | "mendesak" | "darurat">().default("normal").notNull(),
-  status: text("status").$type<"draft" | "submitted" | "approved" | "partial" | "rejected" | "ready" | "delivered" | "received" | "cancelled">().default("draft").notNull(),
+  status: text("status").$type<"submitted" | "approved" | "partial" | "rejected">().default("submitted").notNull(),
   notes: text("notes"),
   submittedAt: timestamp("submittedAt", { withTimezone: true }),
   verifiedAt: timestamp("verifiedAt", { withTimezone: true }),
