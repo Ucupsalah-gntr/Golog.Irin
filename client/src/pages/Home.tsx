@@ -197,7 +197,7 @@ export default function Home() {
         </aside>
 
         <main className="min-w-0 flex-1">
-          <header className={`sticky top-0 z-20 flex h-20 items-center justify-between border-b border-slate-200/80 golog-topbar px-5 backdrop-blur md:px-8 ${active === "overview" ? "hidden lg:flex" : ""}`}><div className="flex items-center gap-3"><button className="rounded-xl p-2 hover:bg-white lg:hidden" onClick={() => setMobileOpen(true)}><Menu size={20} /></button><div><p className="text-xs font-semibold uppercase tracking-[0.18em] text-teal-700">Instalasi Rawat Intensif</p><h1 className="text-xl font-semibold tracking-tight">{visibleNav.find((x) => x.key === active)?.label}</h1></div></div><div className="flex items-center gap-2"><button title="Refresh" onClick={refreshAll} className="rounded-xl border border-slate-200 bg-white p-2.5 text-slate-500 hover:text-teal-700"><RefreshCw size={17} /></button><div className="hidden rounded-xl border border-slate-200 bg-white px-3 py-2 text-right sm:block"><p className="text-xs font-semibold">{user?.name || "Akun aktif"}</p><p className="text-[11px] text-slate-500">{isAdmin ? "Kepala gudang" : "Petugas"}</p></div></div></header>
+          <header className={`sticky top-0 z-20 flex h-20 items-center justify-between border-b border-slate-200/80 golog-topbar px-5 backdrop-blur md:px-8 ${active === "overview" ? "hidden lg:flex" : ""}`}><div className="flex items-center gap-3"><button className="rounded-xl p-2 hover:bg-white lg:hidden" onClick={() => setMobileOpen(true)}><Menu size={20} /></button><div><p className="text-xs font-semibold uppercase tracking-[0.18em] text-teal-700">Instalasi Rawat Intensif</p><h1 className="text-xl font-semibold tracking-tight">{visibleNav.find((x) => x.key === active)?.label}</h1></div></div><div className="flex items-center gap-2"><button title="Refresh" onClick={refreshAll} className="rounded-xl border border-[#b8a27a] bg-[#f7efd7] p-2.5 text-slate-500 hover:text-teal-700"><RefreshCw size={17} /></button><div className="hidden rounded-xl border border-[#b8a27a] bg-[#f7efd7] px-3 py-2 text-right sm:block"><p className="text-xs font-semibold">{user?.name || "Akun aktif"}</p><p className="text-[11px] text-slate-500">{isAdmin ? "Kepala gudang" : "Petugas"}</p></div></div></header>
           <div className={`golog-page mx-auto max-w-[1500px] space-y-6 ${active === "overview" ? "p-0 pb-28 md:p-8 md:pb-8" : "p-5 md:p-8"}`}>
             {active === "overview" && <Overview dashboard={dashboard.data} isAdmin={isAdmin} onGo={go} report={isAdmin ? monthlyReport.data : null} requests={requests.data ?? []} userName={user?.name || user?.username || "Kepala Gudang"} />}
             {active === "stock" && <StockView stock={stock} isAdmin={isAdmin} items={items} warehouses={warehouses} onCreateItem={(input: any) => createItem.mutate(input)} busy={createItem.isPending} onImport={(rows: any[]) => importItems.mutate({ rows })} importBusy={importItems.isPending} />}
@@ -258,7 +258,7 @@ function LoginScreen({ initialError = "" }: { initialError?: string }) {
   }
 
   return (
-    <div className="relative min-h-screen overflow-hidden bg-[#f4faf8] text-[#102a2b]">
+    <div className="relative min-h-screen overflow-hidden golog-app text-[#5a4738]">
       <div className="absolute -right-24 -top-32 h-96 w-96 rounded-full bg-[#dff5e8]" />
       <div className="absolute -left-28 bottom-[-10rem] h-96 w-96 rounded-full bg-[#dceff6]" />
       <div className="relative mx-auto grid min-h-screen max-w-[1500px] items-center gap-10 px-6 py-8 lg:grid-cols-[1.08fr_.92fr] lg:px-12 xl:px-16">
@@ -279,7 +279,7 @@ function LoginScreen({ initialError = "" }: { initialError?: string }) {
                 <ShieldCheck size={15} />
                 Sistem Manajemen Gudang
               </div>
-              <h1 className="mt-6 text-5xl font-bold leading-[1.04] tracking-[-0.045em] text-[#122b4a] md:text-6xl xl:text-7xl">
+              <h1 className="mt-6 text-5xl font-bold leading-[1.04] tracking-[-0.045em] text-[#5a4738] md:text-6xl xl:text-7xl">
                 Satu alur untuk
                 <span className="block text-[#07966f]">stok yang selalu siap.</span>
               </h1>
@@ -297,10 +297,10 @@ function LoginScreen({ initialError = "" }: { initialError?: string }) {
                 const Icon = feature.icon;
                 return (
                   <div key={feature.title} className="rounded-2xl border border-white/80 bg-white/70 p-4 shadow-sm backdrop-blur">
-                    <div className="mb-3 grid h-10 w-10 place-items-center rounded-xl bg-[#e0f7eb] text-[#078d69]">
+                    <div className="mb-3 grid h-10 w-10 place-items-center rounded-xl bg-[#e0f7eb] text-[#7f9146]">
                       <Icon size={19} />
                     </div>
-                    <p className="text-sm font-bold text-[#17304c]">{feature.title}</p>
+                    <p className="text-sm font-bold text-[#5a4738]">{feature.title}</p>
                     <p className="mt-1 text-xs leading-5 text-slate-500">{feature.text}</p>
                   </div>
                 );
@@ -329,14 +329,14 @@ function LoginScreen({ initialError = "" }: { initialError?: string }) {
         </section>
 
         <section className="flex items-center justify-center lg:pl-4">
-          <Card className="w-full max-w-xl border-0 bg-white p-3 shadow-[0_24px_70px_rgba(24,64,65,0.12)]">
-            <CardContent className="rounded-[1.5rem] bg-[#f8faf9] p-7 sm:p-10">
-              <div className="mx-auto grid h-16 w-16 place-items-center rounded-2xl bg-[#c9f3d7] text-[#078d69]">
+          <Card className="w-full max-w-xl border-0 golog-panel p-3">
+            <CardContent className="rounded-[1.5rem] golog-panel-soft p-7 sm:p-10">
+              <div className="mx-auto grid h-16 w-16 place-items-center rounded-2xl bg-[#dce4a7] text-[#5a4738]">
                 <Hospital size={30} />
               </div>
               <div className="mt-7 text-center">
-                <p className="text-xs font-bold uppercase tracking-[0.2em] text-[#078d69]">Ruang kerja</p>
-                <h2 className="mt-3 text-3xl font-bold tracking-tight text-[#122b4a] sm:text-4xl">Selamat Datang</h2>
+                <p className="text-xs font-bold uppercase tracking-[0.2em] text-[#7f9146]">Ruang kerja</p>
+                <h2 className="mt-3 text-3xl font-bold tracking-tight text-[#5a4738] sm:text-4xl">Selamat Datang</h2>
                 <p className="mx-auto mt-3 max-w-md text-sm leading-6 text-slate-500">
                   Masuk menggunakan username dan password akun Gudang IR.
                 </p>
@@ -344,20 +344,20 @@ function LoginScreen({ initialError = "" }: { initialError?: string }) {
 
               <form onSubmit={handleLogin} className="mt-8 space-y-5">
                 <div>
-                  <Label htmlFor="golog-username" className="text-sm font-semibold text-[#17304c]">Username</Label>
+                  <Label htmlFor="golog-username" className="text-sm font-semibold text-[#5a4738]">Username</Label>
                   <Input
                     id="golog-username"
                     value={username}
                     onChange={(event) => setUsername(event.target.value)}
                     autoComplete="username"
                     placeholder="contoh: kepala.gudang"
-                    className="mt-2 h-12 rounded-xl border-slate-200 bg-white"
+                    className="mt-2 h-12 rounded-xl border-[#b8a27a] bg-[#f7efd7]"
                     disabled={starting}
                   />
                 </div>
 
                 <div>
-                  <Label htmlFor="golog-password" className="text-sm font-semibold text-[#17304c]">Password</Label>
+                  <Label htmlFor="golog-password" className="text-sm font-semibold text-[#5a4738]">Password</Label>
                   <div className="relative mt-2">
                     <Input
                       id="golog-password"
@@ -366,7 +366,7 @@ function LoginScreen({ initialError = "" }: { initialError?: string }) {
                       onChange={(event) => setPassword(event.target.value)}
                       autoComplete="current-password"
                       placeholder="Masukkan password"
-                      className="h-12 rounded-xl border-slate-200 bg-white pr-12"
+                      className="h-12 rounded-xl border-[#b8a27a] bg-[#f7efd7] pr-12"
                       disabled={starting}
                     />
                     <button
@@ -375,7 +375,7 @@ function LoginScreen({ initialError = "" }: { initialError?: string }) {
                       title={showPassword ? "Sembunyikan password" : "Tampilkan password"}
                       onClick={() => setShowPassword((visible) => !visible)}
                       disabled={starting}
-                      className="absolute inset-y-0 right-0 grid w-12 place-items-center text-slate-400 hover:text-[#078d69] disabled:opacity-50"
+                      className="absolute inset-y-0 right-0 grid w-12 place-items-center text-slate-400 hover:text-[#7f9146] disabled:opacity-50"
                     >
                       {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                     </button>
@@ -391,19 +391,19 @@ function LoginScreen({ initialError = "" }: { initialError?: string }) {
                 <Button
                   type="submit"
                   disabled={starting}
-                  className="h-14 w-full rounded-2xl bg-[#07966f] text-base font-bold text-white shadow-lg shadow-[#07966f]/20 hover:bg-[#067d5e]"
+                  className="h-14 w-full rounded-2xl bg-[#7f9146] text-base font-bold text-[#fff9ea] shadow-lg shadow-[#7f9146]/20 hover:bg-[#64753a]"
                 >
                   {starting ? "Memeriksa akun…" : "Masuk"}
                 </Button>
               </form>
 
-              <div className="mt-6 rounded-2xl border border-[#dce9e5] bg-white p-4">
+              <div className="mt-6 rounded-2xl border border-[#b8a27a] bg-[#f7efd7] p-4">
                 <div className="flex items-start gap-3">
-                  <div className="mt-0.5 grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-[#e8f8ef] text-[#078d69]">
+                  <div className="mt-0.5 grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-[#e8f8ef] text-[#7f9146]">
                     <ShieldCheck size={19} />
                   </div>
                   <div>
-                    <p className="text-sm font-semibold text-[#17304c]">Akses berbasis akun</p>
+                    <p className="text-sm font-semibold text-[#5a4738]">Akses berbasis akun</p>
                     <p className="mt-1 text-xs leading-5 text-slate-500">
                       Hak akses ditentukan oleh peran dan ruangan yang ditetapkan pada akun Anda.
                     </p>
@@ -1035,14 +1035,14 @@ function StockView({ stock, isAdmin, items, warehouses, onCreateItem, busy, onIm
       </div>}
 
       <div className="grid gap-3 sm:grid-cols-3">
-        <div className="rounded-2xl border border-slate-200 bg-white p-4"><p className="text-xs font-medium text-slate-400">Jenis barang</p><p className="mt-1 text-2xl font-semibold">{formatNumber(rows.length)}</p><p className="mt-1 text-xs text-slate-400">SKU aktif</p></div>
-        <div className="rounded-2xl border border-slate-200 bg-white p-4"><p className="text-xs font-medium text-slate-400">Total stok</p><p className="mt-1 text-2xl font-semibold">{formatNumber(totalQty)}</p><p className="mt-1 text-xs text-slate-400">seluruh satuan tercatat</p></div>
+        <div className="rounded-2xl border border-[#b8a27a] bg-[#f7efd7] p-4"><p className="text-xs font-medium text-slate-400">Jenis barang</p><p className="mt-1 text-2xl font-semibold">{formatNumber(rows.length)}</p><p className="mt-1 text-xs text-slate-400">SKU aktif</p></div>
+        <div className="rounded-2xl border border-[#b8a27a] bg-[#f7efd7] p-4"><p className="text-xs font-medium text-slate-400">Total stok</p><p className="mt-1 text-2xl font-semibold">{formatNumber(totalQty)}</p><p className="mt-1 text-xs text-slate-400">seluruh satuan tercatat</p></div>
         <button type="button" onClick={() => setStatusFilter(statusFilter === "low" ? "all" : "low")} className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-left transition hover:bg-amber-100"><p className="text-xs font-medium text-amber-700">Perlu cek</p><p className="mt-1 text-2xl font-semibold text-amber-900">{formatNumber(lowCount)}</p><p className="mt-1 text-xs text-amber-700/70">stok ≤ minimum</p></button>
       </div>
 
       <div className="mt-5 flex flex-col gap-3 md:flex-row">
         <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Cari nama barang, SKU, atau kategori…" className="h-11 md:flex-1" />
-        <div className="flex rounded-xl border border-slate-200 bg-white p-1">
+        <div className="flex rounded-xl border border-[#b8a27a] bg-[#f7efd7] p-1">
           {([["all", "Semua"], ["safe", "Aman"], ["low", "Perlu cek"]] as const).map(([value, label]) => <button key={value} type="button" onClick={() => setStatusFilter(value)} className={`rounded-lg px-3 py-2 text-xs font-medium transition ${statusFilter === value ? "bg-[#102a2b] text-white" : "text-slate-500 hover:bg-slate-50"}`}>{label}</button>)}
         </div>
       </div>
@@ -1051,7 +1051,7 @@ function StockView({ stock, isAdmin, items, warehouses, onCreateItem, busy, onIm
         {filtered.map((row: any) => {
           const low = Number(row.movementQty) <= Number(row.minStock);
           const open = expanded === Number(row.itemId);
-          return <div key={row.itemId} className="overflow-hidden rounded-2xl border border-slate-200 bg-white transition">
+          return <div key={row.itemId} className="overflow-hidden rounded-2xl border border-[#b8a27a] bg-[#f7efd7] transition">
             <button type="button" onClick={() => setExpanded(open ? null : Number(row.itemId))} className="flex w-full items-center justify-between gap-4 p-4 text-left hover:bg-slate-50/70">
               <div className="min-w-0 flex-1">
                 <p className="truncate font-semibold text-slate-800">{row.name}</p>
@@ -1194,10 +1194,10 @@ function RequestsView({ requests, rooms, items, isAdmin, currentUserId, todayRoo
               <p className="mt-1 max-w-3xl text-sm text-slate-500">Prioritas permintaan ditampilkan lebih dulu. Kepala gudang menentukan jumlah yang benar-benar dipindahkan berdasarkan stok yang tersedia.</p>
             </div>
             <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-              <button type="button" onClick={() => setFilter("all")} className={`rounded-xl border px-4 py-3 text-left transition ${filter === "all" ? "border-[#102a2b] bg-[#102a2b] text-white" : "border-slate-200 bg-white hover:bg-slate-50"}`}><p className="text-[11px] opacity-70">Semua</p><p className="mt-1 text-xl font-semibold">{formatNumber(requestCounts.all)}</p></button>
-              <button type="button" onClick={() => setFilter("pending")} className={`rounded-xl border px-4 py-3 text-left transition ${filter === "pending" ? "border-amber-500 bg-amber-50 text-amber-900" : "border-slate-200 bg-white hover:bg-slate-50"}`}><p className="text-[11px] opacity-70">Menunggu</p><p className="mt-1 text-xl font-semibold">{formatNumber(requestCounts.pending)}</p></button>
-              <button type="button" onClick={() => setFilter("partial")} className={`rounded-xl border px-4 py-3 text-left transition ${filter === "partial" ? "border-amber-500 bg-amber-50 text-amber-900" : "border-slate-200 bg-white hover:bg-slate-50"}`}><p className="text-[11px] opacity-70">Sebagian</p><p className="mt-1 text-xl font-semibold">{formatNumber(requestCounts.partial)}</p></button>
-              <button type="button" onClick={() => setFilter("approved")} className={`rounded-xl border px-4 py-3 text-left transition ${filter === "approved" ? "border-emerald-500 bg-emerald-50 text-emerald-900" : "border-slate-200 bg-white hover:bg-slate-50"}`}><p className="text-[11px] opacity-70">Disetujui</p><p className="mt-1 text-xl font-semibold">{formatNumber(requestCounts.approved)}</p></button>
+              <button type="button" onClick={() => setFilter("all")} className={`rounded-xl border px-4 py-3 text-left transition ${filter === "all" ? "border-[#102a2b] bg-[#102a2b] text-white" : "border-[#b8a27a] bg-[#f7efd7] hover:bg-slate-50"}`}><p className="text-[11px] opacity-70">Semua</p><p className="mt-1 text-xl font-semibold">{formatNumber(requestCounts.all)}</p></button>
+              <button type="button" onClick={() => setFilter("pending")} className={`rounded-xl border px-4 py-3 text-left transition ${filter === "pending" ? "border-amber-500 bg-amber-50 text-amber-900" : "border-[#b8a27a] bg-[#f7efd7] hover:bg-slate-50"}`}><p className="text-[11px] opacity-70">Menunggu</p><p className="mt-1 text-xl font-semibold">{formatNumber(requestCounts.pending)}</p></button>
+              <button type="button" onClick={() => setFilter("partial")} className={`rounded-xl border px-4 py-3 text-left transition ${filter === "partial" ? "border-amber-500 bg-amber-50 text-amber-900" : "border-[#b8a27a] bg-[#f7efd7] hover:bg-slate-50"}`}><p className="text-[11px] opacity-70">Sebagian</p><p className="mt-1 text-xl font-semibold">{formatNumber(requestCounts.partial)}</p></button>
+              <button type="button" onClick={() => setFilter("approved")} className={`rounded-xl border px-4 py-3 text-left transition ${filter === "approved" ? "border-emerald-500 bg-emerald-50 text-emerald-900" : "border-[#b8a27a] bg-[#f7efd7] hover:bg-slate-50"}`}><p className="text-[11px] opacity-70">Disetujui</p><p className="mt-1 text-xl font-semibold">{formatNumber(requestCounts.approved)}</p></button>
             </div>
           </div>
         </CardHeader>
@@ -1290,7 +1290,7 @@ function RequestsView({ requests, rooms, items, isAdmin, currentUserId, todayRoo
                       <div className="rounded-xl bg-slate-50 p-3"><p className="text-[10px] uppercase tracking-wider text-slate-400">Min</p><p className="mt-1 font-semibold">{formatNumber(minimumQty)}</p></div>
                       <div className="rounded-xl bg-slate-50 p-3"><p className="text-[10px] uppercase tracking-wider text-slate-400">Sisa</p><p className={`mt-1 font-semibold ${stockAfterTone(afterQty, minimumQty)}`}>{afterQty < 0 ? "−" : formatNumber(afterQty)}</p></div>
                     </div>
-                    {isSubmitted && <div className="rounded-xl border border-slate-200 bg-white p-3">
+                    {isSubmitted && <div className="rounded-xl border border-[#b8a27a] bg-[#f7efd7] p-3">
                       <Label className="text-[11px] text-slate-500">Jumlah dipindahkan</Label>
                       <Input type="number" min="0" max={line.line.requestedQty} step="1" value={currentQty} onChange={(e) => setQty(row.request.id, line.line.id, e.target.value)} className={exceedsWarehouse ? "mt-2 border-amber-400 bg-amber-50" : "mt-2"} />
                     </div>}
@@ -1645,7 +1645,7 @@ function StockOpnameView({ stock, items, onSubmit, busy }: any) {
               ["3", "Simpan sekaligus", "Semua koreksi diproses dalam satu transaksi atomik."],
               ["4", "Stok terbarui", "Dashboard dan stok gudang langsung ikut berubah."],
             ].map(([number, title, text]) => (
-              <div key={number} className="rounded-2xl border border-slate-200 bg-white p-4">
+              <div key={number} className="rounded-2xl border border-[#b8a27a] bg-[#f7efd7] p-4">
                 <div className="grid h-8 w-8 place-items-center rounded-full bg-[#102a2b] text-sm font-semibold text-white">{number}</div>
                 <p className="mt-3 font-semibold text-slate-800">{title}</p>
                 <p className="mt-1 text-xs leading-5 text-slate-500">{text}</p>
