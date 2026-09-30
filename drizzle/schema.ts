@@ -44,7 +44,22 @@ export const rooms = pgTable("rooms", {
   createdAt: timestamp("createdAt", { withTimezone: true }).defaultNow().notNull(),
 });
 
-export const items = pgTable("items", {
+export const userRoomAccess = pgTable("user_room_access", {
+  id: integer("id").generatedByDefaultAsIdentity().primaryKey(),
+  userId: integer("userId").notNull(),
+  roomId: integer("roomId").notNull(),
+  active: boolean("active").default(true).notNull(),
+  createdAt: timestamp("createdAt", { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt", { withTimezone: true }).defaultNow().notNull(),
+}, (table) => ({
+  userFk: foreignKey({ columns: [table.userId], foreignColumns: [users.id], name: "user_room_access_user_id_fk" }),
+  roomFk: foreignKey({ columns: [table.roomId], foreignColumns: [rooms.id], name: "user_room_access_room_id_fk" }),
+  userRoomUnique: uniqueIndex("user_room_access_user_room_unique").on(table.userId, table.roomId),
+  userIdx: index("user_room_access_user_idx").on(table.userId),
+  roomIdx: index("user_room_access_room_idx").on(table.roomId),
+}));
+
+
   id: integer("id").generatedByDefaultAsIdentity().primaryKey(),
   sku: varchar("sku", { length: 64 }).notNull().unique(),
   name: varchar("name", { length: 180 }).notNull(),
@@ -161,6 +176,7 @@ export const auditLogs = pgTable("audit_logs", {
 }));
 
 export type User = typeof users.$inferSelect;
+export type UserRoomAccess = typeof userRoomAccess.$inferSelect;
 export type InsertUser = typeof users.$inferInsert;
 export type Item = typeof items.$inferSelect;
 export type Room = typeof rooms.$inferSelect;
