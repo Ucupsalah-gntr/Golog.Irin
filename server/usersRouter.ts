@@ -1,7 +1,7 @@
 import { TRPCError } from "@trpc/server";
 import { and, eq, sql } from "drizzle-orm";
 import { z } from "zod";
-import { adminProcedure, router } from "./_core/trpc.ts";
+import { adminProcedure, protectedProcedure, router } from "./_core/trpc.ts";
 import { getDb, rooms, userRoomAccess, users, writeAudit } from "./db.ts";
 
 export const usersRouter = router({
@@ -52,4 +52,5 @@ export const usersRouter = router({
       .leftJoin(userRoomAccess, eq(userRoomAccess.userId, users.id))
       .groupBy(users.id, rooms.id)
       .orderBy(users.name, users.email);
-
+  }),
+});
