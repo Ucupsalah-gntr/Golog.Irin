@@ -50,6 +50,7 @@ const nav = [
   { key: "inbound", label: "Barang masuk", icon: ArrowDownToLine, adminOnly: true },
   { key: "adjustments", label: "Penyesuaian", icon: SlidersHorizontal, adminOnly: true },
   { key: "stocktake", label: "Stock Opname", icon: ClipboardType, adminOnly: true },
+  { key: "room-demand", label: "Pola Ruangan", icon: Activity, adminOnly: true },
   { key: "reports", label: "Laporan", icon: FileDown, adminOnly: true },
 ] as const;
 
@@ -141,7 +142,7 @@ export default function Home() {
   );
   const roomDemand = trpc.analytics.roomDemand.useQuery(
     { days: roomDemandDays },
-    { enabled: isAuthenticated && user?.role === "admin" && active === "overview" },
+    { enabled: isAuthenticated && user?.role === "admin" && active === "room-demand" },
   );
   const createRequest = trpc.requests.create.useMutation({
     onSuccess: () => {
@@ -333,6 +334,7 @@ export default function Home() {
     catalog.refetch();
     if (isAdmin) adjustments.refetch();
     if (isAdmin && active === "reports") monthlyReport.refetch();
+    if (isAdmin && active === "room-demand") roomDemand.refetch();
   }
   function go(key: NavKey) { setActive(key); setMobileOpen(false); }
 
@@ -360,13 +362,14 @@ export default function Home() {
               {unreadNotificationCount > 0 && <span className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-[#c87969] ring-2 ring-[#f7efd7]" />}
             </button><button title="Refresh" onClick={refreshAll} className="rounded-xl border border-[#b8a27a] bg-[#f7efd7] p-2.5 text-slate-500 hover:text-teal-700"><RefreshCw size={17} /></button><div className="hidden rounded-xl border border-[#b8a27a] bg-[#f7efd7] px-3 py-2 text-right sm:block"><p className="text-xs font-semibold">{user?.name || "Akun aktif"}</p><p className="text-[11px] text-slate-500">{isAdmin ? "Kepala gudang" : "Petugas"}</p></div></div></header>
           <div className={`golog-page mx-auto max-w-[1500px] space-y-6 ${active === "overview" ? "p-0 pb-28 md:p-8 md:pb-8" : "p-5 md:p-8"}`}>
-            {active === "overview" && <Overview dashboard={dashboard.data} isAdmin={isAdmin} onGo={go} report={isAdmin ? monthlyReport.data : null} requests={requests.data ?? []} items={items} userName={user?.name || user?.username || "Kepala Gudang"} unreadNotificationCount={unreadNotificationCount} onOpenNotifications={() => setNotificationOpen(true)} roomDemand={isAdmin ? roomDemand.data : null} roomDemandDays={roomDemandDays} onRoomDemandDaysChange={setRoomDemandDays} />}
+            {active === "overview" && <Overview dashboard={dashboard.data} isAdmin={isAdmin} onGo={go} report={isAdmin ? monthlyReport.data : null} requests={requests.data ?? []} userName={user?.name || user?.username || "Kepala Gudang"} unreadNotificationCount={unreadNotificationCount} onOpenNotifications={() => setNotificationOpen(true)} />}
             {active === "stock" && <StockView stock={stock} isAdmin={isAdmin} items={items} warehouses={warehouses} onCreateItem={(input: any) => createItem.mutate(input)} busy={createItem.isPending} onImport={(rows: any[]) => importItems.mutate({ rows })} importBusy={importItems.isPending} focusItemId={notificationTarget?.nav === "stock" ? notificationTarget.itemId : undefined} />}
             {active === "inbound" && <InboundView items={items} warehouses={warehouses} onSubmit={(input: any) => createInbound.mutate(input)} busy={createInbound.isPending} />}
             {active === "requests" && <RequestsView requests={requests.data ?? []} rooms={rooms} items={items} isAdmin={isAdmin} currentUserId={user?.id} todayRoomLocks={todayRoomLocks.data ?? []} selectedRoom={selectedRoom} selectedRoomName={selectedRoomName} setSelectedRoom={setSelectedRoom} lines={requestLines} setLines={setRequestLines} total={requestTotal} onCreate={(input: any) => createRequest.mutate(input)} onVerify={(input: any) => verifyRequest.mutate(input)} busy={createRequest.isPending || verifyRequest.isPending} focusRequestId={notificationTarget?.nav === "requests" ? notificationTarget.requestId : undefined} />}
             {active === "adjustments" && <AdjustmentsView adjustments={adjustments.data ?? []} items={items} rooms={rooms} onSubmit={(input: any) => createAdjustment.mutate(input)} busy={createAdjustment.isPending} />}
             {active === "stocktake" && <StockOpnameView stock={stock} items={items} onSubmit={(input: any) => createBulkStocktake.mutate(input)} busy={createBulkStocktake.isPending} />}
             {active === "reports" && <ReportsView report={monthlyReport.data} month={reportMonth} onMonthChange={setReportMonth} />}
+            {active === "room-demand" && isAdmin && <RoomDemandView data={roomDemand.data} items={items} days={roomDemandDays} onDaysChange={setRoomDemandDays} />}
           </div>
         </main>
       </div>
@@ -431,8 +434,8 @@ function LoginScreen({ initialError = "" }: { initialError?: string }) {
     <div className="relative min-h-screen overflow-hidden golog-app text-[#5a4738]">
       <div className="absolute -right-24 -top-32 h-96 w-96 rounded-full bg-[#dff5e8]" />
       <div className="absolute -left-28 bottom-[-10rem] h-96 w-96 rounded-full bg-[#dceff6]" />
-      <div className="relative mx-auto grid min-h-screen max-w-[1500px] items-center gap-10 px-6 py-8 lg:grid-cols-[1.08fr_.92fr] lg:px-12 xl:px-16">
-        <section className="flex min-h-[720px] flex-col justify-between py-5 lg:py-10">
+      <div className="relative mx-auto grid min-h-screen max-w-[1200px] items-center gap-8 px-6 py-7 lg:grid-cols-[1.05fr_.95fr] lg:px-10 xl:px-12">
+        <section className="flex flex-col justify-between py-4 lg:py-7">
           <div>
             <div className="flex items-center gap-3">
               <div className="grid h-14 w-14 place-items-center rounded-2xl bg-[#c9f3d7] text-[#08785e] shadow-sm">
@@ -444,21 +447,21 @@ function LoginScreen({ initialError = "" }: { initialError?: string }) {
               </div>
             </div>
 
-            <div className="mt-16 max-w-2xl">
+            <div className="mt-12 max-w-xl">
               <div className="inline-flex items-center gap-2 rounded-full bg-[#dff5eb] px-4 py-2 text-xs font-bold text-[#08785e]">
                 <ShieldCheck size={15} />
                 Sistem Manajemen Gudang
               </div>
-              <h1 className="mt-6 text-5xl font-bold leading-[1.04] tracking-[-0.045em] text-[#5a4738] md:text-6xl xl:text-7xl">
+              <h1 className="mt-6 text-4xl font-bold leading-[1.06] tracking-[-0.04em] text-[#5a4738] md:text-5xl xl:text-6xl">
                 Satu alur untuk
                 <span className="block text-[#07966f]">stok yang selalu siap.</span>
               </h1>
-              <p className="mt-6 max-w-xl text-base leading-7 text-slate-500 md:text-lg">
+              <p className="mt-5 max-w-lg text-sm leading-6 text-slate-500 md:text-base">
                 Kelola barang masuk, permintaan ruangan, distribusi, dan penyesuaian stok dengan histori yang jelas.
               </p>
             </div>
 
-            <div className="mt-10 grid max-w-3xl gap-4 sm:grid-cols-3">
+            <div className="mt-8 grid max-w-2xl gap-3 sm:grid-cols-3">
               {[
                 { icon: Boxes, title: "Manajemen Stok", text: "Pantau stok dan cegah kekurangan." },
                 { icon: ClipboardList, title: "Transaksi Lengkap", text: "Setiap pergerakan tercatat." },
@@ -466,19 +469,19 @@ function LoginScreen({ initialError = "" }: { initialError?: string }) {
               ].map((feature) => {
                 const Icon = feature.icon;
                 return (
-                  <div key={feature.title} className="rounded-2xl border border-white/80 bg-white/70 p-4 shadow-sm backdrop-blur">
-                    <div className="mb-3 grid h-10 w-10 place-items-center rounded-xl bg-[#e0f7eb] text-[#7f9146]">
+                  <div key={feature.title} className="rounded-2xl border border-white/80 bg-white/70 p-3.5 shadow-sm backdrop-blur">
+                    <div className="mb-2.5 grid h-9 w-9 place-items-center rounded-xl bg-[#e0f7eb] text-[#7f9146]">
                       <Icon size={19} />
                     </div>
-                    <p className="text-sm font-bold text-[#5a4738]">{feature.title}</p>
-                    <p className="mt-1 text-xs leading-5 text-slate-500">{feature.text}</p>
+                    <p className="text-[13px] font-bold text-[#5a4738]">{feature.title}</p>
+                    <p className="mt-1 text-[11px] leading-5 text-slate-500">{feature.text}</p>
                   </div>
                 );
               })}
             </div>
           </div>
 
-          <div className="relative mt-10 hidden h-48 overflow-hidden rounded-[2rem] border border-white bg-gradient-to-b from-[#eaf7fb] to-[#dcecf1] shadow-sm md:block">
+          <div className="relative mt-10 hidden h-40 overflow-hidden rounded-[1.7rem] border border-white bg-gradient-to-b from-[#eaf7fb] to-[#dcecf1] shadow-sm md:block">
             <div className="absolute inset-x-0 bottom-0 h-14 bg-[#c8e1e8]" />
             <div className="absolute bottom-12 left-8 h-24 w-44 rounded-lg border-4 border-[#496c7c]">
               <div className="absolute left-0 right-0 top-8 border-t-4 border-[#496c7c]" />
@@ -499,20 +502,20 @@ function LoginScreen({ initialError = "" }: { initialError?: string }) {
         </section>
 
         <section className="flex items-center justify-center lg:pl-4">
-          <Card className="w-full max-w-xl border-0 golog-panel p-3">
-            <CardContent className="rounded-[1.5rem] golog-panel-soft p-7 sm:p-10">
-              <div className="mx-auto grid h-16 w-16 place-items-center rounded-2xl bg-[#dce4a7] text-[#5a4738]">
-                <Hospital size={30} />
+          <Card className="w-full max-w-md border-0 golog-panel p-2.5">
+            <CardContent className="rounded-[1.35rem] golog-panel-soft p-6 sm:p-8">
+              <div className="mx-auto grid h-14 w-14 place-items-center rounded-2xl bg-[#dce4a7] text-[#5a4738]">
+                <Hospital size={26} />
               </div>
-              <div className="mt-7 text-center">
+              <div className="mt-6 text-center">
                 <p className="text-xs font-bold uppercase tracking-[0.2em] text-[#7f9146]">Ruang kerja</p>
-                <h2 className="mt-3 text-3xl font-bold tracking-tight text-[#5a4738] sm:text-4xl">Selamat Datang</h2>
-                <p className="mx-auto mt-3 max-w-md text-sm leading-6 text-slate-500">
+                <h2 className="mt-3 text-3xl font-bold tracking-tight text-[#5a4738]">Selamat Datang</h2>
+                <p className="mx-auto mt-2.5 max-w-sm text-[13px] leading-5 text-slate-500">
                   Masuk menggunakan username dan password akun Gudang IR.
                 </p>
               </div>
 
-              <form onSubmit={handleLogin} className="mt-8 space-y-5">
+              <form onSubmit={handleLogin} className="mt-7 space-y-4">
                 <div>
                   <Label htmlFor="golog-username" className="text-sm font-semibold text-[#5a4738]">Username</Label>
                   <Input
@@ -521,7 +524,7 @@ function LoginScreen({ initialError = "" }: { initialError?: string }) {
                     onChange={(event) => setUsername(event.target.value)}
                     autoComplete="username"
                     placeholder="contoh: kepala.gudang"
-                    className="mt-2 h-12 rounded-xl border-[#b8a27a] bg-[#f7efd7]"
+                    className="mt-2 h-11 rounded-xl border-[#b8a27a] bg-[#f7efd7]"
                     disabled={starting}
                   />
                 </div>
@@ -536,7 +539,7 @@ function LoginScreen({ initialError = "" }: { initialError?: string }) {
                       onChange={(event) => setPassword(event.target.value)}
                       autoComplete="current-password"
                       placeholder="Masukkan password"
-                      className="h-12 rounded-xl border-[#b8a27a] bg-[#f7efd7] pr-12"
+                      className="h-11 rounded-xl border-[#b8a27a] bg-[#f7efd7] pr-11"
                       disabled={starting}
                     />
                     <button
@@ -545,7 +548,7 @@ function LoginScreen({ initialError = "" }: { initialError?: string }) {
                       title={showPassword ? "Sembunyikan password" : "Tampilkan password"}
                       onClick={() => setShowPassword((visible) => !visible)}
                       disabled={starting}
-                      className="absolute inset-y-0 right-0 grid w-12 place-items-center text-slate-400 hover:text-[#7f9146] disabled:opacity-50"
+                      className="absolute inset-y-0 right-0 grid w-11 place-items-center text-slate-400 hover:text-[#7f9146] disabled:opacity-50"
                     >
                       {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                     </button>
@@ -561,7 +564,7 @@ function LoginScreen({ initialError = "" }: { initialError?: string }) {
                 <Button
                   type="submit"
                   disabled={starting}
-                  className="h-14 w-full rounded-2xl bg-[#7f9146] text-base font-bold text-[#fff9ea] shadow-lg shadow-[#7f9146]/20 hover:bg-[#64753a]"
+                  className="h-12 w-full rounded-2xl bg-[#7f9146] text-base font-bold text-[#fff9ea] shadow-lg shadow-[#7f9146]/20 hover:bg-[#64753a]"
                 >
                   {starting ? "Memeriksa akun…" : "Masuk"}
                 </Button>
@@ -684,6 +687,33 @@ function NotificationCenter({
   );
 }
 
+
+function RoomDemandView({
+  data,
+  items,
+  days,
+  onDaysChange,
+}: {
+  data: any;
+  items: any[];
+  days: 30 | 90;
+  onDaysChange: (value: 30 | 90) => void;
+}) {
+  return (
+    <div className="space-y-6">
+      <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
+        <div>
+          <p className="golog-kicker">Analitik ruangan</p>
+          <h1 className="golog-display text-3xl tracking-tight text-[#5a4738]">Pola Permintaan Ruangan</h1>
+          <p className="mt-2 max-w-3xl text-sm leading-6 text-[#7e6b57]">
+            Membaca kebiasaan distribusi tiap ruangan dari histori barang yang benar-benar diterima. Gunakan per barang untuk melihat perbedaan intensitas antar-ruangan.
+          </p>
+        </div>
+      </div>
+      <RoomDemandPanel data={data} items={items} days={days} onDaysChange={onDaysChange} />
+    </div>
+  );
+}
 
 function RoomDemandPanel({
   data,
@@ -890,23 +920,15 @@ function Overview({
   userName = "Pengguna",
   unreadNotificationCount = 0,
   onOpenNotifications,
-  items = [],
-  roomDemand,
-  roomDemandDays,
-  onRoomDemandDaysChange,
 }: {
   dashboard: any;
   isAdmin: boolean;
   onGo: (key: NavKey) => void;
   report?: any;
   requests?: any[];
-  items?: any[];
   userName?: string;
   unreadNotificationCount?: number;
   onOpenNotifications?: () => void;
-  roomDemand?: any;
-  roomDemandDays: 30 | 90;
-  onRoomDemandDaysChange: (value: 30 | 90) => void;
 }) {
   const stats = dashboard?.stats ?? { items: 0, lowStock: 0, pending: 0, todayIn: 0 };
   const roomName = dashboard?.roomName;
@@ -932,7 +954,7 @@ function Overview({
 
     return <>
       <div className="md:hidden">
-        <MobileAdminOverview dashboard={dashboard} requests={requests} userName={userName} onGo={onGo} unreadNotificationCount={unreadNotificationCount} onOpenNotifications={onOpenNotifications} roomDemand={roomDemand} items={items} roomDemandDays={roomDemandDays} onRoomDemandDaysChange={onRoomDemandDaysChange} />
+        <MobileAdminOverview dashboard={dashboard} requests={requests} userName={userName} onGo={onGo} unreadNotificationCount={unreadNotificationCount} onOpenNotifications={onOpenNotifications} />
       </div>
       <div className="hidden md:block space-y-6">
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
@@ -942,7 +964,6 @@ function Overview({
           })}
         </div>
         {report && <CategoryPivotTable report={report} />}
-        <RoomDemandPanel data={roomDemand} items={items} days={roomDemandDays} onDaysChange={onRoomDemandDaysChange} />
         <Card className="border-slate-200/80 shadow-sm">
           <CardHeader className="flex flex-row items-center justify-between">
             <div><CardTitle>Aktivitas Gudang Pusat</CardTitle><p className="mt-1 text-sm text-slate-500">Pergerakan terakhir di Gudang Pusat.</p></div>
@@ -999,10 +1020,6 @@ function MobileAdminOverview({
   onGo,
   unreadNotificationCount = 0,
   onOpenNotifications,
-  roomDemand,
-  items,
-  roomDemandDays,
-  onRoomDemandDaysChange,
 }: {
   dashboard: any;
   requests: any[];
@@ -1010,10 +1027,6 @@ function MobileAdminOverview({
   onGo: (key: NavKey) => void;
   unreadNotificationCount?: number;
   onOpenNotifications?: () => void;
-  roomDemand?: any;
-  items?: any[];
-  roomDemandDays: 30 | 90;
-  onRoomDemandDaysChange: (value: 30 | 90) => void;
 }) {
   const stats = dashboard?.stats ?? { items: 0, lowStock: 0, pending: 0, todayIn: 0 };
   const pendingRequests = requests.filter((row) => row?.request?.status === "submitted");
@@ -1214,8 +1227,6 @@ function MobileAdminOverview({
             )}
           </div>
         </div>
-
-        <RoomDemandPanel data={roomDemand} items={items ?? []} days={roomDemandDays} onDaysChange={onRoomDemandDaysChange} />
 
         <div className="px-1 text-xs text-slate-400">
           <div className="flex items-center gap-2">
