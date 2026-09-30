@@ -781,8 +781,11 @@ export const appRouter = router({
       try {
         return await getMonthlyReportData(input.month);
       } catch (error) {
-        const message = error instanceof Error ? error.message : "Laporan bulanan gagal disiapkan.";
-        throw new TRPCError({ code: "BAD_REQUEST", message });
+        console.error("[Reports] monthly report failed:", error);
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Laporan bulanan gagal disiapkan. Silakan coba lagi.",
+        });
       }
     }),
   }),
