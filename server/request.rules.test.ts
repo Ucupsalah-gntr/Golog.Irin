@@ -6,9 +6,9 @@ describe("request workflow rules", () => {
     expect(canTransitionRequestStatus("submitted", "approved")).toBe(true);
     expect(canTransitionRequestStatus("submitted", "partial")).toBe(true);
     expect(canTransitionRequestStatus("submitted", "rejected")).toBe(true);
-    expect(canTransitionRequestStatus("submitted", "ready")).toBe(false);
-    expect(canTransitionRequestStatus("approved", "ready")).toBe(false);
-    expect(canTransitionRequestStatus("partial", "ready")).toBe(false);
+    expect(canTransitionRequestStatus("approved", "submitted")).toBe(false);
+    expect(canTransitionRequestStatus("partial", "submitted")).toBe(false);
+    expect(canTransitionRequestStatus("rejected", "submitted")).toBe(false);
     expect(canTransitionRequestStatus("approved", "rejected")).toBe(false);
   });
 
