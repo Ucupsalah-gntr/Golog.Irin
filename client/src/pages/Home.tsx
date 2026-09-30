@@ -431,7 +431,7 @@ function LoginScreen({ initialError = "" }: { initialError?: string }) {
   }
 
   return (
-    <div className="relative min-h-screen overflow-hidden golog-app text-[#5a4738]">
+    <div className="relative min-h-screen overflow-hidden golog-app golog-theme-login text-[#5a4738]">
       <div className="absolute -right-24 -top-32 h-96 w-96 rounded-full bg-[#dff5e8]" />
       <div className="absolute -left-28 bottom-[-10rem] h-96 w-96 rounded-full bg-[#dceff6]" />
       <div className="relative mx-auto grid min-h-screen max-w-[1200px] items-center gap-8 px-6 py-7 lg:grid-cols-[1.05fr_.95fr] lg:px-10 xl:px-12">
