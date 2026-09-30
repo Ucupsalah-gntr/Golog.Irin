@@ -236,7 +236,7 @@ export default async function handler(req: SyncRequest, res: SyncResponse) {
     return res.status(500).json({
       ok: false,
       error: "SYNC_READ_FAILED",
-      message: error instanceof Error ? error.message : "Data sinkronisasi gagal dibaca.",
+      message: "Data sinkronisasi gagal diproses. Silakan coba lagi.",
     });
   }
 }
