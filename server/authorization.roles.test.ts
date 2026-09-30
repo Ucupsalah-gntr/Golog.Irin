@@ -42,6 +42,14 @@ describe("server-side role authorization", () => {
     });
   });
 
+  it("rejects petugas access to room demand analytics", async () => {
+    const caller = appRouter.createCaller(createContext("user"));
+
+    await expect(caller.analytics.roomDemand({ days: 30 })).rejects.toMatchObject({
+      code: "FORBIDDEN",
+    });
+  });
+
   it("rejects petugas access to admin-only stock actions", async () => {
     const caller = appRouter.createCaller(createContext("user"));
 
