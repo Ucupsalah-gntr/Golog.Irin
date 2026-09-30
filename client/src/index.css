@@ -948,3 +948,328 @@
   .golog-app.golog-theme-room-demand [class*="bg-[#eee2bd]"] { background: #dff1f3 !important; }
   .golog-app.golog-theme-reports [class*="bg-[#eee2bd]"] { background: #dfe8e5 !important; }
 }
+
+
+/* =========================================================
+   Golog.Irin — FINAL VISUAL DIRECTION
+   Reference 01 as the core:
+   #0091B9 teal · #BAE4F0 light blue · #004E9B deep blue
+   #FF6500 orange · #FFD500 yellow
+   ========================================================= */
+
+:root {
+  --golog-teal: #0091B9;
+  --golog-light-blue: #BAE4F0;
+  --golog-deep-blue: #004E9B;
+  --golog-orange: #FF6500;
+  --golog-yellow: #FFD500;
+  --golog-dark: #07304A;
+  --golog-white: #FFFFFF;
+  --golog-surface: #F7FBFC;
+  --golog-line: #B8D5DE;
+  --golog-shadow: rgba(0, 78, 155, 0.12);
+}
+
+/* Shared shell: one strong identity, page content gets the changing composition. */
+.golog-app {
+  color: var(--golog-dark) !important;
+}
+
+.golog-app .golog-sidebar {
+  background: linear-gradient(180deg, #07304A 0%, #004E9B 100%) !important;
+  color: #fff !important;
+  border-right: 0 !important;
+  box-shadow: 10px 0 28px rgba(0, 50, 90, 0.16) !important;
+}
+
+.golog-app .golog-brand-mark {
+  background: var(--golog-yellow) !important;
+  color: var(--golog-deep-blue) !important;
+  border-color: rgba(255,255,255,.8) !important;
+}
+
+.golog-app .golog-topbar {
+  background: rgba(255,255,255,.94) !important;
+  border-bottom: 3px solid var(--golog-teal) !important;
+}
+
+.golog-app .golog-sidebar .text-\[\#f7efd7\],
+.golog-app .golog-sidebar .text-\[\#e5d8ab\] {
+  color: rgba(255,255,255,.78) !important;
+}
+
+.golog-app .golog-sidebar button:not(.golog-nav-active) {
+  color: rgba(255,255,255,.76) !important;
+}
+
+.golog-app .golog-sidebar button:not(.golog-nav-active):hover {
+  background: rgba(186,228,240,.12) !important;
+  color: #fff !important;
+}
+
+.golog-app .golog-nav-active {
+  background: var(--golog-light-blue) !important;
+  color: var(--golog-deep-blue) !important;
+  border: 0 !important;
+  box-shadow: inset 4px 0 0 var(--golog-orange) !important;
+}
+
+.golog-app .golog-bottom-nav {
+  background: #07304A !important;
+  border-top: 2px solid var(--golog-teal) !important;
+}
+
+.golog-app .golog-bottom-active {
+  color: var(--golog-yellow) !important;
+}
+
+.golog-app .golog-bottom-fab {
+  background: var(--golog-orange) !important;
+  border-color: #fff !important;
+}
+
+/* Page personalities — deliberately different, but still one application. */
+.golog-theme-login {
+  --page-bg: #EAF7FA;
+  --page-accent: #0091B9;
+  --page-accent-strong: #004E9B;
+  --page-soft: #BAE4F0;
+  --page-signal: #FF6500;
+  --page-secondary: #FFD500;
+}
+
+.golog-theme-overview {
+  --page-bg: #E7F5F8;
+  --page-accent: #0091B9;
+  --page-accent-strong: #004E9B;
+  --page-soft: #BAE4F0;
+  --page-signal: #FFD500;
+  --page-secondary: #FF6500;
+}
+
+.golog-theme-requests {
+  --page-bg: #F0F7FB;
+  --page-accent: #004E9B;
+  --page-accent-strong: #07304A;
+  --page-soft: #BAE4F0;
+  --page-signal: #FF6500;
+  --page-secondary: #0091B9;
+}
+
+.golog-theme-stock {
+  --page-bg: #F4FAFB;
+  --page-accent: #0091B9;
+  --page-accent-strong: #004E9B;
+  --page-soft: #BAE4F0;
+  --page-signal: #FFD500;
+  --page-secondary: #FF6500;
+}
+
+.golog-theme-inbound {
+  --page-bg: #E8F8FB;
+  --page-accent: #0091B9;
+  --page-accent-strong: #004E9B;
+  --page-soft: #BAE4F0;
+  --page-signal: #FF6500;
+  --page-secondary: #FFD500;
+}
+
+.golog-theme-adjustments {
+  --page-bg: #EDF3FA;
+  --page-accent: #004E9B;
+  --page-accent-strong: #07304A;
+  --page-soft: #BAE4F0;
+  --page-signal: #FF6500;
+  --page-secondary: #FFD500;
+}
+
+.golog-theme-stocktake {
+  --page-bg: #F5FAF9;
+  --page-accent: #0091B9;
+  --page-accent-strong: #004E9B;
+  --page-soft: #BAE4F0;
+  --page-signal: #FFD500;
+  --page-secondary: #FF6500;
+}
+
+.golog-theme-room-demand {
+  --page-bg: #DDF3F8;
+  --page-accent: #0091B9;
+  --page-accent-strong: #004E9B;
+  --page-soft: #BAE4F0;
+  --page-signal: #FF6500;
+  --page-secondary: #FFD500;
+}
+
+.golog-theme-reports {
+  --page-bg: #EAF1F9;
+  --page-accent: #004E9B;
+  --page-accent-strong: #07304A;
+  --page-soft: #BAE4F0;
+  --page-signal: #FF6500;
+  --page-secondary: #FFD500;
+}
+
+.golog-app[class*="golog-theme-"] {
+  background: var(--page-bg) !important;
+}
+
+.golog-app[class*="golog-theme-"] main {
+  background: var(--page-bg) !important;
+}
+
+/* Cards, forms and tables: white working surfaces, sharper blue hierarchy. */
+.golog-app[class*="golog-theme-"] main [data-slot="card"],
+.golog-app[class*="golog-theme-"] main .golog-panel,
+.golog-app[class*="golog-theme-"] main .golog-panel-soft,
+.golog-app[class*="golog-theme-"] main .golog-search,
+.golog-app[class*="golog-theme-"] main .golog-outline-button {
+  background: rgba(255,255,255,.96) !important;
+  border-color: color-mix(in srgb, var(--page-accent) 30%, white) !important;
+  box-shadow: 0 8px 24px var(--golog-shadow) !important;
+}
+
+.golog-app[class*="golog-theme-"] main [data-slot="card-header"] {
+  border-bottom-color: color-mix(in srgb, var(--page-accent) 18%, white) !important;
+}
+
+.golog-app[class*="golog-theme-"] main [data-slot="card-title"],
+.golog-app[class*="golog-theme-"] main h1,
+.golog-app[class*="golog-theme-"] main h2,
+.golog-app[class*="golog-theme-"] main h3,
+.golog-app[class*="golog-theme-"] main h4,
+.golog-app[class*="golog-theme-"] main .golog-display {
+  color: var(--page-accent-strong) !important;
+}
+
+.golog-app[class*="golog-theme-"] main [data-slot="input"],
+.golog-app[class*="golog-theme-"] main input,
+.golog-app[class*="golog-theme-"] main textarea,
+.golog-app[class*="golog-theme-"] main select {
+  background: #fff !important;
+  border-color: color-mix(in srgb, var(--page-accent) 38%, #cbdde3) !important;
+  color: var(--golog-dark) !important;
+}
+
+.golog-app[class*="golog-theme-"] main [data-slot="input"]:focus,
+.golog-app[class*="golog-theme-"] main input:focus,
+.golog-app[class*="golog-theme-"] main textarea:focus,
+.golog-app[class*="golog-theme-"] main select:focus {
+  border-color: var(--page-accent) !important;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--page-accent) 18%, transparent) !important;
+}
+
+.golog-app[class*="golog-theme-"] main table thead {
+  background: var(--page-soft) !important;
+  color: var(--page-accent-strong) !important;
+}
+
+.golog-app[class*="golog-theme-"] main table tbody tr:hover {
+  background: color-mix(in srgb, var(--page-soft) 38%, white) !important;
+}
+
+.golog-app[class*="golog-theme-"] main .bg-slate-50,
+.golog-app[class*="golog-theme-"] main .bg-slate-50\/30,
+.golog-app[class*="golog-theme-"] main .bg-slate-50\/60,
+.golog-app[class*="golog-theme-"] main .bg-slate-50\/70,
+.golog-app[class*="golog-theme-"] main .bg-white {
+  background: #fff !important;
+}
+
+.golog-app[class*="golog-theme-"] main .text-slate-400 {
+  color: #55727C !important;
+}
+
+.golog-app[class*="golog-theme-"] main .text-slate-500,
+.golog-app[class*="golog-theme-"] main .text-slate-600 {
+  color: #315563 !important;
+}
+
+.golog-app[class*="golog-theme-"] main .text-slate-700,
+.golog-app[class*="golog-theme-"] main .text-slate-800,
+.golog-app[class*="golog-theme-"] main .text-slate-900 {
+  color: var(--golog-dark) !important;
+}
+
+.golog-app[class*="golog-theme-"] main .border-slate-100,
+.golog-app[class*="golog-theme-"] main .border-slate-200 {
+  border-color: color-mix(in srgb, var(--page-accent) 22%, #d8e5e9) !important;
+}
+
+/* Primary controls vary by page: blue, teal or orange rather than one global olive button. */
+.golog-app.golog-theme-overview .golog-primary-button,
+.golog-app.golog-theme-stock .golog-primary-button,
+.golog-app.golog-theme-inbound .golog-primary-button,
+.golog-app.golog-theme-stocktake .golog-primary-button,
+.golog-app.golog-theme-room-demand .golog-primary-button {
+  background: var(--golog-teal) !important;
+  border-color: var(--golog-teal) !important;
+  color: #fff !important;
+}
+
+.golog-app.golog-theme-requests .golog-primary-button,
+.golog-app.golog-theme-login .golog-primary-button {
+  background: var(--golog-deep-blue) !important;
+  border-color: var(--golog-deep-blue) !important;
+  color: #fff !important;
+}
+
+.golog-app.golog-theme-adjustments .golog-primary-button,
+.golog-app.golog-theme-reports .golog-primary-button {
+  background: var(--golog-deep-blue) !important;
+  border-color: var(--golog-deep-blue) !important;
+  color: #fff !important;
+}
+
+/* Orange is an action/signal, never a full-page background. */
+.golog-app.golog-theme-requests .golog-topbar {
+  border-bottom-color: var(--golog-orange) !important;
+}
+.golog-app.golog-theme-adjustments .golog-topbar {
+  border-bottom-color: var(--golog-orange) !important;
+}
+.golog-app.golog-theme-room-demand .golog-topbar {
+  border-bottom-color: var(--golog-teal) !important;
+}
+.golog-app.golog-theme-reports .golog-topbar {
+  border-bottom-color: var(--golog-deep-blue) !important;
+}
+
+/* Remove the previous cream/olive visual language from legacy inline utilities. */
+.golog-app[class*="golog-theme-"] [class*="bg-[#f7efd7]"],
+.golog-app[class*="golog-theme-"] [class*="bg-[#fffaf0]"],
+.golog-app[class*="golog-theme-"] [class*="bg-[#eee2bd]"],
+.golog-app[class*="golog-theme-"] [class*="bg-[#e5d8ab]"] {
+  background: #fff !important;
+}
+
+.golog-app[class*="golog-theme-"] [class*="bg-[#dce4a7]"] {
+  background: var(--page-soft) !important;
+}
+
+.golog-app[class*="golog-theme-"] [class*="border-[#b8a27a]"] {
+  border-color: color-mix(in srgb, var(--page-accent) 30%, #d5e3e7) !important;
+}
+
+.golog-app[class*="golog-theme-"] [class*="text-[#5a4738]"],
+.golog-app[class*="golog-theme-"] [class*="text-[#4e3f32]"],
+.golog-app[class*="golog-theme-"] [class*="text-[#7e6b57]"],
+.golog-app[class*="golog-theme-"] [class*="text-[#8b7b67]"] {
+  color: var(--golog-dark) !important;
+}
+
+/* Header controls are now part of the active palette instead of the old cream buttons. */
+.golog-app[class*="golog-theme-"] .golog-topbar button {
+  border-color: color-mix(in srgb, var(--page-accent) 30%, #d5e3e7) !important;
+  background: #fff !important;
+  color: var(--page-accent-strong) !important;
+}
+
+.golog-app[class*="golog-theme-"] .golog-topbar button:hover {
+  background: var(--page-soft) !important;
+}
+
+/* Mobile keeps the same identity without becoming a separate design. */
+.golog-app[class*="golog-theme-"] .golog-mobile-surface {
+  background: var(--page-bg) !important;
+}
