@@ -481,3 +481,281 @@
     color: #dce4a7 !important;
   }
 }
+
+
+/* Golog.Irin — Aqua / Olive / Honey visual system.
+   Each workspace page gets its own color composition while sharing the same interaction language. */
+:root {
+  --golog-aqua: #7bd4cc;
+  --golog-honey: #bea42e;
+  --golog-olive: #7b895b;
+  --golog-celadon: #037367;
+  --golog-deep: #002b1f;
+  --golog-cream: #f5efd7;
+  --golog-paper: #fffaf0;
+  --golog-paper-strong: #eee3bf;
+  --golog-brown: #4b3d2f;
+  --golog-brown-soft: #756650;
+  --golog-line: #c8b98a;
+  --golog-alert: #bd7060;
+  --golog-shadow: rgba(0, 43, 31, 0.12);
+}
+
+@layer components {
+  /* Shared shell: identity stays stable, page mood changes. */
+  .golog-app .golog-brand-mark {
+    background: var(--golog-aqua);
+    color: var(--golog-deep);
+  }
+
+  .golog-app .golog-sidebar {
+    background: linear-gradient(180deg, #002b1f 0%, #174b40 100%);
+  }
+
+  .golog-app .golog-bottom-nav {
+    background: #002b1f;
+    border-top-color: rgba(123, 212, 204, 0.45);
+  }
+
+  .golog-app .golog-bottom-active {
+    color: #7bd4cc !important;
+  }
+
+  /* Overview — fresh aqua. */
+  .golog-theme-overview {
+    --golog-cream: #e8f6f3;
+    --golog-paper: #f8fffd;
+    --golog-paper-strong: #d7eee9;
+    --golog-line: #9ccfc8;
+    --golog-brown: #25463f;
+    --golog-brown-soft: #58766e;
+    --golog-shadow: rgba(3, 115, 103, 0.12);
+    --primary: #037367;
+    --primary-foreground: #f7fffd;
+    --ring: #037367;
+    --background: #e8f6f3;
+    --card: #f8fffd;
+    --popover: #f8fffd;
+    --secondary: #d7eee9;
+    --muted: #dcefeb;
+    --accent: #7bd4cc;
+    --accent-foreground: #002b1f;
+  }
+
+  /* Requests — warm honey accent. */
+  .golog-theme-requests {
+    --golog-cream: #f8efd2;
+    --golog-paper: #fff9e9;
+    --golog-paper-strong: #eee0aa;
+    --golog-line: #cfb96a;
+    --golog-brown: #4d4028;
+    --golog-brown-soft: #756744;
+    --golog-shadow: rgba(137, 107, 20, 0.12);
+    --primary: #bea42e;
+    --primary-foreground: #fffdf3;
+    --ring: #bea42e;
+    --background: #f8efd2;
+    --card: #fff9e9;
+    --popover: #fff9e9;
+    --secondary: #eee0aa;
+    --muted: #f1e7bf;
+    --accent: #7b895b;
+    --accent-foreground: #002b1f;
+  }
+
+  /* Stock — calm olive / aqua. */
+  .golog-theme-stock {
+    --golog-cream: #eef2df;
+    --golog-paper: #fbfdf5;
+    --golog-paper-strong: #dfe8c7;
+    --golog-line: #b8c596;
+    --golog-brown: #34412c;
+    --golog-brown-soft: #667356;
+    --golog-shadow: rgba(78, 96, 54, 0.13);
+    --primary: #7b895b;
+    --primary-foreground: #fafff6;
+    --ring: #7b895b;
+    --background: #eef2df;
+    --card: #fbfdf5;
+    --popover: #fbfdf5;
+    --secondary: #dfe8c7;
+    --muted: #e7edd8;
+    --accent: #7bd4cc;
+    --accent-foreground: #002b1f;
+  }
+
+  /* Inbound — bright celadon with a small honey note. */
+  .golog-theme-inbound {
+    --golog-cream: #e4f4ef;
+    --golog-paper: #f9fffc;
+    --golog-paper-strong: #cfe9e1;
+    --golog-line: #94c7bb;
+    --golog-brown: #25453d;
+    --golog-brown-soft: #5d756c;
+    --golog-shadow: rgba(3, 115, 103, 0.13);
+    --primary: #037367;
+    --primary-foreground: #f8fffd;
+    --ring: #bea42e;
+    --background: #e4f4ef;
+    --card: #f9fffc;
+    --popover: #f9fffc;
+    --secondary: #cfe9e1;
+    --muted: #dcefe9;
+    --accent: #bea42e;
+    --accent-foreground: #002b1f;
+  }
+
+  /* Adjustments — deep green / honey for a more deliberate workspace. */
+  .golog-theme-adjustments {
+    --golog-cream: #e3eee9;
+    --golog-paper: #f7fcf8;
+    --golog-paper-strong: #cbded6;
+    --golog-line: #8eb1a6;
+    --golog-brown: #183c32;
+    --golog-brown-soft: #587067;
+    --golog-shadow: rgba(0, 43, 31, 0.16);
+    --primary: #002b1f;
+    --primary-foreground: #f8fffc;
+    --ring: #bea42e;
+    --background: #e3eee9;
+    --card: #f7fcf8;
+    --popover: #f7fcf8;
+    --secondary: #cbded6;
+    --muted: #deebe6;
+    --accent: #bea42e;
+    --accent-foreground: #002b1f;
+  }
+
+  /* Stocktake — olive structure with honey checkpoints. */
+  .golog-theme-stocktake {
+    --golog-cream: #f0f1df;
+    --golog-paper: #fcfdf6;
+    --golog-paper-strong: #e0e6c2;
+    --golog-line: #bbc68d;
+    --golog-brown: #35402d;
+    --golog-brown-soft: #687253;
+    --golog-shadow: rgba(74, 91, 47, 0.13);
+    --primary: #7b895b;
+    --primary-foreground: #fbfff7;
+    --ring: #bea42e;
+    --background: #f0f1df;
+    --card: #fcfdf6;
+    --popover: #fcfdf6;
+    --secondary: #e0e6c2;
+    --muted: #e9edd9;
+    --accent: #bea42e;
+    --accent-foreground: #002b1f;
+  }
+
+  /* Room demand — aqua first, olive second. */
+  .golog-theme-room-demand {
+    --golog-cream: #e5f5f2;
+    --golog-paper: #fbfffd;
+    --golog-paper-strong: #d2ebe5;
+    --golog-line: #96c9bf;
+    --golog-brown: #24483f;
+    --golog-brown-soft: #5d776e;
+    --golog-shadow: rgba(3, 115, 103, 0.13);
+    --primary: #037367;
+    --primary-foreground: #f8fffd;
+    --ring: #7b895b;
+    --background: #e5f5f2;
+    --card: #fbfffd;
+    --popover: #fbfffd;
+    --secondary: #d2ebe5;
+    --muted: #deefeb;
+    --accent: #7b895b;
+    --accent-foreground: #fffef6;
+  }
+
+  /* Reports — editorial deep green / aqua. */
+  .golog-theme-reports {
+    --golog-cream: #e2eeeb;
+    --golog-paper: #f8fcfb;
+    --golog-paper-strong: #cbddd7;
+    --golog-line: #8dada3;
+    --golog-brown: #173d33;
+    --golog-brown-soft: #597268;
+    --golog-shadow: rgba(0, 43, 31, 0.15);
+    --primary: #002b1f;
+    --primary-foreground: #f8fffc;
+    --ring: #7bd4cc;
+    --background: #e2eeeb;
+    --card: #f8fcfb;
+    --popover: #f8fcfb;
+    --secondary: #cbddd7;
+    --muted: #dbe9e5;
+    --accent: #7bd4cc;
+    --accent-foreground: #002b1f;
+  }
+
+  /* Apply the theme variables to the shadcn/Tailwind surfaces already in the app. */
+  .golog-app [data-slot="card"],
+  .golog-app [data-slot="popover"] {
+    background: var(--card) !important;
+    color: var(--card-foreground);
+    border-color: var(--golog-line) !important;
+  }
+
+  .golog-app .golog-topbar {
+    background: color-mix(in srgb, var(--golog-cream) 92%, transparent) !important;
+    border-bottom-color: color-mix(in srgb, var(--golog-line) 66%, transparent) !important;
+  }
+
+  .golog-app main [data-slot="input"],
+  .golog-app main textarea,
+  .golog-app main select {
+    background: color-mix(in srgb, var(--card) 92%, var(--golog-cream)) !important;
+    border-color: var(--golog-line) !important;
+    color: var(--golog-brown) !important;
+  }
+
+  .golog-app main table thead {
+    background: color-mix(in srgb, var(--golog-cream) 76%, var(--golog-aqua)) !important;
+    color: var(--golog-brown-soft) !important;
+  }
+
+  .golog-app main .golog-panel,
+  .golog-app main .golog-panel-soft,
+  .golog-app main .golog-outline-button,
+  .golog-app main .golog-search {
+    background: var(--card) !important;
+    border-color: var(--golog-line) !important;
+  }
+
+  .golog-app main .golog-primary-button {
+    background: var(--primary) !important;
+    color: var(--primary-foreground) !important;
+    border-color: color-mix(in srgb, var(--primary) 82%, #000) !important;
+  }
+
+  .golog-app main .golog-primary-button:hover {
+    background: color-mix(in srgb, var(--primary) 86%, #000) !important;
+  }
+
+  .golog-app main .golog-display,
+  .golog-app main h1,
+  .golog-app main h2,
+  .golog-app main h3,
+  .golog-app main h4,
+  .golog-app main [data-slot="card-title"] {
+    color: var(--golog-brown) !important;
+  }
+
+  /* Preserve the explicit warning/negative states. */
+  .golog-app main .text-rose-700,
+  .golog-app main .bg-rose-50,
+  .golog-app main .border-rose-200 {
+    color: #a84e43;
+  }
+
+  /* The room-demand matrix keeps its compact layout but inherits the new theme. */
+  .golog-theme-room-demand main [data-slot="card-header"],
+  .golog-theme-room-demand main [data-slot="card-content"] {
+    background: transparent;
+  }
+
+  .golog-theme-room-demand main table tbody tr:hover {
+    background: rgba(123, 212, 204, 0.12) !important;
+  }
+}
