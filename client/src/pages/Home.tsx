@@ -1887,7 +1887,7 @@ function RequestsView({ requests, rooms, items, isAdmin, currentUserId, todayRoo
 
   const getRoomLock = (roomId: number) => todayRoomLocks.find((lock: any) => lock.roomId === roomId);
   const selectedLock = selectedRoom ? getRoomLock(selectedRoom) : null;
-  const selectedLockedByOther = Boolean(selectedLock && selectedLock.requesterId !== currentUserId);
+  const selectedLockedByOther = Boolean(selectedLock && Number(selectedLock.requesterId) !== Number(currentUserId));
 
   function getApprovalQty(requestId: number, line: any) {
     const key = `${requestId}:${line.line.id}`;
@@ -2106,7 +2106,7 @@ function RequestsView({ requests, rooms, items, isAdmin, currentUserId, todayRoo
       <CardHeader><CardTitle>Buat permintaan</CardTitle><p className="mt-1 text-sm text-slate-500">Permintaan menggunakan ruangan aktif Anda. Jika memiliki akses ke lebih dari satu ruangan, ganti konteks di header sebelum mengajukan.</p></CardHeader>
       <CardContent>
         <Field label="Ruangan aktif"><div className="flex h-10 items-center rounded-md border border-input bg-slate-50 px-3 text-sm font-semibold text-[#07304A]">{selectedRoomName || "Belum ada ruangan yang ditugaskan"}</div></Field>
-        <div className={`mt-4 rounded-xl p-3 text-sm ${selectedLockedByOther ? "border-[#FFD1C2] bg-[#f8e3de] text-[#D94A1A]" : selectedLock ? "bg-emerald-50 text-emerald-800" : "border-[#FFD500] bg-[#E6F4F7] text-[#004E9B]"}`}>{selectedLock ? selectedLock.requesterId === currentUserId ? <>Anda adalah PIC request <strong>{selectedRoomName}</strong> hari ini. Anda dapat membuat request susulan.</> : <>Ruangan <strong>{selectedRoomName}</strong> sudah memiliki PIC request hari ini: <strong>{selectedLock.requesterName || "petugas lain"}</strong>.</> : <>Permintaan akan menjadi request pertama untuk <strong>{selectedRoomName || "ruangan yang dipilih"}</strong> hari ini.</>}</div>
+        <div className={`mt-4 rounded-xl p-3 text-sm ${selectedLockedByOther ? "border-[#FFD1C2] bg-[#f8e3de] text-[#D94A1A]" : selectedLock ? "bg-emerald-50 text-emerald-800" : "border-[#FFD500] bg-[#E6F4F7] text-[#004E9B]"}`}>{selectedLock ? Number(selectedLock.requesterId) === Number(currentUserId) ? <>Anda adalah PIC request <strong>{selectedRoomName}</strong> hari ini. Anda dapat membuat request susulan.</> : <>Ruangan <strong>{selectedRoomName}</strong> sudah memiliki PIC request hari ini: <strong>{selectedLock.requesterName || "petugas lain"}</strong>.</> : <>Permintaan akan menjadi request pertama untuk <strong>{selectedRoomName || "ruangan yang dipilih"}</strong> hari ini.</>}</div>
         <div className="mt-5"><Field label="Prioritas"><select className="h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm" value={priority} onChange={(e) => setPriority(e.target.value)}><option value="normal">Normal</option><option value="mendesak">Mendesak</option><option value="darurat">Darurat</option></select></Field></div>
         <div className="mt-5 space-y-3">
           {lines.map((line: Line, index: number) => {
