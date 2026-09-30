@@ -850,3 +850,101 @@
   .golog-theme-adjustments .golog-topbar,
   .golog-theme-reports .golog-topbar { border-bottom: 3px solid #032b2f !important; }
 }
+
+
+@layer components {
+  /* Legacy inline utility bridge.
+     Home.tsx still contains a few hard-coded cream/olive utility classes from the previous visual system.
+     Re-map those surfaces into the active page theme so no old palette leaks through. */
+  .golog-app [class*="bg-[#f7efd7]"] {
+    background: var(--card) !important;
+  }
+  .golog-app [class*="bg-[#fffaf0]"] {
+    background: var(--card) !important;
+  }
+  .golog-app [class*="bg-[#eee2bd]"] {
+    background: var(--golog-cream) !important;
+  }
+  .golog-app [class*="bg-[#e5d8ab]"] {
+    background: var(--golog-paper-strong) !important;
+  }
+  .golog-app [class*="bg-[#dce4a7]"] {
+    background: var(--golog-nav-active) !important;
+  }
+  .golog-app [class*="bg-[#eef0d5]"] {
+    background: color-mix(in srgb, var(--golog-cerulean) 16%, var(--card)) !important;
+  }
+
+  .golog-app [class*="border-[#b8a27a]"] {
+    border-color: var(--golog-line) !important;
+  }
+  .golog-app [class*="border-[#d0be97]"],
+  .golog-app [class*="border-[#d8c9a8]"],
+  .golog-app [class*="border-[#e0d4b8]"],
+  .golog-app [class*="border-[#e4d9be]"] {
+    border-color: color-mix(in srgb, var(--golog-line) 86%, var(--golog-stone)) !important;
+  }
+
+  .golog-app [class*="text-[#5a4738]"],
+  .golog-app [class*="text-[#4e3f32]"] {
+    color: var(--golog-brown) !important;
+  }
+  .golog-app [class*="text-[#8b7b67]"],
+  .golog-app [class*="text-[#7e6b57]"],
+  .golog-app [class*="text-[#9a896f]"],
+  .golog-app [class*="text-[#6f5e4e]"] {
+    color: var(--golog-brown-soft) !important;
+  }
+  .golog-app [class*="text-[#5d7033]"],
+  .golog-app [class*="text-[#64753a]"],
+  .golog-app [class*="text-[#7f9146]"] {
+    color: var(--primary) !important;
+  }
+
+  /* Page-specific accents: the same old component can now look intentionally different per workspace. */
+  .golog-theme-overview [class*="bg-[#dce4a7]"] { background: #56b1bf !important; }
+  .golog-theme-overview [class*="text-[#5d7033]"],
+  .golog-theme-overview [class*="text-[#64753a]"] { color: #08708a !important; }
+
+  .golog-theme-requests [class*="bg-[#dce4a7]"] { background: #d3e6e7 !important; }
+  .golog-theme-requests [class*="text-[#5d7033]"],
+  .golog-theme-requests [class*="text-[#64753a]"] { color: #08708a !important; }
+
+  .golog-theme-stock [class*="bg-[#dce4a7]"] { background: #c8dfe2 !important; }
+  .golog-theme-stock [class*="text-[#5d7033]"],
+  .golog-theme-stock [class*="text-[#64753a]"] { color: #08708a !important; }
+
+  .golog-theme-inbound [class*="bg-[#dce4a7]"] { background: #8ccbd3 !important; }
+  .golog-theme-inbound [class*="text-[#5d7033]"],
+  .golog-theme-inbound [class*="text-[#64753a]"] { color: #08708a !important; }
+
+  .golog-theme-adjustments [class*="bg-[#dce4a7]"] { background: #9bc2c4 !important; }
+  .golog-theme-adjustments [class*="text-[#5d7033]"],
+  .golog-theme-adjustments [class*="text-[#64753a]"] { color: #032b2f !important; }
+
+  .golog-theme-stocktake [class*="bg-[#dce4a7]"] { background: #b9dadd !important; }
+  .golog-theme-stocktake [class*="text-[#5d7033]"],
+  .golog-theme-stocktake [class*="text-[#64753a]"] { color: #08708a !important; }
+
+  .golog-theme-room-demand [class*="bg-[#dce4a7]"] { background: #7fc6d0 !important; }
+  .golog-theme-room-demand [class*="text-[#5d7033]"],
+  .golog-theme-room-demand [class*="text-[#64753a]"] { color: #08708a !important; }
+
+  .golog-theme-reports [class*="bg-[#dce4a7]"] { background: #8bc5cb !important; }
+  .golog-theme-reports [class*="text-[#5d7033]"],
+  .golog-theme-reports [class*="text-[#64753a]"] { color: #032b2f !important; }
+
+  .golog-theme-login [class*="bg-[#dce4a7]"] { background: #56b1bf !important; }
+  .golog-theme-login [class*="text-[#5d7033]"],
+  .golog-theme-login [class*="text-[#64753a]"] { color: #08708a !important; }
+
+  /* Hard-coded page background classes are explicitly neutralized to stop old cream from winning. */
+  .golog-app.golog-theme-overview [class*="bg-[#eee2bd]"] { background: #e4f1f3 !important; }
+  .golog-app.golog-theme-requests [class*="bg-[#eee2bd]"] { background: #e7ecea !important; }
+  .golog-app.golog-theme-stock [class*="bg-[#eee2bd]"] { background: #e5e7df !important; }
+  .golog-app.golog-theme-inbound [class*="bg-[#eee2bd]"] { background: #dceff2 !important; }
+  .golog-app.golog-theme-adjustments [class*="bg-[#eee2bd]"] { background: #dfe8e5 !important; }
+  .golog-app.golog-theme-stocktake [class*="bg-[#eee2bd]"] { background: #e8eae3 !important; }
+  .golog-app.golog-theme-room-demand [class*="bg-[#eee2bd]"] { background: #dff1f3 !important; }
+  .golog-app.golog-theme-reports [class*="bg-[#eee2bd]"] { background: #dfe8e5 !important; }
+}
