@@ -359,3 +359,125 @@
     border-color: rgba(184, 162, 122, 0.72) !important;
   }
 }
+
+
+@layer components {
+  .golog-app main {
+    background: transparent;
+  }
+
+  .golog-app main [data-slot="card"] {
+    border-color: var(--golog-line);
+    background: var(--golog-paper);
+    box-shadow:
+      inset 0 0 0 2px rgba(255, 250, 240, 0.58),
+      0 8px 18px var(--golog-shadow);
+  }
+
+  .golog-app main [data-slot="card-header"] {
+    border-color: rgba(184, 162, 122, 0.58);
+  }
+
+  .golog-app main [data-slot="card-title"] {
+    color: var(--golog-brown);
+    letter-spacing: -0.015em;
+  }
+
+  .golog-app main [data-slot="input"],
+  .golog-app main textarea,
+  .golog-app main select {
+    border-color: var(--golog-line);
+    background: rgba(247, 239, 215, 0.9);
+    color: var(--golog-brown);
+  }
+
+  .golog-app main table thead {
+    background: rgba(229, 216, 171, 0.5);
+    color: var(--golog-brown-soft);
+  }
+
+  .golog-app main table tbody tr:hover {
+    background: rgba(229, 216, 171, 0.18);
+  }
+
+  .golog-app main .bg-slate-50,
+  .golog-app main .bg-slate-50\/30,
+  .golog-app main .bg-slate-50\/60,
+  .golog-app main .bg-slate-50\/70 {
+    background: rgba(237, 226, 189, 0.42);
+  }
+
+  .golog-app main .bg-white {
+    background: var(--golog-paper);
+  }
+
+  .golog-app main .border-slate-200,
+  .golog-app main .border-slate-100 {
+    border-color: rgba(184, 162, 122, 0.72);
+  }
+
+  .golog-app main .divide-slate-100 > :not([hidden]) ~ :not([hidden]) {
+    border-color: rgba(184, 162, 122, 0.48);
+  }
+
+  .golog-app main .text-slate-400 {
+    color: var(--golog-brown-soft);
+  }
+
+  .golog-app main .text-slate-500 {
+    color: #6f5e4e;
+  }
+
+  .golog-app main .text-slate-600 {
+    color: #645343;
+  }
+
+  .golog-app main .text-slate-700 {
+    color: var(--golog-brown);
+  }
+
+  .golog-app main .text-slate-800,
+  .golog-app main .text-slate-900 {
+    color: #4e3f32;
+  }
+
+  .golog-app main .hover\:bg-slate-50:hover,
+  .golog-app main .hover\:bg-slate-50\/70:hover {
+    background: rgba(229, 216, 171, 0.34);
+  }
+
+  .golog-app main .rounded-2xl,
+  .golog-app main .rounded-xl {
+    --tw-ring-color: rgba(184, 162, 122, 0.55);
+  }
+
+  .golog-page {
+    min-height: calc(100vh - 5rem);
+  }
+
+  .golog-topbar h1 {
+    font-family: Georgia, "Times New Roman", serif;
+    color: var(--golog-brown);
+    font-size: 1.5rem;
+  }
+
+  .golog-topbar button {
+    color: var(--golog-brown);
+  }
+
+  .golog-sidebar button {
+    border-radius: 0.7rem;
+  }
+
+  .golog-sidebar .text-teal-50\/70 {
+    color: rgba(247, 239, 215, 0.72);
+  }
+
+  .golog-bottom-nav button {
+    color: rgba(247, 239, 215, 0.62);
+  }
+
+  .golog-bottom-nav button.golog-bottom-active {
+    color: #dce4a7 !important;
+  }
+}
