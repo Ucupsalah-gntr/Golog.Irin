@@ -513,7 +513,7 @@ export async function getGoogleSheetSyncData() {
 
 export async function getRoomDemandPatterns(days = 30) {
   const db = await getDb();
-  const safeDays = days === 90 ? 90 : 30;
+  const safeDays = days === 90 ? 90 : days === 30 ? 30 : 7;
   if (!db) {
     return { days: safeDays, generatedAt: new Date().toISOString(), roomSummary: [], itemRows: [] };
   }
