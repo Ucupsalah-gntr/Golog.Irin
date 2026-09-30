@@ -126,7 +126,7 @@ export default function Home() {
   const [selectedRoom, setSelectedRoom] = useState<number | null>(null);
   const [requestLines, setRequestLines] = useState<Line[]>([{ itemId: 0, requestedQty: 1 }]);
   const [reportMonth, setReportMonth] = useState(getJakartaMonthKeyClient());
-  const [roomDemandDays, setRoomDemandDays] = useState<30 | 90>(30);
+  const [roomDemandDays, setRoomDemandDays] = useState<7 | 30 | 90>(30);
   const [notificationOpen, setNotificationOpen] = useState(false);
   const [readNotificationKeys, setReadNotificationKeys] = useState<string[]>([]);
   const [notificationTarget, setNotificationTarget] = useState<{ nav: NavKey; requestId?: number; itemId?: number } | null>(null);
@@ -688,6 +688,7 @@ function NotificationCenter({
 }
 
 
+
 function RoomDemandView({
   data,
   items,
@@ -696,21 +697,34 @@ function RoomDemandView({
 }: {
   data: any;
   items: any[];
-  days: 30 | 90;
-  onDaysChange: (value: 30 | 90) => void;
+  days: 7 | 30 | 90;
+  onDaysChange: (value: 7 | 30 | 90) => void;
 }) {
   return (
     <div className="space-y-6">
-      <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
+      <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
         <div>
           <p className="golog-kicker">Analitik ruangan</p>
           <h1 className="golog-display text-3xl tracking-tight text-[#5a4738]">Pola Permintaan Ruangan</h1>
           <p className="mt-2 max-w-3xl text-sm leading-6 text-[#7e6b57]">
-            Membaca kebiasaan distribusi tiap ruangan dari histori barang yang benar-benar diterima. Gunakan per barang untuk melihat perbedaan intensitas antar-ruangan.
+            Satu barang langsung terlihat di beberapa ruangan. Angka menunjukkan rata-rata distribusi pada hari saat ruangan menerima barang dalam periode yang dipilih.
           </p>
         </div>
+        <div className="flex shrink-0 rounded-xl border border-[#b8a27a] bg-[#fffaf0] p-1">
+          {[7, 30, 90].map((value) => (
+            <button
+              key={value}
+              type="button"
+              onClick={() => onDaysChange(value as 7 | 30 | 90)}
+              className={`rounded-lg px-3 py-2 text-xs font-semibold transition ${days === value ? "bg-[#102a2b] text-white" : "text-[#7e6b57] hover:bg-[#eee2bd]"}`}
+            >
+              {value === 7 ? "1 minggu" : value + " hari"}
+            </button>
+          ))}
+        </div>
       </div>
-      <RoomDemandPanel data={data} items={items} days={days} onDaysChange={onDaysChange} />
+
+      <RoomDemandPanel data={data} items={items} />
     </div>
   );
 }
@@ -718,194 +732,190 @@ function RoomDemandView({
 function RoomDemandPanel({
   data,
   items,
-  days,
-  onDaysChange,
 }: {
   data: any;
   items: any[];
-  days: 30 | 90;
-  onDaysChange: (value: 30 | 90) => void;
 }) {
-  const [selectedItemId, setSelectedItemId] = useState("");
+  const [search, setSearch] = useState("");
   const roomSummary = Array.isArray(data?.roomSummary) ? data.roomSummary : [];
   const itemRows = Array.isArray(data?.itemRows) ? data.itemRows : [];
-  const selectedRows = selectedItemId
-    ? itemRows
-        .filter((row: any) => Number(row.itemId) === Number(selectedItemId))
-        .sort((a: any, b: any) => Number(b.avgPerActiveDay) - Number(a.avgPerActiveDay))
-    : [];
-  const selectedItem = items.find((item: any) => Number(item.id) === Number(selectedItemId));
-  const totalSelectedQty = selectedRows.reduce((sum: number, row: any) => sum + Number(row.totalQty ?? 0), 0);
-  const averagePerActiveRoom = selectedRows.length
-    ? selectedRows.reduce((sum: number, row: any) => sum + Number(row.avgPerActiveDay ?? 0), 0) / selectedRows.length
-    : 0;
+
+  const roomColumns = useMemo(
+    () => roomSummary.map((room: any) => ({ id: Number(room.roomId), name: room.roomName })),
+    [roomSummary],
+  );
+
+  const itemMap = useMemo(() => {
+    const map = new Map<number, any>();
+    for (const item of items) {
+      map.set(Number(item.id), {
+        id: Number(item.id),
+        name: item.name,
+        sku: item.sku,
+        unit: item.unit,
+      });
+    }
+    for (const row of itemRows) {
+      const id = Number(row.itemId);
+      if (!map.has(id)) {
+        map.set(id, {
+          id,
+          name: row.itemName,
+          sku: row.sku,
+          unit: row.unit,
+        });
+      }
+    }
+    return map;
+  }, [items, itemRows]);
+
+  const activityByItem = useMemo(() => {
+    const map = new Map<number, Map<number, any>>();
+    for (const row of itemRows) {
+      const itemId = Number(row.itemId);
+      const roomId = Number(row.roomId);
+      if (!map.has(itemId)) map.set(itemId, new Map());
+      map.get(itemId)?.set(roomId, row);
+    }
+    return map;
+  }, [itemRows]);
+
+  const rows = useMemo(() => {
+    const query = search.trim().toLowerCase();
+    const all = Array.from(itemMap.values());
+
+    return all
+      .filter((item) => {
+        const activity = activityByItem.get(item.id);
+        const hasActivity = Boolean(activity?.size);
+        if (!query) return hasActivity;
+        return [item.name, item.sku, item.unit].some((value) =>
+          String(value ?? "").toLowerCase().includes(query),
+        );
+      })
+      .sort((a, b) => String(a.name).localeCompare(String(b.name), "id"));
+  }, [activityByItem, itemMap, search]);
+
+  const searched = Boolean(search.trim());
 
   return (
     <Card className="overflow-hidden border-[#b8a27a]/70 bg-[#fffaf0] shadow-sm">
       <CardHeader className="border-b border-[#d8c9a8]/70 bg-[#f7efd7]/55">
-        <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
           <div>
-            <p className="golog-kicker">Pola penggunaan ruangan</p>
-            <CardTitle className="mt-1">Pola Permintaan Ruangan</CardTitle>
-            <p className="mt-1 max-w-3xl text-sm text-[#7e6b57]">
-              Sistem membaca histori distribusi yang benar-benar diterima tiap ruangan. Pilih satu barang untuk membandingkan kebiasaannya antar-ruangan.
+            <p className="golog-kicker">Perbandingan antar-ruangan</p>
+            <CardTitle className="mt-1">Distribusi per Barang</CardTitle>
+            <p className="mt-1 text-sm text-[#7e6b57]">
+              Baris = satu barang. Kolom = ruangan. Cari nama atau SKU untuk memeriksa item tertentu.
             </p>
           </div>
-          <div className="flex shrink-0 rounded-xl border border-[#b8a27a] bg-[#fffaf0] p-1">
-            {[30, 90].map((value) => (
-              <button
-                key={value}
-                type="button"
-                onClick={() => onDaysChange(value as 30 | 90)}
-                className={`rounded-lg px-3 py-2 text-xs font-semibold transition ${days === value ? "bg-[#102a2b] text-white" : "text-[#7e6b57] hover:bg-[#eee2bd]"}`}
-              >
-                {value} hari
-              </button>
-            ))}
+
+          <div className="w-full lg:max-w-md">
+            <div className="relative">
+              <Search size={17} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[#8b7b67]" />
+              <Input
+                value={search}
+                onChange={(event) => setSearch(event.target.value)}
+                placeholder="Cari nama barang atau SKU…"
+                className="h-11 rounded-xl border-2 border-[#b8a27a] bg-[#fffaf0] pl-10 text-[#5a4738]"
+              />
+            </div>
           </div>
         </div>
       </CardHeader>
 
       <CardContent className="p-5">
-        <div className="grid gap-4 md:grid-cols-[minmax(0,1fr)_auto] md:items-end">
-          <Field label="Barang yang dibandingkan">
-            <select
-              className="h-11 w-full rounded-xl border-2 border-[#b8a27a] bg-[#fffaf0] px-3 text-sm text-[#5a4738]"
-              value={selectedItemId}
-              onChange={(e) => setSelectedItemId(e.target.value)}
-            >
-              <option value="">Semua barang — lihat aktivitas ruangan</option>
-              {items.map((item: any) => (
-                <option key={item.id} value={item.id}>
-                  {item.name} · {item.sku} · {item.unit}
-                </option>
-              ))}
-            </select>
-          </Field>
-
-          {selectedItemId && (
-            <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-              <div className="rounded-xl border border-[#d0be97] bg-[#f7efd7] px-3 py-2">
-                <p className="text-[10px] uppercase tracking-[0.12em] text-[#8b7b67]">Ruang terdata</p>
-                <p className="mt-1 text-lg font-semibold text-[#5a4738]">{formatNumber(selectedRows.length)}</p>
-              </div>
-              <div className="rounded-xl border border-[#d0be97] bg-[#f7efd7] px-3 py-2">
-                <p className="text-[10px] uppercase tracking-[0.12em] text-[#8b7b67]">Total distribusi</p>
-                <p className="mt-1 text-lg font-semibold text-[#5a4738]">{formatNumber(totalSelectedQty)}</p>
-              </div>
-              <div className="rounded-xl border border-[#d0be97] bg-[#f7efd7] px-3 py-2">
-                <p className="text-[10px] uppercase tracking-[0.12em] text-[#8b7b67]">Rata-rata ruang</p>
-                <p className="mt-1 text-lg font-semibold text-[#5a4738]">{formatNumber(averagePerActiveRoom)}</p>
-              </div>
-            </div>
-          )}
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+          <div className="text-xs text-[#8b7b67]">
+            {searched
+              ? `Hasil pencarian: ${formatNumber(rows.length)} item`
+              : `Menampilkan ${formatNumber(rows.length)} item yang memiliki distribusi pada periode ini`}
+          </div>
+          <div className="rounded-full border border-[#d0be97] bg-[#f7efd7] px-3 py-1.5 text-[11px] font-semibold text-[#7e6b57]">
+            Periode: {data?.days === 7 ? "1 minggu" : (data?.days ?? 0) + " hari"}
+          </div>
         </div>
 
-        {!selectedItemId ? (
-          <div className="mt-5">
-            <div className="rounded-xl border border-[#d8c9a8] bg-[#eee2bd]/45 px-4 py-3 text-xs leading-5 text-[#7e6b57]">
-              Mode ini menampilkan <strong>aktivitas distribusi</strong>, bukan menjumlahkan semua satuan barang menjadi satu angka. Untuk membandingkan jumlah, pilih satu barang.
-            </div>
-            <div className="mt-4 overflow-x-auto rounded-2xl border border-[#d8c9a8]">
-              <table className="w-full min-w-[620px] text-sm">
-                <thead className="bg-[#f7efd7] text-left text-xs uppercase tracking-[0.12em] text-[#8b7b67]">
-                  <tr>
-                    <th className="px-4 py-3">Ruangan</th>
-                    <th className="px-4 py-3 text-right">Hari aktif</th>
-                    <th className="px-4 py-3 text-right">Item</th>
-                    <th className="px-4 py-3 text-right">Distribusi</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-[#e4d9be] bg-[#fffaf0]">
-                  {roomSummary.map((row: any) => (
-                    <tr key={row.roomId} className="hover:bg-[#f7efd7]/60">
-                      <td className="px-4 py-3 font-semibold text-[#5a4738]">{row.roomName}</td>
-                      <td className="px-4 py-3 text-right text-[#6f5f50]">{formatNumber(row.activeDays)}</td>
-                      <td className="px-4 py-3 text-right text-[#6f5f50]">{formatNumber(row.itemCount)}</td>
-                      <td className="px-4 py-3 text-right font-semibold text-[#5a4738]">{formatNumber(row.distributionEvents)} kali</td>
-                    </tr>
-                  ))}
-                  {!roomSummary.length && (
-                    <tr><td colSpan={4} className="px-4 py-10 text-center text-sm text-[#8b7b67]">Belum ada data distribusi dalam periode ini.</td></tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        ) : (
-          <div className="mt-5">
-            <div className="mb-4 flex items-center justify-between gap-3">
-              <div>
-                <p className="text-sm font-semibold text-[#5a4738]">{selectedItem?.name || "Barang"}</p>
-                <p className="text-xs text-[#8b7b67]">{selectedItem?.sku || ""} · rata-rata dihitung dari hari saat ruangan menerima distribusi</p>
-              </div>
-              <span className="rounded-full border border-[#d0be97] bg-[#f7efd7] px-3 py-1 text-[11px] font-semibold text-[#7e6b57]">{data?.days ?? days} hari</span>
-            </div>
+        <div className="overflow-x-auto rounded-2xl border border-[#d8c9a8]">
+          <table className="w-full min-w-[980px] text-sm">
+            <thead className="bg-[#f7efd7] text-left text-xs uppercase tracking-[0.1em] text-[#8b7b67]">
+              <tr>
+                <th className="sticky left-0 z-10 min-w-[240px] border-r border-[#d8c9a8] bg-[#f7efd7] px-4 py-3">Barang</th>
+                <th className="min-w-[82px] px-3 py-3">Unit</th>
+                {roomColumns.map((room: any) => (
+                  <th key={room.id} className="min-w-[145px] border-l border-[#e0d4b8] px-3 py-3 text-right">{room.name}</th>
+                ))}
+                <th className="min-w-[125px] border-l border-[#e0d4b8] px-3 py-3 text-right">Total</th>
+              </tr>
+            </thead>
 
-            <div className="hidden overflow-x-auto rounded-2xl border border-[#d8c9a8] md:block">
-              <table className="w-full min-w-[720px] text-sm">
-                <thead className="bg-[#f7efd7] text-left text-xs uppercase tracking-[0.12em] text-[#8b7b67]">
-                  <tr>
-                    <th className="px-4 py-3">Ruangan</th>
-                    <th className="px-4 py-3 text-right">Total diterima</th>
-                    <th className="px-4 py-3 text-right">Hari aktif</th>
-                    <th className="px-4 py-3 text-right">Rata-rata / hari aktif</th>
-                    <th className="px-4 py-3 text-right">Distribusi</th>
-                    <th className="px-4 py-3 text-right">Posisi</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-[#e4d9be] bg-[#fffaf0]">
-                  {selectedRows.map((row: any, index: number) => (
-                    <tr key={row.roomId} className={index === 0 ? "bg-[#eef0d5]/50" : "hover:bg-[#f7efd7]/60"}>
-                      <td className="px-4 py-3 font-semibold text-[#5a4738]">{row.roomName}</td>
-                      <td className="px-4 py-3 text-right font-semibold text-[#5a4738]">{formatNumber(row.totalQty)} {row.unit}</td>
-                      <td className="px-4 py-3 text-right text-[#6f5f50]">{formatNumber(row.activeDays)}</td>
-                      <td className="px-4 py-3 text-right font-semibold text-[#5d7033]">{formatNumber(row.avgPerActiveDay)} {row.unit}</td>
-                      <td className="px-4 py-3 text-right text-[#6f5f50]">{formatNumber(row.distributionEvents)} kali</td>
-                      <td className="px-4 py-3 text-right">
-                        <span className={`inline-flex rounded-full border px-2.5 py-1 text-[11px] font-semibold ${index === 0 ? "border-[#b8c68a] bg-[#eef0d5] text-[#5d7033]" : index === selectedRows.length - 1 && selectedRows.length > 1 ? "border-[#d8c9a8] bg-[#f7efd7] text-[#8b7b67]" : "border-[#d8c9a8] bg-[#fffaf0] text-[#7e6b57]"}`}>
-                          {index === 0 ? "Tertinggi" : index === selectedRows.length - 1 && selectedRows.length > 1 ? "Terendah" : "—"}
-                        </span>
-                      </td>
-                    </tr>
-                  ))}
-                  {!selectedRows.length && (
-                    <tr><td colSpan={6} className="px-4 py-10 text-center text-sm text-[#8b7b67]">Belum ada distribusi untuk barang ini dalam periode yang dipilih.</td></tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
+            <tbody className="divide-y divide-[#e4d9be] bg-[#fffaf0]">
+              {rows.map((item: any) => {
+                const byRoom = activityByItem.get(item.id) ?? new Map();
+                const totalQty = roomColumns.reduce((sum: number, room: any) => sum + Number(byRoom.get(room.id)?.totalQty ?? 0), 0);
+                const totalActiveDays = roomColumns.reduce((sum: number, room: any) => sum + Number(byRoom.get(room.id)?.activeDays ?? 0), 0);
+                const totalAverage = totalActiveDays > 0 ? totalQty / totalActiveDays : 0;
 
-            <div className="space-y-3 md:hidden">
-              {selectedRows.map((row: any, index: number) => (
-                <div key={row.roomId} className={`rounded-2xl border p-4 ${index === 0 ? "border-[#b8c68a] bg-[#eef0d5]/45" : "border-[#d8c9a8] bg-[#fffaf0]"}`}>
-                  <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <p className="font-semibold text-[#5a4738]">{row.roomName}</p>
-                      <p className="mt-1 text-xs text-[#8b7b67]">{formatNumber(row.distributionEvents)} distribusi · {formatNumber(row.activeDays)} hari aktif</p>
-                    </div>
-                    <span className="rounded-full border border-[#d0be97] bg-[#f7efd7] px-2.5 py-1 text-[10px] font-semibold text-[#7e6b57]">
-                      {index === 0 ? "Tertinggi" : index === selectedRows.length - 1 && selectedRows.length > 1 ? "Terendah" : "—"}
-                    </span>
-                  </div>
-                  <div className="mt-4 grid grid-cols-2 gap-3">
-                    <div className="rounded-xl border border-[#d8c9a8] bg-[#f7efd7] p-3">
-                      <p className="text-[10px] uppercase tracking-[0.12em] text-[#8b7b67]">Total</p>
-                      <p className="mt-1 text-lg font-semibold text-[#5a4738]">{formatNumber(row.totalQty)} {row.unit}</p>
-                    </div>
-                    <div className="rounded-xl border border-[#d8c9a8] bg-[#fffaf0] p-3">
-                      <p className="text-[10px] uppercase tracking-[0.12em] text-[#8b7b67]">Rata-rata</p>
-                      <p className="mt-1 text-lg font-semibold text-[#5d7033]">{formatNumber(row.avgPerActiveDay)} {row.unit}</p>
-                    </div>
-                  </div>
-                </div>
-              ))}
-              {!selectedRows.length && (
-                <div className="rounded-2xl border border-[#d8c9a8] bg-[#fffaf0] px-4 py-10 text-center text-sm text-[#8b7b67]">Belum ada distribusi untuk barang ini dalam periode yang dipilih.</div>
+                return (
+                  <tr key={item.id} className="hover:bg-[#f7efd7]/45">
+                    <td className="sticky left-0 z-[1] border-r border-[#e4d9be] bg-[#fffaf0] px-4 py-3">
+                      <p className="font-semibold text-[#5a4738]">{item.name}</p>
+                      <p className="mt-0.5 text-[11px] text-[#9a896f]">{item.sku}</p>
+                    </td>
+                    <td className="px-3 py-3 text-[#7e6b57]">{item.unit}</td>
+
+                    {roomColumns.map((room: any) => {
+                      const row = byRoom.get(room.id);
+                      const avg = Number(row?.avgPerActiveDay ?? 0);
+                      const total = Number(row?.totalQty ?? 0);
+                      const activeDays = Number(row?.activeDays ?? 0);
+
+                      return (
+                        <td
+                          key={room.id}
+                          title={row ? `${formatNumber(total)} ${item.unit} dalam ${formatNumber(activeDays)} hari aktif` : "Tidak ada distribusi"}
+                          className={`border-l border-[#eee4cf] px-3 py-3 text-right ${row ? "bg-[#eef0d5]/35" : ""}`}
+                        >
+                          {row ? (
+                            <>
+                              <p className="font-semibold text-[#5d7033]">{formatNumber(avg)}</p>
+                              <p className="mt-0.5 text-[10px] text-[#9a896f]">{formatNumber(total)} total</p>
+                            </>
+                          ) : (
+                            <span className="text-[#b4a58c]">—</span>
+                          )}
+                        </td>
+                      );
+                    })}
+
+                    <td className="border-l border-[#e0d4b8] px-3 py-3 text-right">
+                      <p className="font-semibold text-[#5a4738]">{formatNumber(totalQty)}</p>
+                      <p className="mt-0.5 text-[10px] text-[#9a896f]">{formatNumber(totalAverage)}/hari aktif</p>
+                    </td>
+                  </tr>
+                );
+              })}
+
+              {!rows.length && (
+                <tr>
+                  <td colSpan={roomColumns.length + 3} className="px-5 py-12 text-center">
+                    <Search className="mx-auto text-[#b4a58c]" size={24} />
+                    <p className="mt-3 font-semibold text-[#5a4738]">
+                      {searched ? "Barang tidak ditemukan" : "Belum ada distribusi dalam periode ini"}
+                    </p>
+                    <p className="mt-1 text-sm text-[#8b7b67]">
+                      {searched ? "Coba nama barang atau SKU lain." : "Pilih periode lain untuk melihat histori distribusi."}
+                    </p>
+                  </td>
+                </tr>
               )}
-            </div>
-          </div>
-        )}
+            </tbody>
+          </table>
+        </div>
+
+        <div className="mt-4 rounded-xl border border-[#d8c9a8] bg-[#eee2bd]/45 px-4 py-3 text-xs leading-5 text-[#7e6b57]">
+          Angka utama di tiap kolom adalah <strong>rata-rata distribusi per hari aktif</strong>. Total ditampilkan kecil di bawahnya agar satu barang dapat dibandingkan antar-ruangan tanpa membuka halaman satu per satu.
+        </div>
       </CardContent>
     </Card>
   );
