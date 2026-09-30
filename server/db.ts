@@ -13,6 +13,7 @@ import {
   stockAdjustments,
   stockMovements,
   users,
+  userRoomAccess,
   warehouses,
 } from "../drizzle/schema.ts";
 import { ENV } from "./_core/env.ts";
