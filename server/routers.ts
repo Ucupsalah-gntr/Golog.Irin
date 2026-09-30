@@ -271,11 +271,13 @@ export const appRouter = router({
       const requestAuditInput = { ...input, roomId, requestDate };
 
       const result = await db.transaction(async (tx) => {
+        // The first requester of a room/day becomes the PIC for that room/day.
+        // A later request by the same staff member reuses the existing lock.
+        // A different staff member must never overwrite the existing PIC.
         await tx.insert(requestDayLocks)
           .values({ roomId, requestDate, requesterId: ctx.user.id })
-          .onConflictDoUpdate({
+          .onConflictDoNothing({
             target: [requestDayLocks.roomId, requestDayLocks.requestDate],
-            set: { requestDate },
           });
 
         const lockRows = await tx
