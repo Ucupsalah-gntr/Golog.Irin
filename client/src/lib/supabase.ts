@@ -11,10 +11,22 @@ if (!url || !key) {
 // sessionStorage is isolated per tab, while a per-load storageKey prevents
 // Supabase auth events from one tab from switching another tab's session.
 const TAB_STORAGE_PREFIX = "gologirin-auth-session:";
-const TAB_STORAGE_KEY =
-  typeof globalThis.crypto?.randomUUID === "function"
-    ? globalThis.crypto.randomUUID()
-    : `tab-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+const TAB_ID_STORAGE_KEY = "gologirin-tab-id";
+
+function getStableTabId() {
+  const existing = sessionStorage.getItem(TAB_ID_STORAGE_KEY);
+  if (existing) return existing;
+
+  const generated =
+    typeof globalThis.crypto?.randomUUID === "function"
+      ? globalThis.crypto.randomUUID()
+      : `tab-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+
+  sessionStorage.setItem(TAB_ID_STORAGE_KEY, generated);
+  return generated;
+}
+
+const TAB_STORAGE_KEY = getStableTabId();
 
 const getTabStorageKeys = () =>
   Object.keys(sessionStorage).filter((keyName) => keyName.startsWith(TAB_STORAGE_PREFIX));
