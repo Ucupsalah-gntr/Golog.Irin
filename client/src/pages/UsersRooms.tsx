@@ -10,16 +10,16 @@ import { toast } from "sonner";
 
 export default function UsersRooms() {
   const { user, loading, isAuthenticated } = useAuth();
-  const [draftRooms, setDraftRooms] = useState<Record<number, string>>({});
+  const [draftRooms, setDraftRooms] = useState<Record<number, number[]>>({});
   const users = trpc.system.users.list.useQuery(undefined, {
     enabled: isAuthenticated && user?.role === "admin",
   });
   const catalog = trpc.catalog.all.useQuery(undefined, {
     enabled: isAuthenticated && user?.role === "admin",
   });
-  const assignRoom = trpc.system.users.assignRoom.useMutation({
+  const assignRooms = trpc.system.users.assignRooms.useMutation({
     onSuccess: (_, input) => {
-      toast.success(input.roomId === null ? "Akun dilepas dari ruangan" : "Ruangan akun berhasil diperbarui");
+      toast.success(input.roomIds.length ? "Akses ruangan akun berhasil diperbarui" : "Akses ruangan akun dilepas");
       users.refetch();
     },
     onError: (error) => toast.error(error.message),
@@ -60,7 +60,7 @@ export default function UsersRooms() {
         <div>
           <p className="text-xs font-semibold uppercase tracking-[0.18em] text-teal-700">Administrasi</p>
           <h1 className="mt-2 text-3xl font-semibold tracking-tight">Akun & Ruangan</h1>
-          <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-500">Tautkan akun petugas ke satu ruangan aktif. Penguncian akses ruangan belum diaktifkan pada tahap ini.</p>
+          <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-500">Tentukan satu atau beberapa ruangan yang dapat dilayani akun petugas. Ruangan aktif dipilih oleh petugas setelah login.</p>
         </div>
 
         <Card className="border-slate-200/80 shadow-sm">
@@ -79,11 +79,11 @@ export default function UsersRooms() {
                         <UserRow
                           key={row.id}
                           row={row}
-                          currentRoomId={currentRoomId}
+                          currentRoomIds={draftRooms[row.id] ?? (row.roomId == null ? [] : [Number(row.roomId)])}
                           rooms={rooms}
-                          saving={assignRoom.isPending && assignRoom.variables?.userId === row.id}
-                          onChange={(value: string) => setDraftRooms((prev) => ({ ...prev, [row.id]: value }))}
-                          onSave={() => assignRoom.mutate({ userId: row.id, roomId: currentRoomId === "" ? null : Number(currentRoomId) })}
+                          saving={assignRooms.isPending && assignRooms.variables?.userId === row.id}
+                          onChange={(value: number[]) => setDraftRooms((prev) => ({ ...prev, [row.id]: value }))}
+                          onSave={(roomIds: number[]) => assignRooms.mutate({ userId: row.id, roomIds })}
                         />
                       );
                     })}
@@ -104,14 +104,30 @@ export default function UsersRooms() {
   );
 }
 
-function UserRow({ row, currentRoomId, rooms, saving, onChange, onSave }: any) {
+function UserRow({ row, currentRoomIds, rooms, saving, onChange, onSave }: any) {
+  const toggleRoom = (roomId: number) => {
+    const next = currentRoomIds.includes(roomId)
+      ? currentRoomIds.filter((id: number) => id !== roomId)
+      : [...currentRoomIds, roomId];
+    onChange(next);
+  };
+
   return (
     <tr className="align-middle">
       <td className="px-5 py-4"><div className="font-medium">{row.name ?? "Tanpa nama"}</div><div className="text-xs text-slate-400">ID #{row.id}</div></td>
       <td className="px-5 py-4 text-slate-500">{row.email ?? "—"}</td>
       <td className="px-5 py-4"><Badge variant="outline" className={row.role === "admin" ? "border-teal-200 bg-teal-50 text-teal-700" : "border-slate-200 bg-slate-50 text-slate-600"}>{row.role === "admin" ? "Kepala gudang" : "Petugas"}</Badge></td>
-      <td className="px-5 py-4"><select value={currentRoomId} onChange={(event) => onChange(event.target.value)} className="h-10 w-full max-w-xs rounded-xl border border-slate-200 bg-white px-3 text-sm outline-none focus:border-teal-500"><option value="">Belum ditugaskan</option>{rooms.map((room: any) => <option key={room.id} value={room.id}>{room.name}</option>)}</select></td>
-      <td className="px-5 py-4 text-right"><Button className="rounded-xl bg-[#102a2b]" onClick={onSave} disabled={saving}><Save size={16} className="mr-2" />{saving ? "Menyimpan…" : "Simpan"}</Button></td>
+      <td className="px-5 py-4">
+        <div className="flex max-w-sm flex-wrap gap-2">
+          {rooms.map((room: any) => (
+            <button key={room.id} type="button" onClick={() => toggleRoom(Number(room.id))} className={`rounded-xl border px-3 py-2 text-xs font-semibold transition ${currentRoomIds.includes(Number(room.id)) ? "border-[#0091B9] bg-[#E6F4F7] text-[#004E9B]" : "border-slate-200 bg-white text-slate-500 hover:border-[#9CCED8]"}`}>
+              {room.name}
+            </button>
+          ))}
+        </div>
+        {!currentRoomIds.length && <p className="mt-2 text-xs text-amber-600">Belum ada akses ruangan.</p>}
+      </td>
+      <td className="px-5 py-4 text-right"><Button className="rounded-xl" onClick={() => onSave(currentRoomIds)} disabled={saving}><Save size={16} className="mr-2" />{saving ? "Menyimpan…" : "Simpan"}</Button></td>
     </tr>
   );
 }
