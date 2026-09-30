@@ -845,12 +845,12 @@ function RoomDemandPanel({
   return (
     <Card className="overflow-hidden border-[#b8a27a]/70 bg-[#fffaf0] shadow-sm">
       <CardHeader className="border-b border-[#d8c9a8]/70 bg-[#f7efd7]/55">
-        <div className="space-y-4">
+        <div className="space-y-3">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
             <div>
               <p className="golog-kicker">Perbandingan antar-ruangan</p>
               <CardTitle className="mt-1">Distribusi per Barang</CardTitle>
-              <p className="mt-1 text-sm text-[#7e6b57]">
+              <p className="mt-1 max-w-4xl text-xs leading-5 text-[#7e6b57]">
                 Baris = satu barang. Kolom = ruangan. Gunakan pencarian untuk item tertentu dan filter gudang sumber untuk memisahkan 4 gudang pusat.
               </p>
             </div>
@@ -868,14 +868,14 @@ function RoomDemandPanel({
             </div>
           </div>
 
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap gap-1.5">
             <button
               type="button"
               onClick={() => setSelectedSourceWarehouseId("all")}
               className={
                 selectedSourceWarehouseId === "all"
-                  ? "rounded-full border border-[#102a2b] bg-[#102a2b] px-3 py-2 text-xs font-semibold text-white"
-                  : "rounded-full border border-[#d0be97] bg-[#fffaf0] px-3 py-2 text-xs font-semibold text-[#7e6b57] hover:bg-[#eee2bd]"
+                  ? "rounded-full border border-[#102a2b] bg-[#102a2b] px-2.5 py-1.5 text-[11px] font-semibold text-white"
+                  : "rounded-full border border-[#d0be97] bg-[#fffaf0] px-2.5 py-1.5 text-[11px] font-semibold text-[#7e6b57] hover:bg-[#eee2bd]"
               }
             >
               Semua sumber
@@ -891,7 +891,7 @@ function RoomDemandPanel({
                   onClick={() => setSelectedSourceWarehouseId(warehouseId)}
                   className={
                     active
-                      ? "rounded-full border border-[#7f9146] bg-[#dce4a7] px-3 py-2 text-xs font-semibold text-[#4e5e29]"
+                      ? "rounded-full border border-[#7f9146] bg-[#dce4a7] px-2.5 py-1.5 text-[11px] font-semibold text-[#4e5e29]"
                       : "rounded-full border border-[#d0be97] bg-[#fffaf0] px-3 py-2 text-xs font-semibold text-[#7e6b57] hover:bg-[#eee2bd]"
                   }
                 >
@@ -903,8 +903,8 @@ function RoomDemandPanel({
         </div>
       </CardHeader>
 
-      <CardContent className="p-5">
-        <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+      <CardContent className="p-4">
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
           <div className="text-xs text-[#8b7b67]">
             {searched
               ? "Hasil pencarian: " + formatNumber(rows.length) + " item · " + sourceLabel
@@ -916,13 +916,13 @@ function RoomDemandPanel({
         </div>
 
         <div className="overflow-x-auto rounded-2xl border border-[#d8c9a8]">
-          <table className="w-full min-w-[980px] text-sm">
+          <table className="w-full min-w-[860px] text-sm">
             <thead className="bg-[#f7efd7] text-left text-xs uppercase tracking-[0.1em] text-[#8b7b67]">
               <tr>
-                <th className="sticky left-0 z-10 min-w-[240px] border-r border-[#d8c9a8] bg-[#f7efd7] px-4 py-3">Barang</th>
+                <th className="sticky left-0 z-10 min-w-[220px] border-r border-[#d8c9a8] bg-[#f7efd7] px-3 py-2.5">Barang</th>
                 <th className="min-w-[82px] px-3 py-3">Unit</th>
                 {roomColumns.map((room: any) => (
-                  <th key={room.id} className="min-w-[145px] border-l border-[#e0d4b8] px-3 py-3 text-right">{room.name}</th>
+                  <th key={room.id} className="min-w-[110px] border-l border-[#e0d4b8] px-3 py-3 text-right">{room.name}</th>
                 ))}
                 <th className="min-w-[125px] border-l border-[#e0d4b8] px-3 py-3 text-right">Total</th>
               </tr>
@@ -941,7 +941,7 @@ function RoomDemandPanel({
                       <p className="font-semibold text-[#5a4738]">{item.name}</p>
                       <p className="mt-0.5 text-[11px] text-[#9a896f]">{item.sku}</p>
                     </td>
-                    <td className="px-3 py-3 text-[#7e6b57]">{item.unit}</td>
+                    <td className="px-3 py-2.5 text-[#7e6b57]">{item.unit}</td>
 
                     {roomColumns.map((room: any) => {
                       const row = byRoom.get(room.id);
@@ -967,7 +967,7 @@ function RoomDemandPanel({
                       );
                     })}
 
-                    <td className="border-l border-[#e0d4b8] px-3 py-3 text-right">
+                    <td className="border-l border-[#e0d4b8] px-3 py-2.5 text-right">
                       <p className="font-semibold text-[#5a4738]">{formatNumber(totalQty)}</p>
                       <p className="mt-0.5 text-[10px] text-[#9a896f]">{formatNumber(totalAverage)}/hari aktif</p>
                     </td>
@@ -992,7 +992,7 @@ function RoomDemandPanel({
           </table>
         </div>
 
-        <div className="mt-4 flex flex-col gap-3 border-t border-[#e0d4b8] pt-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="mt-3 flex flex-col gap-2 border-t border-[#e0d4b8] pt-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="text-xs text-[#8b7b67]">
             {rows.length
               ? "Menampilkan " + formatNumber((safePage - 1) * pageSize + 1) + "–" + formatNumber(Math.min(safePage * pageSize, rows.length)) + " dari " + formatNumber(rows.length) + " barang · maks. 15 baris per halaman"
@@ -1021,7 +1021,7 @@ function RoomDemandPanel({
           </div>
         </div>
 
-        <div className="mt-4 rounded-xl border border-[#d8c9a8] bg-[#eee2bd]/45 px-4 py-3 text-xs leading-5 text-[#7e6b57]">
+        <div className="mt-3 rounded-xl border border-[#d8c9a8] bg-[#eee2bd]/45 px-3 py-2.5 text-xs leading-5 text-[#7e6b57]">
           Angka utama di tiap kolom adalah <strong>rata-rata distribusi per hari aktif</strong>. Data dapat dipisahkan berdasarkan gudang sumber: Gudang Farmasi, Gudang RT, CSSD, dan Laboratorium.
         </div>
       </CardContent>
