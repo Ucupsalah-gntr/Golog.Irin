@@ -79,7 +79,7 @@ export default function UsersRooms() {
                         <UserRow
                           key={row.id}
                           row={row}
-                          currentRoomIds={draftRooms[row.id] ?? (row.roomId == null ? [] : [Number(row.roomId)])}
+                          currentRoomIds={draftRooms[row.id] ?? (Array.isArray(row.roomIds) ? row.roomIds.map(Number) : row.roomId == null ? [] : [Number(row.roomId)])}
                           rooms={rooms}
                           saving={assignRooms.isPending && assignRooms.variables?.userId === row.id}
                           onChange={(value: number[]) => setDraftRooms((prev) => ({ ...prev, [row.id]: value }))}
