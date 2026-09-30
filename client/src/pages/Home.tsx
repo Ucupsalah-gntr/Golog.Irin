@@ -339,12 +339,12 @@ export default function Home() {
   function go(key: NavKey) { setActive(key); setMobileOpen(false); }
 
   return (
-    <div className={`golog-app golog-theme-${active} min-h-screen text-[#5a4738]`}>
+    <div className={`golog-app golog-theme-${active} min-h-screen text-[#07304A]`}>
       <div className="flex min-h-screen">
         <aside className={`${mobileOpen ? "translate-y-0 opacity-100" : "-translate-y-3 opacity-0 pointer-events-none"} fixed left-3 right-3 top-[76px] z-40 max-h-[calc(100vh-92px)] overflow-y-auto rounded-2xl border border-white/10 golog-sidebar text-white shadow-2xl transition-all duration-200 md:pointer-events-auto md:inset-y-0 md:left-0 md:right-auto md:top-0 md:z-30 md:max-h-none md:w-72 md:translate-y-0 md:overflow-y-auto md:rounded-none md:border-0 md:opacity-100 md:shadow-none`}>
           <div className="flex min-h-full flex-col px-5 py-5 md:h-full md:py-6">
-            <div className="flex items-center justify-between border-b border-white/10 pb-6"><div className="flex items-center gap-3"><div className="golog-brand-mark grid h-11 w-11 place-items-center rounded-2xl"><Hospital size={22} /></div><div><p className="golog-display text-lg not-italic text-[#f7efd7]">Golog.Irin</p><p className="text-xs text-[#e5d8ab]/75">Rawat Intensif</p></div></div><button className="md:hidden" onClick={() => setMobileOpen(false)}><X size={18} /></button></div>
-            <div className="mt-7 rounded-xl border border-[#e5d8ab]/15 bg-black/10 p-4"><p className="text-[11px] uppercase tracking-[0.18em] text-[#e5d8ab]/60">Sesi aktif</p><p className="mt-1 truncate font-medium">{user?.name || user?.email || "Pengguna"}</p><div className="mt-2 flex items-center gap-2 text-xs text-[#e5d8ab]/70"><ShieldCheck size={14} />{isAdmin ? "Kepala gudang" : "Petugas ruangan"}</div></div>
+            <div className="flex items-center justify-between border-b border-white/10 pb-6"><div className="flex items-center gap-3"><div className="golog-brand-mark grid h-11 w-11 place-items-center rounded-2xl"><Hospital size={22} /></div><div><p className="golog-display text-lg not-italic text-[#FFFFFF]">Golog.Irin</p><p className="text-xs text-[#BAE4F0]/75">Rawat Intensif</p></div></div><button className="md:hidden" onClick={() => setMobileOpen(false)}><X size={18} /></button></div>
+            <div className="mt-7 rounded-xl border border-[#BAE4F0]/15 bg-black/10 p-4"><p className="text-[11px] uppercase tracking-[0.18em] text-[#BAE4F0]/60">Sesi aktif</p><p className="mt-1 truncate font-medium">{user?.name || user?.email || "Pengguna"}</p><div className="mt-2 flex items-center gap-2 text-xs text-[#BAE4F0]/70"><ShieldCheck size={14} />{isAdmin ? "Kepala gudang" : "Petugas ruangan"}</div></div>
             <nav className="mt-8 space-y-1">{visibleNav.map((item) => { const Icon = item.icon; return <button key={item.key} onClick={() => go(item.key)} className={`flex w-full items-center gap-3 rounded-xl px-4 py-3 text-left text-sm transition ${active === item.key ? "golog-nav-active font-semibold" : "text-[#f5ecd5]/70 hover:bg-white/10 hover:text-white"}`}><Icon size={18} />{item.label}</button>; })}</nav>
             <div className="mt-auto border-t border-white/10 pt-5"><button onClick={() => logout()} className="flex w-full items-center gap-3 rounded-xl px-4 py-3 text-sm text-teal-50/70 hover:bg-white/10 hover:text-white"><LogOut size={18} />Keluar</button></div>
           </div>
@@ -356,11 +356,11 @@ export default function Home() {
               title="Notifikasi"
               aria-label="Notifikasi"
               onClick={() => setNotificationOpen(true)}
-              className="relative rounded-xl border border-[#b8a27a] bg-[#f7efd7] p-2.5 text-[#5a4738] hover:bg-[#e8dcba]"
+              className="relative rounded-xl border border-[#9CCED8] bg-[#FFFFFF] p-2.5 text-[#07304A] hover:bg-[#DCEEF2]"
             >
               <Bell size={17} />
-              {unreadNotificationCount > 0 && <span className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-[#c87969] ring-2 ring-[#f7efd7]" />}
-            </button><button title="Refresh" onClick={refreshAll} className="rounded-xl border border-[#b8a27a] bg-[#f7efd7] p-2.5 text-slate-500 hover:text-teal-700"><RefreshCw size={17} /></button><div className="hidden rounded-xl border border-[#b8a27a] bg-[#f7efd7] px-3 py-2 text-right sm:block"><p className="text-xs font-semibold">{user?.name || "Akun aktif"}</p><p className="text-[11px] text-slate-500">{isAdmin ? "Kepala gudang" : "Petugas"}</p></div></div></header>
+              {unreadNotificationCount > 0 && <span className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-[#FF6500] ring-2 ring-[#FFFFFF]" />}
+            </button><button title="Refresh" onClick={refreshAll} className="rounded-xl border border-[#9CCED8] bg-[#FFFFFF] p-2.5 text-slate-500 hover:text-teal-700"><RefreshCw size={17} /></button><div className="hidden rounded-xl border border-[#9CCED8] bg-[#FFFFFF] px-3 py-2 text-right sm:block"><p className="text-xs font-semibold">{user?.name || "Akun aktif"}</p><p className="text-[11px] text-slate-500">{isAdmin ? "Kepala gudang" : "Petugas"}</p></div></div></header>
           <div className={`golog-page mx-auto max-w-[1500px] space-y-6 ${active === "overview" ? "p-0 pb-28 md:p-8 md:pb-8" : "p-5 md:p-8"}`}>
             {active === "overview" && <Overview dashboard={dashboard.data} isAdmin={isAdmin} onGo={go} report={isAdmin ? monthlyReport.data : null} requests={requests.data ?? []} userName={user?.name || user?.username || "Kepala Gudang"} unreadNotificationCount={unreadNotificationCount} onOpenNotifications={() => setNotificationOpen(true)} />}
             {active === "stock" && <StockView stock={stock} isAdmin={isAdmin} items={items} warehouses={warehouses} onCreateItem={(input: any) => createItem.mutate(input)} busy={createItem.isPending} onImport={(rows: any[]) => importItems.mutate({ rows })} importBusy={importItems.isPending} focusItemId={notificationTarget?.nav === "stock" ? notificationTarget.itemId : undefined} />}
@@ -431,7 +431,7 @@ function LoginScreen({ initialError = "" }: { initialError?: string }) {
   }
 
   return (
-    <div className="relative min-h-screen overflow-hidden golog-app golog-theme-login text-[#5a4738]">
+    <div className="relative min-h-screen overflow-hidden golog-app golog-theme-login text-[#07304A]">
       <div className="absolute -right-24 -top-32 h-96 w-96 rounded-full bg-[#dff5e8]" />
       <div className="absolute -left-28 bottom-[-10rem] h-96 w-96 rounded-full bg-[#dceff6]" />
       <div className="relative mx-auto grid min-h-screen max-w-[1200px] items-center gap-8 px-6 py-7 lg:grid-cols-[1.05fr_.95fr] lg:px-10 xl:px-12">
@@ -452,7 +452,7 @@ function LoginScreen({ initialError = "" }: { initialError?: string }) {
                 <ShieldCheck size={15} />
                 Sistem Manajemen Gudang
               </div>
-              <h1 className="mt-6 text-4xl font-bold leading-[1.06] tracking-[-0.04em] text-[#5a4738] md:text-5xl xl:text-6xl">
+              <h1 className="mt-6 text-4xl font-bold leading-[1.06] tracking-[-0.04em] text-[#07304A] md:text-5xl xl:text-6xl">
                 Satu alur untuk
                 <span className="block text-[#07966f]">stok yang selalu siap.</span>
               </h1>
@@ -470,10 +470,10 @@ function LoginScreen({ initialError = "" }: { initialError?: string }) {
                 const Icon = feature.icon;
                 return (
                   <div key={feature.title} className="rounded-2xl border border-white/80 bg-white/70 p-3.5 shadow-sm backdrop-blur">
-                    <div className="mb-2.5 grid h-9 w-9 place-items-center rounded-xl bg-[#e0f7eb] text-[#7f9146]">
+                    <div className="mb-2.5 grid h-9 w-9 place-items-center rounded-xl bg-[#e0f7eb] text-[#0091B9]">
                       <Icon size={19} />
                     </div>
-                    <p className="text-[13px] font-bold text-[#5a4738]">{feature.title}</p>
+                    <p className="text-[13px] font-bold text-[#07304A]">{feature.title}</p>
                     <p className="mt-1 text-[11px] leading-5 text-slate-500">{feature.text}</p>
                   </div>
                 );
@@ -483,20 +483,20 @@ function LoginScreen({ initialError = "" }: { initialError?: string }) {
 
           <div className="relative mt-10 hidden h-40 overflow-hidden rounded-[1.7rem] border border-white bg-gradient-to-b from-[#eaf7fb] to-[#dcecf1] shadow-sm md:block">
             <div className="absolute inset-x-0 bottom-0 h-14 bg-[#c8e1e8]" />
-            <div className="absolute bottom-12 left-8 h-24 w-44 rounded-lg border-4 border-[#496c7c]">
-              <div className="absolute left-0 right-0 top-8 border-t-4 border-[#496c7c]" />
-              <div className="absolute left-0 right-0 top-16 border-t-4 border-[#496c7c]" />
-              <div className="absolute left-5 top-[-2px] h-10 w-10 rounded-md bg-[#d89b61]" />
-              <div className="absolute left-20 top-[38px] h-8 w-12 rounded-md bg-[#e7ae72]" />
-              <div className="absolute right-4 top-[67px] h-10 w-14 rounded-md bg-[#d89b61]" />
+            <div className="absolute bottom-12 left-8 h-24 w-44 rounded-lg border-4 border-[#315563]">
+              <div className="absolute left-0 right-0 top-8 border-t-4 border-[#315563]" />
+              <div className="absolute left-0 right-0 top-16 border-t-4 border-[#315563]" />
+              <div className="absolute left-5 top-[-2px] h-10 w-10 rounded-md bg-[#FFB45C]" />
+              <div className="absolute left-20 top-[38px] h-8 w-12 rounded-md bg-[#FFB45C]" />
+              <div className="absolute right-4 top-[67px] h-10 w-14 rounded-md bg-[#FFB45C]" />
             </div>
             <div className="absolute bottom-10 left-[39%] h-28 w-28 rounded-full bg-[#75c69d]/35" />
             <div className="absolute bottom-8 left-[47%] h-24 w-12 rounded-t-[2rem] bg-[#1d5960]" />
             <div className="absolute bottom-5 left-[44%] h-10 w-24 rounded-full bg-[#123e48]/20" />
             <div className="absolute bottom-11 right-12 h-24 w-36 rounded-2xl bg-white/60 p-4">
-              <div className="h-3 w-20 rounded bg-[#d89b61]" />
-              <div className="mt-3 h-3 w-28 rounded bg-[#e7ae72]" />
-              <div className="mt-3 h-3 w-16 rounded bg-[#d89b61]" />
+              <div className="h-3 w-20 rounded bg-[#FFB45C]" />
+              <div className="mt-3 h-3 w-28 rounded bg-[#FFB45C]" />
+              <div className="mt-3 h-3 w-16 rounded bg-[#FFB45C]" />
             </div>
           </div>
         </section>
@@ -504,12 +504,12 @@ function LoginScreen({ initialError = "" }: { initialError?: string }) {
         <section className="flex items-center justify-center lg:pl-4">
           <Card className="w-full max-w-md border-0 golog-panel p-2.5">
             <CardContent className="rounded-[1.35rem] golog-panel-soft p-6 sm:p-8">
-              <div className="mx-auto grid h-14 w-14 place-items-center rounded-2xl bg-[#dce4a7] text-[#5a4738]">
+              <div className="mx-auto grid h-14 w-14 place-items-center rounded-2xl bg-[#BAE4F0] text-[#07304A]">
                 <Hospital size={26} />
               </div>
               <div className="mt-6 text-center">
-                <p className="text-xs font-bold uppercase tracking-[0.2em] text-[#7f9146]">Ruang kerja</p>
-                <h2 className="mt-3 text-3xl font-bold tracking-tight text-[#5a4738]">Selamat Datang</h2>
+                <p className="text-xs font-bold uppercase tracking-[0.2em] text-[#0091B9]">Ruang kerja</p>
+                <h2 className="mt-3 text-3xl font-bold tracking-tight text-[#07304A]">Selamat Datang</h2>
                 <p className="mx-auto mt-2.5 max-w-sm text-[13px] leading-5 text-slate-500">
                   Masuk menggunakan username dan password akun Gudang IR.
                 </p>
@@ -517,20 +517,20 @@ function LoginScreen({ initialError = "" }: { initialError?: string }) {
 
               <form onSubmit={handleLogin} className="mt-7 space-y-4">
                 <div>
-                  <Label htmlFor="golog-username" className="text-sm font-semibold text-[#5a4738]">Username</Label>
+                  <Label htmlFor="golog-username" className="text-sm font-semibold text-[#07304A]">Username</Label>
                   <Input
                     id="golog-username"
                     value={username}
                     onChange={(event) => setUsername(event.target.value)}
                     autoComplete="username"
                     placeholder="contoh: kepala.gudang"
-                    className="mt-2 h-11 rounded-xl border-[#b8a27a] bg-[#f7efd7]"
+                    className="mt-2 h-11 rounded-xl border-[#9CCED8] bg-[#FFFFFF]"
                     disabled={starting}
                   />
                 </div>
 
                 <div>
-                  <Label htmlFor="golog-password" className="text-sm font-semibold text-[#5a4738]">Password</Label>
+                  <Label htmlFor="golog-password" className="text-sm font-semibold text-[#07304A]">Password</Label>
                   <div className="relative mt-2">
                     <Input
                       id="golog-password"
@@ -539,7 +539,7 @@ function LoginScreen({ initialError = "" }: { initialError?: string }) {
                       onChange={(event) => setPassword(event.target.value)}
                       autoComplete="current-password"
                       placeholder="Masukkan password"
-                      className="h-11 rounded-xl border-[#b8a27a] bg-[#f7efd7] pr-11"
+                      className="h-11 rounded-xl border-[#9CCED8] bg-[#FFFFFF] pr-11"
                       disabled={starting}
                     />
                     <button
@@ -548,7 +548,7 @@ function LoginScreen({ initialError = "" }: { initialError?: string }) {
                       title={showPassword ? "Sembunyikan password" : "Tampilkan password"}
                       onClick={() => setShowPassword((visible) => !visible)}
                       disabled={starting}
-                      className="absolute inset-y-0 right-0 grid w-11 place-items-center text-slate-400 hover:text-[#7f9146] disabled:opacity-50"
+                      className="absolute inset-y-0 right-0 grid w-11 place-items-center text-slate-400 hover:text-[#0091B9] disabled:opacity-50"
                     >
                       {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                     </button>
@@ -564,19 +564,19 @@ function LoginScreen({ initialError = "" }: { initialError?: string }) {
                 <Button
                   type="submit"
                   disabled={starting}
-                  className="h-12 w-full rounded-2xl bg-[#7f9146] text-base font-bold text-[#fff9ea] shadow-lg shadow-[#7f9146]/20 hover:bg-[#64753a]"
+                  className="h-12 w-full rounded-2xl bg-[#0091B9] text-base font-bold text-[#FFFFFF] shadow-lg shadow-[#0091B9]/20 hover:bg-[#004E9B]"
                 >
                   {starting ? "Memeriksa akun…" : "Masuk"}
                 </Button>
               </form>
 
-              <div className="mt-6 rounded-2xl border border-[#b8a27a] bg-[#f7efd7] p-4">
+              <div className="mt-6 rounded-2xl border border-[#9CCED8] bg-[#FFFFFF] p-4">
                 <div className="flex items-start gap-3">
-                  <div className="mt-0.5 grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-[#e8f8ef] text-[#7f9146]">
+                  <div className="mt-0.5 grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-[#e8f8ef] text-[#0091B9]">
                     <ShieldCheck size={19} />
                   </div>
                   <div>
-                    <p className="text-sm font-semibold text-[#5a4738]">Akses berbasis akun</p>
+                    <p className="text-sm font-semibold text-[#07304A]">Akses berbasis akun</p>
                     <p className="mt-1 text-xs leading-5 text-slate-500">
                       Hak akses ditentukan oleh peran dan ruangan yang ditetapkan pada akun Anda.
                     </p>
@@ -625,22 +625,22 @@ function NotificationCenter({
         type="button"
         aria-label="Tutup notifikasi"
         onClick={onClose}
-        className="absolute inset-0 bg-[#5a4738]/25 backdrop-blur-[2px]"
+        className="absolute inset-0 bg-[#07304A]/25 backdrop-blur-[2px]"
       />
-      <section className="absolute right-3 top-3 w-[min(420px,calc(100vw-1.5rem))] overflow-hidden rounded-2xl border-2 border-[#b8a27a] bg-[#f7efd7] shadow-[0_20px_50px_rgba(90,71,56,0.25)] md:right-6 md:top-6">
-        <div className="flex items-start justify-between border-b border-[#b8a27a]/60 px-5 py-4">
+      <section className="absolute right-3 top-3 w-[min(420px,calc(100vw-1.5rem))] overflow-hidden rounded-2xl border-2 border-[#9CCED8] bg-[#FFFFFF] shadow-[0_20px_50px_rgba(90,71,56,0.25)] md:right-6 md:top-6">
+        <div className="flex items-start justify-between border-b border-[#9CCED8]/60 px-5 py-4">
           <div>
             <p className="golog-kicker">Pusat Notifikasi</p>
-            <h2 className="mt-1 text-xl font-semibold text-[#5a4738]">Notifikasi</h2>
-            <p className="mt-1 text-xs text-[#7e6b57]">{unreadCount} belum dibaca</p>
+            <h2 className="mt-1 text-xl font-semibold text-[#07304A]">Notifikasi</h2>
+            <p className="mt-1 text-xs text-[#315563]">{unreadCount} belum dibaca</p>
           </div>
           <div className="flex items-center gap-2">
             {unreadCount > 0 && (
-              <button type="button" onClick={onMarkAllRead} className="rounded-lg border border-[#b8a27a] px-2.5 py-1.5 text-[11px] font-semibold text-[#5a4738] hover:bg-[#e8dcba]">
+              <button type="button" onClick={onMarkAllRead} className="rounded-lg border border-[#9CCED8] px-2.5 py-1.5 text-[11px] font-semibold text-[#07304A] hover:bg-[#DCEEF2]">
                 Tandai semua
               </button>
             )}
-            <button type="button" onClick={onClose} className="grid h-9 w-9 place-items-center rounded-lg text-[#5a4738] hover:bg-[#e8dcba]" aria-label="Tutup">
+            <button type="button" onClick={onClose} className="grid h-9 w-9 place-items-center rounded-lg text-[#07304A] hover:bg-[#DCEEF2]" aria-label="Tutup">
               <X size={18} />
             </button>
           </div>
@@ -656,29 +656,29 @@ function NotificationCenter({
                     key={item.key}
                     type="button"
                     onClick={() => onOpen(item)}
-                    className={"flex w-full items-start gap-3 rounded-xl border p-3 text-left transition " + (unread ? "border-[#a9b567] bg-[#eef0d5]" : "border-[#d0be97] bg-[#f7efd7] hover:bg-[#eee2bd]")}
+                    className={"flex w-full items-start gap-3 rounded-xl border p-3 text-left transition " + (unread ? "border-[#a9b567] bg-[#E6F4F7]" : "border-[#B8D5DE] bg-[#FFFFFF] hover:bg-[#F4FAFC]")}
                   >
-                    <div className={"mt-0.5 grid h-9 w-9 shrink-0 place-items-center rounded-xl " + (item.kind === "low-stock" ? "bg-[#f0d3ca] text-[#b56557]" : item.kind === "status" ? "bg-[#e3d6b1] text-[#6f5d48]" : "bg-[#dce4a7] text-[#64753a]")}>
+                    <div className={"mt-0.5 grid h-9 w-9 shrink-0 place-items-center rounded-xl " + (item.kind === "low-stock" ? "bg-[#f0d3ca] text-[#b56557]" : item.kind === "status" ? "bg-[#e3d6b1] text-[#6f5d48]" : "bg-[#BAE4F0] text-[#004E9B]")}>
                       {notificationKindIcon(item.kind)}
                     </div>
                     <div className="min-w-0 flex-1">
                       <div className="flex items-start justify-between gap-2">
-                        <p className="text-sm font-semibold text-[#5a4738]">{item.title}</p>
-                        {unread && <span className="mt-1 h-2 w-2 shrink-0 rounded-full bg-[#c87969]" />}
+                        <p className="text-sm font-semibold text-[#07304A]">{item.title}</p>
+                        {unread && <span className="mt-1 h-2 w-2 shrink-0 rounded-full bg-[#FF6500]" />}
                       </div>
-                      <p className="mt-1 truncate text-xs font-medium text-[#6f5e4e]">{item.message}</p>
-                      <p className="mt-1 text-[11px] text-[#8b7b67]">{item.meta}</p>
+                      <p className="mt-1 truncate text-xs font-medium text-[#315563]">{item.message}</p>
+                      <p className="mt-1 text-[11px] text-[#55727C]">{item.meta}</p>
                     </div>
-                    <div className="mt-2 flex items-center gap-1 text-[11px] font-semibold text-[#64753a]">{item.actionLabel}<ChevronRight size={14} /></div>
+                    <div className="mt-2 flex items-center gap-1 text-[11px] font-semibold text-[#004E9B]">{item.actionLabel}<ChevronRight size={14} /></div>
                   </button>
                 );
               })}
             </div>
           ) : (
             <div className="px-4 py-12 text-center">
-              <Bell className="mx-auto text-[#7f9146]" size={26} />
-              <p className="mt-3 text-sm font-semibold text-[#5a4738]">Tidak ada notifikasi</p>
-              <p className="mt-1 text-xs text-[#8b7b67]">Semua aktivitas penting sedang tertangani.</p>
+              <Bell className="mx-auto text-[#0091B9]" size={26} />
+              <p className="mt-3 text-sm font-semibold text-[#07304A]">Tidak ada notifikasi</p>
+              <p className="mt-1 text-xs text-[#55727C]">Semua aktivitas penting sedang tertangani.</p>
             </div>
           )}
         </div>
@@ -705,18 +705,18 @@ function RoomDemandView({
       <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
         <div>
           <p className="golog-kicker">Analitik ruangan</p>
-          <h1 className="golog-display text-3xl tracking-tight text-[#5a4738]">Pola Permintaan Ruangan</h1>
-          <p className="mt-2 max-w-3xl text-sm leading-6 text-[#7e6b57]">
+          <h1 className="golog-display text-3xl tracking-tight text-[#07304A]">Pola Permintaan Ruangan</h1>
+          <p className="mt-2 max-w-3xl text-sm leading-6 text-[#315563]">
             Satu barang langsung terlihat di beberapa ruangan. Angka menunjukkan rata-rata distribusi pada hari saat ruangan menerima barang dalam periode yang dipilih.
           </p>
         </div>
-        <div className="flex shrink-0 rounded-xl border border-[#b8a27a] bg-[#fffaf0] p-1">
+        <div className="flex shrink-0 rounded-xl border border-[#9CCED8] bg-[#FFFFFF] p-1">
           {[7, 30, 90].map((value) => (
             <button
               key={value}
               type="button"
               onClick={() => onDaysChange(value as 7 | 30 | 90)}
-              className={`rounded-lg px-3 py-2 text-xs font-semibold transition ${days === value ? "bg-[#102a2b] text-white" : "text-[#7e6b57] hover:bg-[#eee2bd]"}`}
+              className={`rounded-lg px-3 py-2 text-xs font-semibold transition ${days === value ? "bg-[#07304A] text-white" : "text-[#315563] hover:bg-[#F4FAFC]"}`}
             >
               {value === 7 ? "1 minggu" : value + " hari"}
             </button>
@@ -830,26 +830,26 @@ function RoomDemandPanel({
       : sourceWarehouses.find((warehouse: any) => Number(warehouse.id) === Number(selectedSourceWarehouseId))?.name ?? "Gudang sumber";
 
   return (
-    <Card className="overflow-hidden border-[#b8a27a]/70 bg-[#fffaf0] shadow-sm">
-      <CardHeader className="border-b border-[#d8c9a8]/70 bg-[#f7efd7]/55">
+    <Card className="overflow-hidden border-[#9CCED8]/70 bg-[#FFFFFF] shadow-sm">
+      <CardHeader className="border-b border-[#C7E0E6]/70 bg-[#FFFFFF]/55">
         <div className="space-y-3">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
             <div>
               <p className="golog-kicker">Perbandingan antar-ruangan</p>
               <CardTitle className="mt-1">Distribusi per Barang</CardTitle>
-              <p className="mt-1 max-w-4xl text-xs leading-5 text-[#7e6b57]">
+              <p className="mt-1 max-w-4xl text-xs leading-5 text-[#315563]">
                 Baris = satu barang. Kolom = ruangan. Gunakan pencarian untuk item tertentu dan filter gudang sumber untuk memisahkan 4 gudang pusat.
               </p>
             </div>
 
             <div className="w-full lg:max-w-md">
               <div className="relative">
-                <Search size={17} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[#8b7b67]" />
+                <Search size={17} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[#55727C]" />
                 <Input
                   value={search}
                   onChange={(event) => setSearch(event.target.value)}
                   placeholder="Cari nama barang atau SKU…"
-                  className="h-11 rounded-xl border-2 border-[#b8a27a] bg-[#fffaf0] pl-10 text-[#5a4738]"
+                  className="h-11 rounded-xl border-2 border-[#9CCED8] bg-[#FFFFFF] pl-10 text-[#07304A]"
                 />
               </div>
             </div>
@@ -861,8 +861,8 @@ function RoomDemandPanel({
               onClick={() => setSelectedSourceWarehouseId("all")}
               className={
                 selectedSourceWarehouseId === "all"
-                  ? "rounded-full border border-[#102a2b] bg-[#102a2b] px-2.5 py-1.5 text-[11px] font-semibold text-white"
-                  : "rounded-full border border-[#d0be97] bg-[#fffaf0] px-2.5 py-1.5 text-[11px] font-semibold text-[#7e6b57] hover:bg-[#eee2bd]"
+                  ? "rounded-full border border-[#07304A] bg-[#07304A] px-2.5 py-1.5 text-[11px] font-semibold text-white"
+                  : "rounded-full border border-[#B8D5DE] bg-[#FFFFFF] px-2.5 py-1.5 text-[11px] font-semibold text-[#315563] hover:bg-[#F4FAFC]"
               }
             >
               Semua sumber
@@ -878,8 +878,8 @@ function RoomDemandPanel({
                   onClick={() => setSelectedSourceWarehouseId(warehouseId)}
                   className={
                     active
-                      ? "rounded-full border border-[#7f9146] bg-[#dce4a7] px-2.5 py-1.5 text-[11px] font-semibold text-[#4e5e29]"
-                      : "rounded-full border border-[#d0be97] bg-[#fffaf0] px-3 py-2 text-xs font-semibold text-[#7e6b57] hover:bg-[#eee2bd]"
+                      ? "rounded-full border border-[#0091B9] bg-[#BAE4F0] px-2.5 py-1.5 text-[11px] font-semibold text-[#4e5e29]"
+                      : "rounded-full border border-[#B8D5DE] bg-[#FFFFFF] px-3 py-2 text-xs font-semibold text-[#315563] hover:bg-[#F4FAFC]"
                   }
                 >
                   {warehouse.name}
@@ -892,30 +892,30 @@ function RoomDemandPanel({
 
       <CardContent className="p-4">
         <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-          <div className="text-xs text-[#8b7b67]">
+          <div className="text-xs text-[#55727C]">
             {searched
               ? "Hasil pencarian: " + formatNumber(rows.length) + " item · " + sourceLabel
               : "Menampilkan " + formatNumber(rows.length) + " item aktif pada " + sourceLabel}
           </div>
-          <div className="rounded-full border border-[#d0be97] bg-[#f7efd7] px-3 py-1.5 text-[11px] font-semibold text-[#7e6b57]">
+          <div className="rounded-full border border-[#B8D5DE] bg-[#FFFFFF] px-3 py-1.5 text-[11px] font-semibold text-[#315563]">
             Periode: {data?.days === 7 ? "1 minggu" : (data?.days ?? 0) + " hari"}
           </div>
         </div>
 
-        <div className="max-h-[805px] overflow-auto rounded-2xl border border-[#d8c9a8]">
+        <div className="max-h-[805px] overflow-auto rounded-2xl border border-[#C7E0E6]">
           <table className="w-full min-w-[860px] text-sm">
-            <thead className="sticky top-0 z-10 bg-[#f7efd7] text-left text-xs uppercase tracking-[0.1em] text-[#8b7b67]">
+            <thead className="sticky top-0 z-10 bg-[#FFFFFF] text-left text-xs uppercase tracking-[0.1em] text-[#55727C]">
               <tr>
-                <th className="sticky left-0 top-0 z-20 min-w-[220px] border-r border-[#d8c9a8] bg-[#f7efd7] px-3 py-2.5">Barang</th>
+                <th className="sticky left-0 top-0 z-20 min-w-[220px] border-r border-[#C7E0E6] bg-[#FFFFFF] px-3 py-2.5">Barang</th>
                 <th className="min-w-[82px] px-3 py-3">Unit</th>
                 {roomColumns.map((room: any) => (
-                  <th key={room.id} className="min-w-[110px] border-l border-[#e0d4b8] px-3 py-3 text-right">{room.name}</th>
+                  <th key={room.id} className="min-w-[110px] border-l border-[#D5E8ED] px-3 py-3 text-right">{room.name}</th>
                 ))}
-                <th className="min-w-[125px] border-l border-[#e0d4b8] px-3 py-3 text-right">Total</th>
+                <th className="min-w-[125px] border-l border-[#D5E8ED] px-3 py-3 text-right">Total</th>
               </tr>
             </thead>
 
-            <tbody className="divide-y divide-[#e4d9be] bg-[#fffaf0]">
+            <tbody className="divide-y divide-[#D5E8ED] bg-[#FFFFFF]">
               {rows.map((item: any) => {
                 const byRoom = activityByItem.get(item.id) ?? new Map();
                 const totalQty = roomColumns.reduce((sum: number, room: any) => sum + Number(byRoom.get(room.id)?.totalQty ?? 0), 0);
@@ -923,12 +923,12 @@ function RoomDemandPanel({
                 const totalAverage = totalActiveDays > 0 ? totalQty / totalActiveDays : 0;
 
                 return (
-                  <tr key={item.id} className="hover:bg-[#f7efd7]/45">
-                    <td className="sticky left-0 z-[1] border-r border-[#e4d9be] bg-[#fffaf0] px-4 py-3">
-                      <p className="font-semibold text-[#5a4738]">{item.name}</p>
-                      <p className="mt-0.5 text-[11px] text-[#9a896f]">{item.sku}</p>
+                  <tr key={item.id} className="hover:bg-[#FFFFFF]/45">
+                    <td className="sticky left-0 z-[1] border-r border-[#D5E8ED] bg-[#FFFFFF] px-4 py-3">
+                      <p className="font-semibold text-[#07304A]">{item.name}</p>
+                      <p className="mt-0.5 text-[11px] text-[#55727C]">{item.sku}</p>
                     </td>
-                    <td className="px-3 py-2.5 text-[#7e6b57]">{item.unit}</td>
+                    <td className="px-3 py-2.5 text-[#315563]">{item.unit}</td>
 
                     {roomColumns.map((room: any) => {
                       const row = byRoom.get(room.id);
@@ -940,12 +940,12 @@ function RoomDemandPanel({
                         <td
                           key={room.id}
                           title={row ? formatNumber(total) + " " + item.unit + " dalam " + formatNumber(activeDays) + " hari aktif" : "Tidak ada distribusi"}
-                          className={"border-l border-[#eee4cf] px-3 py-3 text-right " + (row ? "bg-[#eef0d5]/35" : "")}
+                          className={"border-l border-[#eee4cf] px-3 py-3 text-right " + (row ? "bg-[#E6F4F7]/35" : "")}
                         >
                           {row ? (
                             <>
-                              <p className="font-semibold text-[#5d7033]">{formatNumber(avg)}</p>
-                              <p className="mt-0.5 text-[10px] text-[#9a896f]">{formatNumber(total)} total</p>
+                              <p className="font-semibold text-[#004E9B]">{formatNumber(avg)}</p>
+                              <p className="mt-0.5 text-[10px] text-[#55727C]">{formatNumber(total)} total</p>
                             </>
                           ) : (
                             <span className="text-[#b4a58c]">—</span>
@@ -954,9 +954,9 @@ function RoomDemandPanel({
                       );
                     })}
 
-                    <td className="border-l border-[#e0d4b8] px-3 py-2.5 text-right">
-                      <p className="font-semibold text-[#5a4738]">{formatNumber(totalQty)}</p>
-                      <p className="mt-0.5 text-[10px] text-[#9a896f]">{formatNumber(totalAverage)}/hari aktif</p>
+                    <td className="border-l border-[#D5E8ED] px-3 py-2.5 text-right">
+                      <p className="font-semibold text-[#07304A]">{formatNumber(totalQty)}</p>
+                      <p className="mt-0.5 text-[10px] text-[#55727C]">{formatNumber(totalAverage)}/hari aktif</p>
                     </td>
                   </tr>
                 );
@@ -966,10 +966,10 @@ function RoomDemandPanel({
                 <tr>
                   <td colSpan={roomColumns.length + 3} className="px-5 py-12 text-center">
                     <Search className="mx-auto text-[#b4a58c]" size={24} />
-                    <p className="mt-3 font-semibold text-[#5a4738]">
+                    <p className="mt-3 font-semibold text-[#07304A]">
                       {searched ? "Barang tidak ditemukan" : "Belum ada distribusi dalam periode ini"}
                     </p>
-                    <p className="mt-1 text-sm text-[#8b7b67]">
+                    <p className="mt-1 text-sm text-[#55727C]">
                       {searched ? "Coba nama barang atau SKU lain." : "Pilih periode atau gudang sumber lain untuk melihat histori distribusi."}
                     </p>
                   </td>
@@ -979,20 +979,20 @@ function RoomDemandPanel({
           </table>
         </div>
 
-        <div className="mt-3 flex items-center justify-between gap-3 border-t border-[#e0d4b8] pt-3">
-          <div className="text-xs text-[#8b7b67]">
+        <div className="mt-3 flex items-center justify-between gap-3 border-t border-[#D5E8ED] pt-3">
+          <div className="text-xs text-[#55727C]">
             {rows.length
               ? "Menampilkan " + formatNumber(rows.length) + " barang · tabel menampilkan maksimal 15 baris sekaligus"
               : "Tidak ada baris untuk ditampilkan"}
           </div>
           {rows.length > 15 && (
-            <div className="shrink-0 text-[11px] font-semibold text-[#7e6b57]">
+            <div className="shrink-0 text-[11px] font-semibold text-[#315563]">
               ↕ Gulir tabel untuk melihat barang lainnya
             </div>
           )}
         </div>
 
-        <div className="mt-3 rounded-xl border border-[#d8c9a8] bg-[#eee2bd]/45 px-3 py-2.5 text-xs leading-5 text-[#7e6b57]">
+        <div className="mt-3 rounded-xl border border-[#C7E0E6] bg-[#F4FAFC]/45 px-3 py-2.5 text-xs leading-5 text-[#315563]">
           Angka utama di tiap kolom adalah <strong>rata-rata distribusi per hari aktif</strong>. Data dapat dipisahkan berdasarkan gudang sumber: Gudang Farmasi, Gudang RT, CSSD, dan Laboratorium.
         </div>
       </CardContent>
@@ -1131,29 +1131,29 @@ function MobileAdminOverview({
       <div className="mx-auto max-w-xl space-y-5">
         <div className="flex items-center justify-between px-1">
           <div className="flex min-w-0 items-center gap-3">
-            <div className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-[#5a4738] text-sm font-bold text-[#f7efd7] shadow-sm">
+            <div className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-[#07304A] text-sm font-bold text-[#FFFFFF] shadow-sm">
               {initials}
             </div>
             <div className="min-w-0">
               <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">Welcome back,</p>
-              <p className="truncate text-[18px] font-semibold tracking-tight text-[#5a4738]">{userName}</p>
+              <p className="truncate text-[18px] font-semibold tracking-tight text-[#07304A]">{userName}</p>
             </div>
           </div>
           <button
             type="button"
             onClick={() => onOpenNotifications?.()}
-            className="relative grid h-11 w-11 shrink-0 place-items-center rounded-full bg-[#f7efd7] text-[#5a4738] shadow-sm ring-1 ring-[#b8a27a]"
+            className="relative grid h-11 w-11 shrink-0 place-items-center rounded-full bg-[#FFFFFF] text-[#07304A] shadow-sm ring-1 ring-[#9CCED8]"
             aria-label="Notifikasi"
           >
             <Bell size={20} />
-            {unreadNotificationCount > 0 && <span className="absolute right-2 top-2 h-2 w-2 rounded-full bg-[#c87969] ring-2 ring-[#f7efd7]" />}
+            {unreadNotificationCount > 0 && <span className="absolute right-2 top-2 h-2 w-2 rounded-full bg-[#FF6500] ring-2 ring-[#FFFFFF]" />}
           </button>
         </div>
 
         <button
           type="button"
           onClick={() => onGo("stock")}
-          className="flex w-full items-center gap-3 rounded-2xl bg-[#e7d9ad] px-4 py-3.5 text-left shadow-inner ring-1 ring-slate-200/70"
+          className="flex w-full items-center gap-3 rounded-2xl bg-[#BAE4F0] px-4 py-3.5 text-left shadow-inner ring-1 ring-slate-200/70"
         >
           <Search size={21} className="text-[#42566d]" />
           <span className="text-sm text-slate-500">Cari SKU atau nama barang</span>
@@ -1162,7 +1162,7 @@ function MobileAdminOverview({
         <button
           type="button"
           onClick={() => onGo("requests")}
-          className="flex w-full items-center justify-between rounded-2xl border border-amber-200 bg-[#fffaf0] px-4 py-3.5 text-left shadow-sm"
+          className="flex w-full items-center justify-between rounded-2xl border border-amber-200 bg-[#FFFFFF] px-4 py-3.5 text-left shadow-sm"
         >
           <div className="flex items-center gap-3">
             <div className="grid h-10 w-10 place-items-center rounded-xl bg-amber-100 text-amber-700"><ClipboardCheck size={18} /></div>
@@ -1174,7 +1174,7 @@ function MobileAdminOverview({
           <span className="rounded-full bg-amber-100 px-3 py-1 text-[11px] font-bold text-amber-800">Review</span>
         </button>
 
-        <div className="rounded-[1.8rem] bg-[#7f9146] p-5 text-white shadow-[0_18px_45px_rgba(13,184,137,0.24)]">
+        <div className="rounded-[1.8rem] bg-[#0091B9] p-5 text-white shadow-[0_18px_45px_rgba(13,184,137,0.24)]">
           <div className="flex items-center justify-between gap-4">
             <div>
               <p className="text-[20px] font-semibold tracking-tight">Aksi Gudang</p>
@@ -1198,7 +1198,7 @@ function MobileAdminOverview({
             className="rounded-2xl bg-white p-4 text-left shadow-sm ring-1 ring-slate-200/70"
           >
             <div className="grid h-11 w-11 place-items-center rounded-2xl bg-emerald-50 text-emerald-600"><ArrowDownToLine size={22} /></div>
-            <p className="mt-3 text-sm font-semibold text-[#5a4738]">Barang Masuk</p>
+            <p className="mt-3 text-sm font-semibold text-[#07304A]">Barang Masuk</p>
             <p className="mt-1 text-xs text-slate-400">Catat penerimaan</p>
           </button>
           <button
@@ -1207,7 +1207,7 @@ function MobileAdminOverview({
             className="rounded-2xl bg-white p-4 text-left shadow-sm ring-1 ring-slate-200/70"
           >
             <div className="grid h-11 w-11 place-items-center rounded-2xl bg-orange-50 text-orange-500"><Truck size={22} /></div>
-            <p className="mt-3 text-sm font-semibold text-[#5a4738]">Distribusi</p>
+            <p className="mt-3 text-sm font-semibold text-[#07304A]">Distribusi</p>
             <p className="mt-1 text-xs text-slate-400">Kelola permintaan</p>
           </button>
         </div>
@@ -1215,19 +1215,19 @@ function MobileAdminOverview({
         <div className="grid grid-cols-2 gap-3">
           <div className="rounded-2xl bg-white p-4 shadow-sm ring-1 ring-slate-200/70">
             <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-slate-400">Total SKU</p>
-            <p className="mt-2 text-[27px] font-bold tracking-tight text-[#5a4738]">{formatNumber(stats.items)}</p>
+            <p className="mt-2 text-[27px] font-bold tracking-tight text-[#07304A]">{formatNumber(stats.items)}</p>
             <span className="mt-1 inline-flex rounded-full bg-emerald-50 px-2 py-1 text-[10px] font-bold text-emerald-600">Aktif</span>
           </div>
           <div className="rounded-2xl bg-white p-4 shadow-sm ring-1 ring-slate-200/70">
             <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-slate-400">Stok Rendah</p>
-            <p className="mt-2 text-[27px] font-bold tracking-tight text-[#5a4738]">{formatNumber(stats.lowStock)}</p>
+            <p className="mt-2 text-[27px] font-bold tracking-tight text-[#07304A]">{formatNumber(stats.lowStock)}</p>
             <span className="mt-1 inline-flex rounded-full bg-rose-50 px-2 py-1 text-[10px] font-bold text-rose-600">{stats.lowStock ? "Perlu cek" : "Aman"}</span>
           </div>
         </div>
 
         <div>
           <div className="mb-3 flex items-center justify-between px-1">
-            <h2 className="text-[17px] font-semibold tracking-tight text-[#5a4738]">Pending Approvals</h2>
+            <h2 className="text-[17px] font-semibold tracking-tight text-[#07304A]">Pending Approvals</h2>
             <button type="button" onClick={() => onGo("requests")} className="text-xs font-bold text-emerald-600">
               {pendingRequests.length} Required
             </button>
@@ -1252,7 +1252,7 @@ function MobileAdminOverview({
                     <span className={`text-[10px] font-extrabold uppercase tracking-[0.12em] ${priorityClass}`}>{priority} · priority</span>
                     <span className="text-[10px] italic text-slate-400">{formatDate(row.request.createdAt)}</span>
                   </div>
-                  <p className="mt-2 truncate text-sm font-semibold text-[#5a4738]">{row.request.requestNo}</p>
+                  <p className="mt-2 truncate text-sm font-semibold text-[#07304A]">{row.request.requestNo}</p>
                   <p className="mt-1 truncate text-xs text-slate-500">{row.room?.name || "Ruangan"} · {row.lines?.length || 0} item</p>
                   <div className="mt-3 flex items-center justify-between text-xs font-semibold">
                     <span className="text-slate-500">Buka antrean approval</span>
@@ -1264,7 +1264,7 @@ function MobileAdminOverview({
             {!pendingRequests.length && (
               <div className="rounded-2xl bg-white p-5 text-center shadow-sm ring-1 ring-slate-200/70">
                 <ClipboardCheck className="mx-auto text-emerald-500" size={22} />
-                <p className="mt-2 text-sm font-semibold text-[#5a4738]">Tidak ada approval tertunda</p>
+                <p className="mt-2 text-sm font-semibold text-[#07304A]">Tidak ada approval tertunda</p>
                 <p className="mt-1 text-xs text-slate-400">Antrean gudang sedang bersih.</p>
               </div>
             )}
@@ -1273,7 +1273,7 @@ function MobileAdminOverview({
 
         <div>
           <div className="mb-3 flex items-center justify-between px-1">
-            <h2 className="text-[17px] font-semibold tracking-tight text-[#5a4738]">Recent Activity</h2>
+            <h2 className="text-[17px] font-semibold tracking-tight text-[#07304A]">Recent Activity</h2>
             <button type="button" onClick={() => onGo("reports")} className="text-xs font-bold text-emerald-600">See all</button>
           </div>
           <div className="space-y-2.5">
@@ -1291,7 +1291,7 @@ function MobileAdminOverview({
                       {positive ? <ArrowDownToLine size={19} /> : <ArrowUpFromLine size={19} />}
                     </div>
                     <div className="min-w-0 text-left">
-                      <p className="truncate text-sm font-semibold text-[#5a4738]">{row.item?.name || "Item"}</p>
+                      <p className="truncate text-sm font-semibold text-[#07304A]">{row.item?.name || "Item"}</p>
                       <p className="truncate text-[11px] text-slate-400">
                         {row.movement.movementType === "in" ? "Barang masuk" : row.movement.movementType === "out" ? "Keluar gudang" : "Penyesuaian"} · {formatDate(row.movement.occurredAt)}
                       </p>
@@ -1309,7 +1309,7 @@ function MobileAdminOverview({
             {!dashboard?.recent?.length && (
               <div className="rounded-2xl bg-white p-5 text-center shadow-sm ring-1 ring-slate-200/70">
                 <History className="mx-auto text-slate-300" size={23} />
-                <p className="mt-2 text-sm font-semibold text-[#5a4738]">Belum ada aktivitas</p>
+                <p className="mt-2 text-sm font-semibold text-[#07304A]">Belum ada aktivitas</p>
                 <p className="mt-1 text-xs text-slate-400">Aktivitas gudang akan tampil di sini.</p>
               </div>
             )}
@@ -1338,7 +1338,7 @@ function MobileAdminOverview({
             <button
               type="button"
               onClick={() => onGo("inbound")}
-              className="relative -mt-9 grid h-16 w-16 place-items-center rounded-full border-4 border-[#f7efd7] bg-[#7f9146] text-white shadow-[0_12px_28px_rgba(90,71,56,0.24)]"
+              className="relative -mt-9 grid h-16 w-16 place-items-center rounded-full border-4 border-[#FFFFFF] bg-[#0091B9] text-white shadow-[0_12px_28px_rgba(90,71,56,0.24)]"
               aria-label="Barang Masuk"
               title="Barang Masuk"
             >
@@ -1386,25 +1386,25 @@ function MobileUserOverview({
       <div className="mx-auto max-w-xl space-y-5">
         <div className="flex items-center justify-between px-1">
           <div className="flex min-w-0 items-center gap-3">
-            <div className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-[#5a4738] text-sm font-bold text-[#f7efd7] shadow-sm">{initials}</div>
+            <div className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-[#07304A] text-sm font-bold text-[#FFFFFF] shadow-sm">{initials}</div>
             <div className="min-w-0">
               <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">Welcome back,</p>
-              <p className="truncate text-[18px] font-semibold tracking-tight text-[#5a4738]">{userName}</p>
+              <p className="truncate text-[18px] font-semibold tracking-tight text-[#07304A]">{userName}</p>
               <p className="truncate text-[11px] text-slate-400">{roomName || "Ruangan belum dipilih"}</p>
             </div>
           </div>
-          <button type="button" onClick={() => onOpenNotifications?.()} className="relative grid h-11 w-11 shrink-0 place-items-center rounded-full bg-[#f7efd7] text-[#5a4738] shadow-sm ring-1 ring-[#b8a27a]" aria-label="Notifikasi">
+          <button type="button" onClick={() => onOpenNotifications?.()} className="relative grid h-11 w-11 shrink-0 place-items-center rounded-full bg-[#FFFFFF] text-[#07304A] shadow-sm ring-1 ring-[#9CCED8]" aria-label="Notifikasi">
             <Bell size={20} />
             {pendingRequests.length > 0 && <span className="absolute right-2 top-2 h-2 w-2 rounded-full bg-rose-500 ring-2 ring-white" />}
           </button>
         </div>
 
-        <button type="button" onClick={() => onGo("stock")} className="flex w-full items-center gap-3 rounded-2xl bg-[#e7d9ad] px-4 py-3.5 text-left shadow-inner ring-1 ring-slate-200/70">
+        <button type="button" onClick={() => onGo("stock")} className="flex w-full items-center gap-3 rounded-2xl bg-[#BAE4F0] px-4 py-3.5 text-left shadow-inner ring-1 ring-slate-200/70">
           <Search size={21} className="text-[#42566d]" />
           <span className="text-sm text-slate-500">Cari SKU atau nama barang di ruangan</span>
         </button>
 
-        <button type="button" onClick={() => onGo("requests")} className="flex w-full items-center justify-between rounded-2xl border border-amber-200 bg-[#fffaf0] px-4 py-3.5 text-left shadow-sm">
+        <button type="button" onClick={() => onGo("requests")} className="flex w-full items-center justify-between rounded-2xl border border-amber-200 bg-[#FFFFFF] px-4 py-3.5 text-left shadow-sm">
           <div className="flex items-center gap-3">
             <div className="grid h-10 w-10 place-items-center rounded-xl bg-amber-100 text-amber-700"><ClipboardCheck size={18} /></div>
             <div>
@@ -1415,7 +1415,7 @@ function MobileUserOverview({
           <span className="rounded-full bg-amber-100 px-3 py-1 text-[11px] font-bold text-amber-800">Lihat</span>
         </button>
 
-        <div className="rounded-[1.8rem] bg-[#7f9146] p-5 text-white shadow-[0_18px_45px_rgba(13,184,137,0.24)]">
+        <div className="rounded-[1.8rem] bg-[#0091B9] p-5 text-white shadow-[0_18px_45px_rgba(13,184,137,0.24)]">
           <div className="flex items-center justify-between gap-4">
             <div>
               <p className="text-[20px] font-semibold tracking-tight">Ajukan Kebutuhan</p>
@@ -1430,12 +1430,12 @@ function MobileUserOverview({
         <div className="grid grid-cols-2 gap-3">
           <button type="button" onClick={() => onGo("stock")} className="rounded-2xl bg-white p-4 text-left shadow-sm ring-1 ring-slate-200/70">
             <div className="grid h-11 w-11 place-items-center rounded-2xl bg-emerald-50 text-emerald-600"><Boxes size={22} /></div>
-            <p className="mt-3 text-sm font-semibold text-[#5a4738]">Stok Ruangan</p>
+            <p className="mt-3 text-sm font-semibold text-[#07304A]">Stok Ruangan</p>
             <p className="mt-1 text-xs text-slate-400">Cek saldo BMHP</p>
           </button>
           <button type="button" onClick={() => onGo("requests")} className="rounded-2xl bg-white p-4 text-left shadow-sm ring-1 ring-slate-200/70">
             <div className="grid h-11 w-11 place-items-center rounded-2xl bg-orange-50 text-orange-500"><ClipboardList size={22} /></div>
-            <p className="mt-3 text-sm font-semibold text-[#5a4738]">Permintaan</p>
+            <p className="mt-3 text-sm font-semibold text-[#07304A]">Permintaan</p>
             <p className="mt-1 text-xs text-slate-400">Ajukan kebutuhan</p>
           </button>
         </div>
@@ -1443,19 +1443,19 @@ function MobileUserOverview({
         <div className="grid grid-cols-2 gap-3">
           <div className="rounded-2xl bg-white p-4 shadow-sm ring-1 ring-slate-200/70">
             <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-slate-400">Jenis Barang</p>
-            <p className="mt-2 text-[27px] font-bold tracking-tight text-[#5a4738]">{formatNumber(stats.items)}</p>
+            <p className="mt-2 text-[27px] font-bold tracking-tight text-[#07304A]">{formatNumber(stats.items)}</p>
             <span className="mt-1 inline-flex max-w-full truncate rounded-full bg-emerald-50 px-2 py-1 text-[10px] font-bold text-emerald-600">{roomName || "Ruangan"}</span>
           </div>
           <div className="rounded-2xl bg-white p-4 shadow-sm ring-1 ring-slate-200/70">
             <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-slate-400">Stok Perlu Cek</p>
-            <p className="mt-2 text-[27px] font-bold tracking-tight text-[#5a4738]">{formatNumber(stats.lowStock)}</p>
+            <p className="mt-2 text-[27px] font-bold tracking-tight text-[#07304A]">{formatNumber(stats.lowStock)}</p>
             <span className="mt-1 inline-flex rounded-full bg-rose-50 px-2 py-1 text-[10px] font-bold text-rose-600">{stats.lowStock ? "Perlu perhatian" : "Aman"}</span>
           </div>
         </div>
 
         <div>
           <div className="mb-3 flex items-center justify-between px-1">
-            <h2 className="text-[17px] font-semibold tracking-tight text-[#5a4738]">Permintaan Terakhir</h2>
+            <h2 className="text-[17px] font-semibold tracking-tight text-[#07304A]">Permintaan Terakhir</h2>
             <button type="button" onClick={() => onGo("requests")} className="text-xs font-bold text-emerald-600">Lihat semua</button>
           </div>
           <div className="space-y-3">
@@ -1465,7 +1465,7 @@ function MobileUserOverview({
                   <span className="text-[10px] font-extrabold uppercase tracking-[0.12em] text-slate-500">{statusLabel(row.request.status)}</span>
                   <span className="text-[10px] italic text-slate-400">{formatDate(row.request.createdAt)}</span>
                 </div>
-                <p className="mt-2 truncate text-sm font-semibold text-[#5a4738]">{row.request.requestNo}</p>
+                <p className="mt-2 truncate text-sm font-semibold text-[#07304A]">{row.request.requestNo}</p>
                 <p className="mt-1 truncate text-xs text-slate-500">{row.lines?.length || 0} item · {row.request.priority}</p>
                 <div className="mt-3 flex items-center justify-between text-xs font-semibold">
                   <span className="text-slate-500">{row.request.status === "submitted" ? "Menunggu verifikasi" : "Buka detail permintaan"}</span>
@@ -1476,7 +1476,7 @@ function MobileUserOverview({
             {!requests.length && (
               <div className="rounded-2xl bg-white p-5 text-center shadow-sm ring-1 ring-slate-200/70">
                 <ClipboardList className="mx-auto text-slate-300" size={22} />
-                <p className="mt-2 text-sm font-semibold text-[#5a4738]">Belum ada permintaan</p>
+                <p className="mt-2 text-sm font-semibold text-[#07304A]">Belum ada permintaan</p>
                 <p className="mt-1 text-xs text-slate-400">Ajukan kebutuhan pertama untuk ruangan Anda.</p>
               </div>
             )}
@@ -1485,7 +1485,7 @@ function MobileUserOverview({
 
         <div>
           <div className="mb-3 flex items-center justify-between px-1">
-            <h2 className="text-[17px] font-semibold tracking-tight text-[#5a4738]">Aktivitas Ruangan</h2>
+            <h2 className="text-[17px] font-semibold tracking-tight text-[#07304A]">Aktivitas Ruangan</h2>
             <button type="button" onClick={() => onGo("stock")} className="text-xs font-bold text-emerald-600">Cek stok</button>
           </div>
           <div className="space-y-2.5">
@@ -1496,7 +1496,7 @@ function MobileUserOverview({
                   <div className="flex min-w-0 items-center gap-3">
                     <div className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-slate-100 text-slate-500">{positive ? <ArrowDownToLine size={19} /> : <ArrowUpFromLine size={19} />}</div>
                     <div className="min-w-0 text-left">
-                      <p className="truncate text-sm font-semibold text-[#5a4738]">{row.item?.name || "Item"}</p>
+                      <p className="truncate text-sm font-semibold text-[#07304A]">{row.item?.name || "Item"}</p>
                       <p className="truncate text-[11px] text-slate-400">{row.movement.movementType === "in" ? "Masuk ruangan" : row.movement.movementType === "out" ? "Keluar" : "Penyesuaian"} · {formatDate(row.movement.occurredAt)}</p>
                     </div>
                   </div>
@@ -1510,7 +1510,7 @@ function MobileUserOverview({
             {!dashboard?.recent?.length && (
               <div className="rounded-2xl bg-white p-5 text-center shadow-sm ring-1 ring-slate-200/70">
                 <History className="mx-auto text-slate-300" size={23} />
-                <p className="mt-2 text-sm font-semibold text-[#5a4738]">Belum ada aktivitas</p>
+                <p className="mt-2 text-sm font-semibold text-[#07304A]">Belum ada aktivitas</p>
                 <p className="mt-1 text-xs text-slate-400">Distribusi yang disetujui akan tampil di sini.</p>
               </div>
             )}
@@ -1527,7 +1527,7 @@ function MobileUserOverview({
           <button type="button" onClick={() => onGo("overview")} className="flex flex-col items-center gap-1 text-[10px] font-semibold golog-bottom-active"><BarChart3 size={19} />Home</button>
           <button type="button" onClick={() => onGo("stock")} className="flex flex-col items-center gap-1 text-[10px] font-semibold text-slate-400"><Boxes size={19} />Stok</button>
           <div className="flex justify-center">
-            <button type="button" onClick={() => onGo("requests")} className="relative -mt-9 grid h-16 w-16 place-items-center rounded-full border-4 border-[#f7efd7] bg-[#7f9146] text-white shadow-[0_12px_28px_rgba(13,184,137,0.35)]" aria-label="Ajukan Permintaan"><Truck size={25} /></button>
+            <button type="button" onClick={() => onGo("requests")} className="relative -mt-9 grid h-16 w-16 place-items-center rounded-full border-4 border-[#FFFFFF] bg-[#0091B9] text-white shadow-[0_12px_28px_rgba(13,184,137,0.35)]" aria-label="Ajukan Permintaan"><Truck size={25} /></button>
           </div>
           <button type="button" onClick={() => onGo("requests")} className="flex flex-col items-center gap-1 text-[10px] font-semibold text-slate-400"><ClipboardList size={19} />Riwayat</button>
           <button type="button" onClick={() => onGo("requests")} className="flex flex-col items-center gap-1 text-[10px] font-semibold text-slate-400"><Bell size={19} />Status</button>
@@ -1600,12 +1600,12 @@ function StockView({ stock, isAdmin, items, warehouses, onCreateItem, busy, onIm
   return (
     <div className="space-y-5">
       <Card className="overflow-hidden">
-        <CardHeader className="border-b border-[#b8a27a]/60 pb-5">
+        <CardHeader className="border-b border-[#9CCED8]/60 pb-5">
           <div className="flex flex-col gap-5 xl:flex-row xl:items-end xl:justify-between">
             <div className="max-w-2xl">
               <p className="golog-kicker">Inventory workspace</p>
               <CardTitle className="mt-1">{isAdmin ? "Stok Gudang Pusat" : "Stok Ruangan"}</CardTitle>
-              <p className="mt-2 text-sm leading-6 text-[#6f5e4e]">
+              <p className="mt-2 text-sm leading-6 text-[#315563]">
                 {isAdmin
                   ? "Pantau saldo BMHP Gudang Pusat dan prioritaskan barang yang sudah menyentuh batas minimum."
                   : "Pantau saldo BMHP yang tersedia di ruangan Anda sebelum membuat permintaan baru."}
@@ -1629,38 +1629,38 @@ function StockView({ stock, isAdmin, items, warehouses, onCreateItem, busy, onIm
 
         <CardContent className="pt-5">
           {showImport && isAdmin && (
-            <div className="mb-6 rounded-2xl border-2 border-[#b8a27a] bg-[#eee2bd]/45 p-5 shadow-[inset_0_0_0_2px_rgba(255,250,240,0.55)]">
+            <div className="mb-6 rounded-2xl border-2 border-[#9CCED8] bg-[#F4FAFC]/45 p-5 shadow-[inset_0_0_0_2px_rgba(255,250,240,0.55)]">
               <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                 <div>
-                  <p className="font-semibold text-[#5a4738]">Impor master barang</p>
-                  <p className="mt-1 text-xs leading-5 text-[#7e6b57]">Upload .xlsx, .xls, atau .csv. Data diperiksa dahulu dan tidak akan disimpan jika masih ada error.</p>
+                  <p className="font-semibold text-[#07304A]">Impor master barang</p>
+                  <p className="mt-1 text-xs leading-5 text-[#315563]">Upload .xlsx, .xls, atau .csv. Data diperiksa dahulu dan tidak akan disimpan jika masih ada error.</p>
                 </div>
                 <Button variant="outline" size="sm" onClick={downloadTemplate}>Unduh template CSV</Button>
               </div>
 
-              <div className="mt-4 rounded-xl border border-[#b8a27a] bg-[#f7efd7] p-3">
+              <div className="mt-4 rounded-xl border border-[#9CCED8] bg-[#FFFFFF] p-3">
                 <Input type="file" accept=".xlsx,.xls,.csv" onChange={(e) => e.target.files?.[0] && handleImportFile(e.target.files[0])} />
-                {fileName && <p className="mt-2 text-xs text-[#7e6b57]">File dipilih: <strong>{fileName}</strong></p>}
+                {fileName && <p className="mt-2 text-xs text-[#315563]">File dipilih: <strong>{fileName}</strong></p>}
               </div>
 
               {preview && (
                 <div className="mt-4 space-y-3">
                   <div className="grid gap-3 sm:grid-cols-3">
-                    <div className="golog-panel-soft rounded-xl p-3"><p className="text-xs text-[#8b7b67]">Baris terbaca</p><p className="mt-1 text-lg font-semibold">{preview.rows.length}</p></div>
-                    <div className="golog-panel-soft rounded-xl p-3"><p className="text-xs text-[#8b7b67]">Error</p><p className="mt-1 text-lg font-semibold">{preview.errors.length}</p></div>
-                    <div className="golog-panel-soft rounded-xl p-3"><p className="text-xs text-[#8b7b67]">SKU duplikat</p><p className="mt-1 text-lg font-semibold">{preview.duplicateSkus.length}</p></div>
+                    <div className="golog-panel-soft rounded-xl p-3"><p className="text-xs text-[#55727C]">Baris terbaca</p><p className="mt-1 text-lg font-semibold">{preview.rows.length}</p></div>
+                    <div className="golog-panel-soft rounded-xl p-3"><p className="text-xs text-[#55727C]">Error</p><p className="mt-1 text-lg font-semibold">{preview.errors.length}</p></div>
+                    <div className="golog-panel-soft rounded-xl p-3"><p className="text-xs text-[#55727C]">SKU duplikat</p><p className="mt-1 text-lg font-semibold">{preview.duplicateSkus.length}</p></div>
                   </div>
 
                   {preview.errors.length > 0 && (
-                    <div className="rounded-xl border border-[#dca69a] bg-[#f8e3de] p-3 text-sm text-[#9b5146]">
+                    <div className="rounded-xl border border-[#FFD1C2] bg-[#f8e3de] p-3 text-sm text-[#D94A1A]">
                       {preview.errors.slice(0, 8).map((error, i) => <p key={i}>Baris {error.rowNumber} · {error.field}: {error.message}</p>)}
                       {preview.errors.length > 8 && <p className="mt-1">+ {preview.errors.length - 8} error lainnya.</p>}
                     </div>
                   )}
 
                   {canImport && (
-                    <div className="flex flex-col gap-3 rounded-xl border border-[#b8c68a] bg-[#eef0d5] p-3 sm:flex-row sm:items-center sm:justify-between">
-                      <p className="text-sm text-[#5d7033]">Semua {preview.rows.length} baris lolos validasi dan siap diimpor.</p>
+                    <div className="flex flex-col gap-3 rounded-xl border border-[#FFD500] bg-[#E6F4F7] p-3 sm:flex-row sm:items-center sm:justify-between">
+                      <p className="text-sm text-[#004E9B]">Semua {preview.rows.length} baris lolos validasi dan siap diimpor.</p>
                       <Button disabled={importBusy} onClick={() => onImport(preview.rows)}>{importBusy ? "Mengimpor…" : "Impor ke master barang"}</Button>
                     </div>
                   )}
@@ -1670,11 +1670,11 @@ function StockView({ stock, isAdmin, items, warehouses, onCreateItem, busy, onIm
           )}
 
           {show && (
-            <div className="mb-6 rounded-2xl border-2 border-[#b8a27a] bg-[#eee2bd]/45 p-5 shadow-[inset_0_0_0_2px_rgba(255,250,240,0.55)]">
+            <div className="mb-6 rounded-2xl border-2 border-[#9CCED8] bg-[#F4FAFC]/45 p-5 shadow-[inset_0_0_0_2px_rgba(255,250,240,0.55)]">
               <div className="mb-4 flex items-center justify-between gap-3">
                 <div>
-                  <p className="font-semibold text-[#5a4738]">Tambah master barang</p>
-                  <p className="mt-1 text-xs text-[#7e6b57]">Tetapkan SKU dan minimum stok agar monitoring segera aktif.</p>
+                  <p className="font-semibold text-[#07304A]">Tambah master barang</p>
+                  <p className="mt-1 text-xs text-[#315563]">Tetapkan SKU dan minimum stok agar monitoring segera aktif.</p>
                 </div>
               </div>
               <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
@@ -1695,25 +1695,25 @@ function StockView({ stock, isAdmin, items, warehouses, onCreateItem, busy, onIm
 
           <div className="grid gap-3 sm:grid-cols-3">
             <div className="golog-panel-soft rounded-2xl p-4">
-              <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[#8b7b67]">SKU aktif</p>
+              <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[#55727C]">SKU aktif</p>
               <p className="mt-2 text-3xl font-semibold tracking-tight">{formatNumber(rows.length)}</p>
-              <p className="mt-1 text-xs text-[#7e6b57]">barang yang sedang terpantau</p>
+              <p className="mt-1 text-xs text-[#315563]">barang yang sedang terpantau</p>
             </div>
             <button type="button" onClick={() => setStatusFilter(statusFilter === "safe" ? "all" : "safe")} className="golog-panel-soft rounded-2xl p-4 text-left transition hover:-translate-y-0.5">
-              <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[#8b7b67]">Aman</p>
+              <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[#55727C]">Aman</p>
               <p className="mt-2 text-3xl font-semibold tracking-tight">{formatNumber(safeCount)}</p>
-              <p className="mt-1 text-xs text-[#5d7033]">di atas minimum</p>
+              <p className="mt-1 text-xs text-[#004E9B]">di atas minimum</p>
             </button>
-            <button type="button" onClick={() => setStatusFilter(statusFilter === "low" ? "all" : "low")} className="rounded-2xl border-2 border-[#d7aa71] bg-[#fbefd1] p-4 text-left shadow-[inset_0_0_0_2px_rgba(255,250,240,0.55)] transition hover:-translate-y-0.5">
-              <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[#9b7040]">Perlu cek</p>
+            <button type="button" onClick={() => setStatusFilter(statusFilter === "low" ? "all" : "low")} className="rounded-2xl border-2 border-[#FFB45C] bg-[#FFF6D6] p-4 text-left shadow-[inset_0_0_0_2px_rgba(255,250,240,0.55)] transition hover:-translate-y-0.5">
+              <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[#FF6500]">Perlu cek</p>
               <p className="mt-2 text-3xl font-semibold tracking-tight text-[#6d4c2f]">{formatNumber(lowCount)}</p>
-              <p className="mt-1 text-xs text-[#9b7040]">stok ≤ minimum</p>
+              <p className="mt-1 text-xs text-[#FF6500]">stok ≤ minimum</p>
             </button>
           </div>
 
           <div className="mt-5 flex flex-col gap-3 md:flex-row">
             <div className="relative flex-1">
-              <Search size={18} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[#8b7b67]" />
+              <Search size={18} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[#55727C]" />
               <Input
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
@@ -1722,13 +1722,13 @@ function StockView({ stock, isAdmin, items, warehouses, onCreateItem, busy, onIm
                 aria-label="Cari stok"
               />
             </div>
-            <div className="flex w-full overflow-x-auto rounded-xl border-2 border-[#b8a27a] bg-[#e5d8ab]/55 p-1 md:w-auto">
+            <div className="flex w-full overflow-x-auto rounded-xl border-2 border-[#9CCED8] bg-[#BAE4F0]/55 p-1 md:w-auto">
               {([["all", "Semua"], ["safe", "Aman"], ["low", "Perlu cek"]] as const).map(([value, label]) => (
                 <button
                   key={value}
                   type="button"
                   onClick={() => setStatusFilter(value)}
-                  className={`whitespace-nowrap rounded-lg px-3 py-2 text-xs font-semibold transition ${statusFilter === value ? "bg-[#5a4738] text-[#fff9ea] shadow-sm" : "text-[#6f5e4e] hover:bg-[#f7efd7]"}`}
+                  className={`whitespace-nowrap rounded-lg px-3 py-2 text-xs font-semibold transition ${statusFilter === value ? "bg-[#07304A] text-[#FFFFFF] shadow-sm" : "text-[#315563] hover:bg-[#FFFFFF]"}`}
                 >
                   {label}
                 </button>
@@ -1745,55 +1745,55 @@ function StockView({ stock, isAdmin, items, warehouses, onCreateItem, busy, onIm
               const coverage = minQty > 0 ? Math.min(100, Math.max(0, (stockQty / minQty) * 100)) : stockQty > 0 ? 100 : 0;
 
               return (
-                <div id={`stock-item-${row.itemId}`} key={row.itemId} className={`overflow-hidden rounded-2xl border-2 bg-[#f7efd7] shadow-[inset_0_0_0_2px_rgba(255,250,240,0.45)] ${Number(focusItemId) === Number(row.itemId) ? "border-[#7f9146] ring-2 ring-[#a9b567] ring-offset-2" : "border-[#b8a27a]"}`}>
+                <div id={`stock-item-${row.itemId}`} key={row.itemId} className={`overflow-hidden rounded-2xl border-2 bg-[#FFFFFF] shadow-[inset_0_0_0_2px_rgba(255,250,240,0.45)] ${Number(focusItemId) === Number(row.itemId) ? "border-[#0091B9] ring-2 ring-[#a9b567] ring-offset-2" : "border-[#9CCED8]"}`}>
                   <button
                     type="button"
                     onClick={() => setExpanded(open ? null : Number(row.itemId))}
-                    className="flex w-full items-center gap-4 p-4 text-left transition hover:bg-[#eee2bd]/55 sm:p-5"
+                    className="flex w-full items-center gap-4 p-4 text-left transition hover:bg-[#F4FAFC]/55 sm:p-5"
                   >
-                    <div className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-[#e5d8ab] text-[#6b573f]">
+                    <div className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-[#BAE4F0] text-[#6b573f]">
                       <Boxes size={20} />
                     </div>
 
                     <div className="min-w-0 flex-1">
                       <div className="flex flex-wrap items-center gap-2">
-                        <p className="truncate font-semibold text-[#4e3f32]">{row.name}</p>
-                        <Badge className={low ? "border-[#d7aa71] bg-[#fbefd1] text-[#9b7040]" : "border-[#b8c68a] bg-[#eef0d5] text-[#5d7033]"}>
+                        <p className="truncate font-semibold text-[#07304A]">{row.name}</p>
+                        <Badge className={low ? "border-[#FFB45C] bg-[#FFF6D6] text-[#FF6500]" : "border-[#FFD500] bg-[#E6F4F7] text-[#004E9B]"}>
                           {low ? "Perlu cek" : "Aman"}
                         </Badge>
                       </div>
-                      <p className="mt-1 truncate text-xs text-[#8b7b67]">{row.sku} · {row.category || "Umum"} · {row.unit}</p>
+                      <p className="mt-1 truncate text-xs text-[#55727C]">{row.sku} · {row.category || "Umum"} · {row.unit}</p>
                       <div className="mt-3 h-1.5 w-full max-w-md overflow-hidden rounded-full bg-[#dfd1a7]">
-                        <div className={`h-full rounded-full ${low ? "bg-[#c87969]" : "bg-[#7f9146]"}`} style={{ width: `${coverage}%` }} />
+                        <div className={`h-full rounded-full ${low ? "bg-[#FF6500]" : "bg-[#0091B9]"}`} style={{ width: `${coverage}%` }} />
                       </div>
                     </div>
 
                     <div className="shrink-0 text-right">
-                      <p className={`text-xl font-semibold tracking-tight ${low ? "text-[#9b7040]" : "text-[#5a4738]"}`}>{formatNumber(stockQty)}</p>
-                      <p className="text-[11px] text-[#8b7b67]">{row.unit}</p>
+                      <p className={`text-xl font-semibold tracking-tight ${low ? "text-[#FF6500]" : "text-[#07304A]"}`}>{formatNumber(stockQty)}</p>
+                      <p className="text-[11px] text-[#55727C]">{row.unit}</p>
                       <p className="mt-1 text-[10px] font-semibold uppercase tracking-[0.1em] text-[#9b8974]">min {formatNumber(minQty)}</p>
                     </div>
 
-                    <ChevronRight size={18} className={`shrink-0 text-[#9a896f] transition-transform ${open ? "rotate-90" : ""}`} />
+                    <ChevronRight size={18} className={`shrink-0 text-[#55727C] transition-transform ${open ? "rotate-90" : ""}`} />
                   </button>
 
                   {open && (
-                    <div className="border-t-2 border-[#b8a27a]/55 bg-[#eee2bd]/45 px-4 pb-4 pt-3 sm:px-5">
+                    <div className="border-t-2 border-[#9CCED8]/55 bg-[#F4FAFC]/45 px-4 pb-4 pt-3 sm:px-5">
                       <div className="grid gap-3 sm:grid-cols-3">
                         <div className="golog-panel-soft rounded-xl p-3">
-                          <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-[#8b7b67]">SKU</p>
-                          <p className="mt-1 text-sm font-semibold text-[#5a4738]">{row.sku}</p>
+                          <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-[#55727C]">SKU</p>
+                          <p className="mt-1 text-sm font-semibold text-[#07304A]">{row.sku}</p>
                         </div>
                         <div className="golog-panel-soft rounded-xl p-3">
-                          <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-[#8b7b67]">Minimum</p>
-                          <p className="mt-1 text-sm font-semibold text-[#5a4738]">{formatNumber(minQty)} {row.unit}</p>
+                          <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-[#55727C]">Minimum</p>
+                          <p className="mt-1 text-sm font-semibold text-[#07304A]">{formatNumber(minQty)} {row.unit}</p>
                         </div>
                         <div className="golog-panel-soft rounded-xl p-3">
-                          <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-[#8b7b67]">Status</p>
-                          <p className="mt-1 text-sm font-semibold text-[#5a4738]">{low ? "Sudah menyentuh batas minimum." : "Masih di atas batas minimum."}</p>
+                          <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-[#55727C]">Status</p>
+                          <p className="mt-1 text-sm font-semibold text-[#07304A]">{low ? "Sudah menyentuh batas minimum." : "Masih di atas batas minimum."}</p>
                         </div>
                       </div>
-                      <div className="mt-3 flex flex-col gap-2 text-xs text-[#7e6b57] sm:flex-row sm:items-center sm:justify-between">
+                      <div className="mt-3 flex flex-col gap-2 text-xs text-[#315563] sm:flex-row sm:items-center sm:justify-between">
                         <span>{isAdmin ? "Lokasi: Gudang Pusat" : "Lokasi: Ruangan aktif"}</span>
                         <span>Saldo diperbarui dari pergerakan stok.</span>
                       </div>
@@ -1804,7 +1804,7 @@ function StockView({ stock, isAdmin, items, warehouses, onCreateItem, busy, onIm
             })}
 
             {!filtered.length && (
-              <Card className="border-2 border-[#b8a27a] shadow-sm">
+              <Card className="border-2 border-[#9CCED8] shadow-sm">
                 <CardContent>
                   <EmptyState title={rows.length ? "Barang tidak ditemukan" : "Master barang masih kosong"} text={rows.length ? "Coba ubah kata pencarian atau filter status." : isAdmin ? "Tambahkan master barang terlebih dahulu." : "Belum ada data stok."} />
                 </CardContent>
@@ -1813,7 +1813,7 @@ function StockView({ stock, isAdmin, items, warehouses, onCreateItem, busy, onIm
           </div>
 
           {rows.length > 0 && (
-            <p className="mt-4 rounded-xl border border-[#b8a27a]/70 bg-[#eee2bd]/40 px-3 py-2 text-xs leading-5 text-[#7e6b57]">
+            <p className="mt-4 rounded-xl border border-[#9CCED8]/70 bg-[#F4FAFC]/40 px-3 py-2 text-xs leading-5 text-[#315563]">
               Saldo stok adalah informasi pemantauan. Perubahan stok tetap dilakukan melalui <strong>Barang Masuk</strong>, <strong>Permintaan</strong>, atau <strong>Stock Opname</strong> sesuai wewenang.
             </p>
           )}
@@ -1822,7 +1822,7 @@ function StockView({ stock, isAdmin, items, warehouses, onCreateItem, busy, onIm
     </div>
   );
 }
-function InboundView({ items, warehouses, onSubmit, busy }: any) { const [form, setForm] = useState({ itemId: "", quantity: "", sourceWarehouseId: "", notes: "", occurredAt: new Date().toISOString().slice(0, 10) }); return <Card className="max-w-3xl border-slate-200/80 shadow-sm"><CardHeader><CardTitle>Catat barang masuk</CardTitle><p className="mt-1 text-sm text-slate-500">Penerimaan dari Gudang Farmasi, Gudang RT, CSSD, atau Laboratorium.</p></CardHeader><CardContent><div className="grid gap-4 md:grid-cols-2"><Field label="Barang"><select className="h-10 w-full rounded-lg border-2 border-[#b8a27a] bg-[#f7efd7] px-3 text-sm text-[#5a4738] shadow-[inset_0_0_0_2px_rgba(255,250,240,0.52)]" value={form.itemId} onChange={(e) => setForm({ ...form, itemId: e.target.value })}><option value="">Pilih barang</option>{items.map((item: any) => <option key={item.id} value={item.id}>{item.name} · {item.sku}</option>)}</select></Field><Field label="Sumber gudang"><select className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm" value={form.sourceWarehouseId} onChange={(e) => setForm({ ...form, sourceWarehouseId: e.target.value })}><option value="">Pilih gudang sumber</option>{warehouses.filter((w: any) => w.kind === "source").map((w: any) => <option key={w.id} value={w.id}>{w.name}</option>)}</select></Field><Field label="Jumlah"><Input type="number" min="1" value={form.quantity} onChange={(e) => setForm({ ...form, quantity: e.target.value })} placeholder="0" /></Field><Field label="Tanggal kejadian"><Input type="date" value={form.occurredAt} onChange={(e) => setForm({ ...form, occurredAt: e.target.value })} /></Field><div className="md:col-span-2"><Field label="Catatan"><Textarea value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} placeholder="Nomor dokumen, nota, atau keterangan penerimaan" /></Field></div></div><Button className="mt-6" disabled={busy || !form.itemId || !form.quantity || !form.sourceWarehouseId} onClick={() => onSubmit({ itemId: Number(form.itemId), quantity: Number(form.quantity), sourceWarehouseId: Number(form.sourceWarehouseId), occurredAt: new Date(form.occurredAt) })}><ArrowDownToLine size={16} className="mr-2" />Simpan barang masuk</Button></CardContent></Card> }
+function InboundView({ items, warehouses, onSubmit, busy }: any) { const [form, setForm] = useState({ itemId: "", quantity: "", sourceWarehouseId: "", notes: "", occurredAt: new Date().toISOString().slice(0, 10) }); return <Card className="max-w-3xl border-slate-200/80 shadow-sm"><CardHeader><CardTitle>Catat barang masuk</CardTitle><p className="mt-1 text-sm text-slate-500">Penerimaan dari Gudang Farmasi, Gudang RT, CSSD, atau Laboratorium.</p></CardHeader><CardContent><div className="grid gap-4 md:grid-cols-2"><Field label="Barang"><select className="h-10 w-full rounded-lg border-2 border-[#9CCED8] bg-[#FFFFFF] px-3 text-sm text-[#07304A] shadow-[inset_0_0_0_2px_rgba(255,250,240,0.52)]" value={form.itemId} onChange={(e) => setForm({ ...form, itemId: e.target.value })}><option value="">Pilih barang</option>{items.map((item: any) => <option key={item.id} value={item.id}>{item.name} · {item.sku}</option>)}</select></Field><Field label="Sumber gudang"><select className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm" value={form.sourceWarehouseId} onChange={(e) => setForm({ ...form, sourceWarehouseId: e.target.value })}><option value="">Pilih gudang sumber</option>{warehouses.filter((w: any) => w.kind === "source").map((w: any) => <option key={w.id} value={w.id}>{w.name}</option>)}</select></Field><Field label="Jumlah"><Input type="number" min="1" value={form.quantity} onChange={(e) => setForm({ ...form, quantity: e.target.value })} placeholder="0" /></Field><Field label="Tanggal kejadian"><Input type="date" value={form.occurredAt} onChange={(e) => setForm({ ...form, occurredAt: e.target.value })} /></Field><div className="md:col-span-2"><Field label="Catatan"><Textarea value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} placeholder="Nomor dokumen, nota, atau keterangan penerimaan" /></Field></div></div><Button className="mt-6" disabled={busy || !form.itemId || !form.quantity || !form.sourceWarehouseId} onClick={() => onSubmit({ itemId: Number(form.itemId), quantity: Number(form.quantity), sourceWarehouseId: Number(form.sourceWarehouseId), occurredAt: new Date(form.occurredAt) })}><ArrowDownToLine size={16} className="mr-2" />Simpan barang masuk</Button></CardContent></Card> }
 
 function RequestsView({ requests, rooms, items, isAdmin, currentUserId, todayRoomLocks, selectedRoom, selectedRoomName, setSelectedRoom, lines, setLines, total, onCreate, onVerify, busy, focusRequestId }: any) {
   const [priority, setPriority] = useState("normal");
@@ -1958,11 +1958,11 @@ function RequestsView({ requests, rooms, items, isAdmin, currentUserId, todayRoo
               <p className="mt-1 max-w-3xl text-sm text-slate-500">Prioritas permintaan ditampilkan lebih dulu. Kepala gudang menentukan jumlah yang benar-benar dipindahkan berdasarkan stok yang tersedia.</p>
             </div>
             <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 xl:grid-cols-5">
-              <button type="button" onClick={() => setFilter("all")} className={`rounded-xl border px-4 py-3 text-left transition ${filter === "all" ? "border-[#102a2b] bg-[#102a2b] text-white" : "border-[#b8a27a] bg-[#f7efd7] hover:bg-slate-50"}`}><p className="text-[11px] opacity-70">Semua</p><p className="mt-1 text-xl font-semibold">{formatNumber(requestCounts.all)}</p></button>
-              <button type="button" onClick={() => setFilter("pending")} className={`rounded-xl border px-4 py-3 text-left transition ${filter === "pending" ? "border-amber-500 bg-amber-50 text-amber-900" : "border-[#b8a27a] bg-[#f7efd7] hover:bg-slate-50"}`}><p className="text-[11px] opacity-70">Menunggu</p><p className="mt-1 text-xl font-semibold">{formatNumber(requestCounts.pending)}</p></button>
-              <button type="button" onClick={() => setFilter("partial")} className={`rounded-xl border px-4 py-3 text-left transition ${filter === "partial" ? "border-amber-500 bg-amber-50 text-amber-900" : "border-[#b8a27a] bg-[#f7efd7] hover:bg-slate-50"}`}><p className="text-[11px] opacity-70">Sebagian</p><p className="mt-1 text-xl font-semibold">{formatNumber(requestCounts.partial)}</p></button>
-              <button type="button" onClick={() => setFilter("approved")} className={`rounded-xl border px-4 py-3 text-left transition ${filter === "approved" ? "border-emerald-500 bg-emerald-50 text-emerald-900" : "border-[#b8a27a] bg-[#f7efd7] hover:bg-slate-50"}`}><p className="text-[11px] opacity-70">Disetujui</p><p className="mt-1 text-xl font-semibold">{formatNumber(requestCounts.approved)}</p></button>
-              <button type="button" onClick={() => setFilter("rejected")} className={`rounded-xl border px-4 py-3 text-left transition ${filter === "rejected" ? "border-rose-500 bg-rose-50 text-rose-900" : "border-[#b8a27a] bg-[#f7efd7] hover:bg-slate-50"}`}><p className="text-[11px] opacity-70">Ditolak</p><p className="mt-1 text-xl font-semibold">{formatNumber(requestCounts.rejected)}</p></button>
+              <button type="button" onClick={() => setFilter("all")} className={`rounded-xl border px-4 py-3 text-left transition ${filter === "all" ? "border-[#07304A] bg-[#07304A] text-white" : "border-[#9CCED8] bg-[#FFFFFF] hover:bg-slate-50"}`}><p className="text-[11px] opacity-70">Semua</p><p className="mt-1 text-xl font-semibold">{formatNumber(requestCounts.all)}</p></button>
+              <button type="button" onClick={() => setFilter("pending")} className={`rounded-xl border px-4 py-3 text-left transition ${filter === "pending" ? "border-amber-500 bg-amber-50 text-amber-900" : "border-[#9CCED8] bg-[#FFFFFF] hover:bg-slate-50"}`}><p className="text-[11px] opacity-70">Menunggu</p><p className="mt-1 text-xl font-semibold">{formatNumber(requestCounts.pending)}</p></button>
+              <button type="button" onClick={() => setFilter("partial")} className={`rounded-xl border px-4 py-3 text-left transition ${filter === "partial" ? "border-amber-500 bg-amber-50 text-amber-900" : "border-[#9CCED8] bg-[#FFFFFF] hover:bg-slate-50"}`}><p className="text-[11px] opacity-70">Sebagian</p><p className="mt-1 text-xl font-semibold">{formatNumber(requestCounts.partial)}</p></button>
+              <button type="button" onClick={() => setFilter("approved")} className={`rounded-xl border px-4 py-3 text-left transition ${filter === "approved" ? "border-emerald-500 bg-emerald-50 text-emerald-900" : "border-[#9CCED8] bg-[#FFFFFF] hover:bg-slate-50"}`}><p className="text-[11px] opacity-70">Disetujui</p><p className="mt-1 text-xl font-semibold">{formatNumber(requestCounts.approved)}</p></button>
+              <button type="button" onClick={() => setFilter("rejected")} className={`rounded-xl border px-4 py-3 text-left transition ${filter === "rejected" ? "border-rose-500 bg-rose-50 text-rose-900" : "border-[#9CCED8] bg-[#FFFFFF] hover:bg-slate-50"}`}><p className="text-[11px] opacity-70">Ditolak</p><p className="mt-1 text-xl font-semibold">{formatNumber(requestCounts.rejected)}</p></button>
             </div>
           </div>
         </CardHeader>
@@ -1974,7 +1974,7 @@ function RequestsView({ requests, rooms, items, isAdmin, currentUserId, todayRoo
           const meta = priorityMeta(row.request.priority);
           const approval = approvalSummary(row);
 
-          return <Card id={`request-${row.request.id}`} key={row.request.id} className={`overflow-hidden border-slate-200/80 shadow-sm transition ${Number(focusRequestId) === Number(row.request.id) ? "ring-2 ring-[#7f9146] ring-offset-2" : isSubmitted ? "ring-1 ring-slate-100" : ""}`}>
+          return <Card id={`request-${row.request.id}`} key={row.request.id} className={`overflow-hidden border-slate-200/80 shadow-sm transition ${Number(focusRequestId) === Number(row.request.id) ? "ring-2 ring-[#0091B9] ring-offset-2" : isSubmitted ? "ring-1 ring-slate-100" : ""}`}>
             <CardContent className="p-0">
               <div className="flex flex-col gap-4 border-b border-slate-100 px-5 py-4 lg:flex-row lg:items-center lg:justify-between">
                 <div className="min-w-0">
@@ -1986,11 +1986,11 @@ function RequestsView({ requests, rooms, items, isAdmin, currentUserId, todayRoo
                   <p className="mt-1 text-sm text-slate-500">{row.room?.name || "Ruangan"} · {formatDate(row.request.createdAt)}</p>
                   {row.request.notes && <p className="mt-2 text-xs leading-5 text-slate-500">{row.request.notes}</p>}
                   {isSubmitted && (
-                    <div className="mt-3 flex flex-wrap gap-2 text-[11px] font-semibold text-[#7e6b57]">
-                      <span className="rounded-lg border border-[#b8a27a] bg-[#f7efd7] px-2.5 py-1">
+                    <div className="mt-3 flex flex-wrap gap-2 text-[11px] font-semibold text-[#315563]">
+                      <span className="rounded-lg border border-[#9CCED8] bg-[#FFFFFF] px-2.5 py-1">
                         Dipindahkan {formatNumber(approval.approved)} / {formatNumber(approval.requested)}
                       </span>
-                      {approval.exceedsStock && <span className="rounded-lg border border-[#dca69a] bg-[#f7ded7] px-2.5 py-1 text-[#a95447]">Melebihi stok gudang</span>}
+                      {approval.exceedsStock && <span className="rounded-lg border border-[#FFD1C2] bg-[#f7ded7] px-2.5 py-1 text-[#D94A1A]">Melebihi stok gudang</span>}
                     </div>
                   )}
                 </div>
@@ -2064,7 +2064,7 @@ function RequestsView({ requests, rooms, items, isAdmin, currentUserId, todayRoo
                       <div className="rounded-xl bg-slate-50 p-3"><p className="text-[10px] uppercase tracking-wider text-slate-400">Min</p><p className="mt-1 font-semibold">{formatNumber(minimumQty)}</p></div>
                       <div className="rounded-xl bg-slate-50 p-3"><p className="text-[10px] uppercase tracking-wider text-slate-400">Sisa</p><p className={`mt-1 font-semibold ${stockAfterTone(afterQty, minimumQty)}`}>{afterQty < 0 ? "−" : formatNumber(afterQty)}</p></div>
                     </div>
-                    {isSubmitted && <div className="rounded-xl border border-[#b8a27a] bg-[#f7efd7] p-3">
+                    {isSubmitted && <div className="rounded-xl border border-[#9CCED8] bg-[#FFFFFF] p-3">
                       <Label className="text-[11px] text-slate-500">Jumlah dipindahkan</Label>
                       <Input type="number" min="0" max={line.line.requestedQty} step="1" value={currentQty} onChange={(e) => setQty(row.request.id, line.line.id, e.target.value)} className={exceedsWarehouse ? "mt-2 border-amber-400 bg-amber-50" : "mt-2"} />
                     </div>}
@@ -2086,7 +2086,7 @@ function RequestsView({ requests, rooms, items, isAdmin, currentUserId, todayRoo
       <CardHeader><CardTitle>Buat permintaan</CardTitle><p className="mt-1 text-sm text-slate-500">Pilih ruangan yang sedang Anda layani hari ini. Stok Gudang Pusat ditampilkan sebelum mengajukan.</p></CardHeader>
       <CardContent>
         <Field label="Ruangan yang dilayani *"><select className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm" value={selectedRoom ?? ""} onChange={(e) => setSelectedRoom(Number(e.target.value) || null)}><option value="">Pilih ruangan sebelum lanjut</option>{rooms.map((room: any) => { const lock = getRoomLock(room.id); const lockedByOther = Boolean(lock && lock.requesterId !== currentUserId); return <option key={room.id} value={room.id} disabled={lockedByOther}>{room.name}{lock ? lock.requesterId === currentUserId ? " — Anda" : ` — ${lock.requesterName || "petugas lain"}` : " — belum ada PIC"} </option>; })}</select></Field>
-        <div className={`mt-4 rounded-xl p-3 text-sm ${selectedLockedByOther ? "border-[#dca69a] bg-[#f8e3de] text-[#9b5146]" : selectedLock ? "bg-emerald-50 text-emerald-800" : "border-[#b8c68a] bg-[#eef0d5] text-[#5d7033]"}`}>{selectedLock ? selectedLock.requesterId === currentUserId ? <>Anda adalah PIC request <strong>{selectedRoomName}</strong> hari ini. Anda dapat membuat request susulan.</> : <>Ruangan <strong>{selectedRoomName}</strong> sudah memiliki PIC request hari ini: <strong>{selectedLock.requesterName || "petugas lain"}</strong>.</> : <>Permintaan akan menjadi request pertama untuk <strong>{selectedRoomName || "ruangan yang dipilih"}</strong> hari ini.</>}</div>
+        <div className={`mt-4 rounded-xl p-3 text-sm ${selectedLockedByOther ? "border-[#FFD1C2] bg-[#f8e3de] text-[#D94A1A]" : selectedLock ? "bg-emerald-50 text-emerald-800" : "border-[#FFD500] bg-[#E6F4F7] text-[#004E9B]"}`}>{selectedLock ? selectedLock.requesterId === currentUserId ? <>Anda adalah PIC request <strong>{selectedRoomName}</strong> hari ini. Anda dapat membuat request susulan.</> : <>Ruangan <strong>{selectedRoomName}</strong> sudah memiliki PIC request hari ini: <strong>{selectedLock.requesterName || "petugas lain"}</strong>.</> : <>Permintaan akan menjadi request pertama untuk <strong>{selectedRoomName || "ruangan yang dipilih"}</strong> hari ini.</>}</div>
         <div className="mt-5"><Field label="Prioritas"><select className="h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm" value={priority} onChange={(e) => setPriority(e.target.value)}><option value="normal">Normal</option><option value="mendesak">Mendesak</option><option value="darurat">Darurat</option></select></Field></div>
         <div className="mt-5 space-y-3">
           {lines.map((line: Line, index: number) => {
@@ -2110,7 +2110,7 @@ function RequestsView({ requests, rooms, items, isAdmin, currentUserId, todayRoo
     </Card>
 
     <Card className="border-slate-200/80 shadow-sm">
-      <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"><div><CardTitle>Daftar permintaan</CardTitle><p className="mt-1 text-sm text-slate-500">Riwayat permintaan yang Anda buat</p></div><select className="h-9 rounded-lg border-2 border-[#b8a27a] bg-[#f7efd7] px-2 text-xs text-[#5a4738]" value={filter} onChange={(e) => setFilter(e.target.value)}><option value="all">Semua status</option><option value="submitted">Diajukan</option><option value="approved">Disetujui</option><option value="partial">Sebagian</option><option value="rejected">Ditolak</option></select></CardHeader>
+      <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"><div><CardTitle>Daftar permintaan</CardTitle><p className="mt-1 text-sm text-slate-500">Riwayat permintaan yang Anda buat</p></div><select className="h-9 rounded-lg border-2 border-[#9CCED8] bg-[#FFFFFF] px-2 text-xs text-[#07304A]" value={filter} onChange={(e) => setFilter(e.target.value)}><option value="all">Semua status</option><option value="submitted">Diajukan</option><option value="approved">Disetujui</option><option value="partial">Sebagian</option><option value="rejected">Ditolak</option></select></CardHeader>
       <CardContent><div className="space-y-3">{sortedRequests.map((row: any) => <div key={row.request.id} className="rounded-2xl border border-slate-200 p-4">
         <div className="flex flex-wrap items-start justify-between gap-3"><div><div className="flex items-center gap-2"><span className="font-semibold">{row.request.requestNo}</span><Badge className={statusTone(row.request.status)}>{statusLabel(row.request.status)}</Badge></div><p className="mt-1 text-sm text-slate-500">{row.room?.name || "Ruangan"} · {formatDate(row.request.createdAt)} · <span className="capitalize">{row.request.priority}</span></p></div></div>
         <div className="mt-4 grid gap-2 border-t border-slate-100 pt-3 text-sm">{row.lines.map((line: any) => <div key={line.line.id} className="flex justify-between gap-4"><span>{line.item?.name || "Item"}</span><span className="font-medium">{line.line.requestedQty} diminta · {line.line.approvedQty} dipindahkan</span></div>)}</div>
@@ -2165,21 +2165,21 @@ function StockOpnameView({ stock, items, onSubmit, busy }: any) {
   function rowMeta(row: OpnameRow) {
     const physical = row.physicalQty === "" ? null : Number(row.physicalQty);
     const difference = physical === null ? null : physical - row.systemQty;
-    if (physical === null) return { physical, difference, label: "Belum diisi", className: "border-[#d0be97] bg-[#f7efd7] text-[#8b7b67]" };
-    if (difference === 0) return { physical, difference, label: "Sesuai", className: "border-[#b8c68a] bg-[#eef0d5] text-[#5d7033]" };
+    if (physical === null) return { physical, difference, label: "Belum diisi", className: "border-[#B8D5DE] bg-[#FFFFFF] text-[#55727C]" };
+    if (difference === 0) return { physical, difference, label: "Sesuai", className: "border-[#FFD500] bg-[#E6F4F7] text-[#004E9B]" };
     if (difference! > 0) return { physical, difference, label: "Tambah", className: "border-[#b8d0de] bg-[#e7f0f4] text-[#4d7182]" };
-    return { physical, difference, label: "Kurang", className: "border-[#dca69a] bg-[#f8e3de] text-[#9b5146]" };
+    return { physical, difference, label: "Kurang", className: "border-[#FFD1C2] bg-[#f8e3de] text-[#D94A1A]" };
   }
   return (
     <div className="space-y-5">
       <Card className="overflow-hidden">
-        <CardHeader className="border-b border-[#b8a27a]/60 pb-5">
+        <CardHeader className="border-b border-[#9CCED8]/60 pb-5">
           <div className="flex flex-col gap-5 xl:flex-row xl:items-end xl:justify-between">
-            <div className="max-w-3xl"><p className="golog-kicker">Warehouse control</p><CardTitle className="mt-1">Stock Opname Gudang Pusat</CardTitle><p className="mt-2 text-sm leading-6 text-[#6f5e4e]">Hitung stok fisik, bandingkan dengan saldo sistem, lalu simpan seluruh koreksi sekaligus dalam satu transaksi.</p></div>
-            <div className="rounded-2xl border-2 border-[#b8a27a] bg-[#f7efd7] px-4 py-3 xl:min-w-[250px]">
-              <div className="flex items-center justify-between gap-3"><p className="text-xs font-semibold uppercase tracking-[0.14em] text-[#8b7b67]">Progres opname</p><span className="text-sm font-bold text-[#5a4738]">{progress}%</span></div>
-              <div className="mt-3 h-2 overflow-hidden rounded-full bg-[#dfd1a7]"><div className="h-full rounded-full bg-[#7f9146] transition-all" style={{ width: progress + "%" }} /></div>
-              <p className="mt-2 text-xs text-[#8b7b67]">{formatNumber(checkedRows.length)} dari {formatNumber(rows.length)} barang diperiksa</p>
+            <div className="max-w-3xl"><p className="golog-kicker">Warehouse control</p><CardTitle className="mt-1">Stock Opname Gudang Pusat</CardTitle><p className="mt-2 text-sm leading-6 text-[#315563]">Hitung stok fisik, bandingkan dengan saldo sistem, lalu simpan seluruh koreksi sekaligus dalam satu transaksi.</p></div>
+            <div className="rounded-2xl border-2 border-[#9CCED8] bg-[#FFFFFF] px-4 py-3 xl:min-w-[250px]">
+              <div className="flex items-center justify-between gap-3"><p className="text-xs font-semibold uppercase tracking-[0.14em] text-[#55727C]">Progres opname</p><span className="text-sm font-bold text-[#07304A]">{progress}%</span></div>
+              <div className="mt-3 h-2 overflow-hidden rounded-full bg-[#dfd1a7]"><div className="h-full rounded-full bg-[#0091B9] transition-all" style={{ width: progress + "%" }} /></div>
+              <p className="mt-2 text-xs text-[#55727C]">{formatNumber(checkedRows.length)} dari {formatNumber(rows.length)} barang diperiksa</p>
             </div>
           </div>
         </CardHeader>
@@ -2189,66 +2189,66 @@ function StockOpnameView({ stock, items, onSubmit, busy }: any) {
             <Field label="Tanggal opname"><Input type="date" value={incidentDate} onChange={(e) => setIncidentDate(e.target.value)} /></Field>
           </div>
           <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-            <div className="golog-panel-soft rounded-2xl p-4"><p className="text-xs font-semibold uppercase tracking-[0.14em] text-[#8b7b67]">Diperiksa</p><p className="mt-2 text-3xl font-semibold tracking-tight">{formatNumber(checkedRows.length)}</p><p className="mt-1 text-xs text-[#7e6b57]">dari {formatNumber(rows.length)} SKU</p></div>
-            <div className="rounded-2xl border-2 border-[#d7aa71] bg-[#fbefd1] p-4"><p className="text-xs font-semibold uppercase tracking-[0.14em] text-[#9b7040]">Ada selisih</p><p className="mt-2 text-3xl font-semibold tracking-tight text-[#6d4c2f]">{formatNumber(changedRows.length)}</p><p className="mt-1 text-xs text-[#9b7040]">perlu dikonfirmasi</p></div>
-            <div className="rounded-2xl border-2 border-[#b8c68a] bg-[#eef0d5] p-4"><p className="text-xs font-semibold uppercase tracking-[0.14em] text-[#5d7033]">Kelebihan</p><p className="mt-2 text-3xl font-semibold tracking-tight text-[#4e6328]">+{formatNumber(positiveDifference)}</p><p className="mt-1 text-xs text-[#5d7033]">{formatNumber(increaseRows.length)} barang</p></div>
-            <div className="rounded-2xl border-2 border-[#dca69a] bg-[#f8e3de] p-4"><p className="text-xs font-semibold uppercase tracking-[0.14em] text-[#9b5146]">Kekurangan</p><p className="mt-2 text-3xl font-semibold tracking-tight text-[#8f493f]">−{formatNumber(negativeDifference)}</p><p className="mt-1 text-xs text-[#9b5146]">{formatNumber(decreaseRows.length)} barang</p></div>
+            <div className="golog-panel-soft rounded-2xl p-4"><p className="text-xs font-semibold uppercase tracking-[0.14em] text-[#55727C]">Diperiksa</p><p className="mt-2 text-3xl font-semibold tracking-tight">{formatNumber(checkedRows.length)}</p><p className="mt-1 text-xs text-[#315563]">dari {formatNumber(rows.length)} SKU</p></div>
+            <div className="rounded-2xl border-2 border-[#FFB45C] bg-[#FFF6D6] p-4"><p className="text-xs font-semibold uppercase tracking-[0.14em] text-[#FF6500]">Ada selisih</p><p className="mt-2 text-3xl font-semibold tracking-tight text-[#6d4c2f]">{formatNumber(changedRows.length)}</p><p className="mt-1 text-xs text-[#FF6500]">perlu dikonfirmasi</p></div>
+            <div className="rounded-2xl border-2 border-[#FFD500] bg-[#E6F4F7] p-4"><p className="text-xs font-semibold uppercase tracking-[0.14em] text-[#004E9B]">Kelebihan</p><p className="mt-2 text-3xl font-semibold tracking-tight text-[#4e6328]">+{formatNumber(positiveDifference)}</p><p className="mt-1 text-xs text-[#004E9B]">{formatNumber(increaseRows.length)} barang</p></div>
+            <div className="rounded-2xl border-2 border-[#FFD1C2] bg-[#f8e3de] p-4"><p className="text-xs font-semibold uppercase tracking-[0.14em] text-[#D94A1A]">Kekurangan</p><p className="mt-2 text-3xl font-semibold tracking-tight text-[#8f493f]">−{formatNumber(negativeDifference)}</p><p className="mt-1 text-xs text-[#D94A1A]">{formatNumber(decreaseRows.length)} barang</p></div>
           </div>
-          <div className="flex flex-col gap-3 rounded-2xl border-2 border-[#b8a27a] bg-[#eee2bd]/45 p-3 md:flex-row md:items-center md:justify-between">
-            <div className="relative min-w-0 flex-1"><Search size={18} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[#8b7b67]" /><Input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Cari SKU atau nama barang…" className="h-11 bg-[#f7efd7] pl-10" aria-label="Cari barang stock opname" /></div>
-            <div className="flex overflow-x-auto rounded-xl border border-[#b8a27a] bg-[#e5d8ab]/55 p-1">
+          <div className="flex flex-col gap-3 rounded-2xl border-2 border-[#9CCED8] bg-[#F4FAFC]/45 p-3 md:flex-row md:items-center md:justify-between">
+            <div className="relative min-w-0 flex-1"><Search size={18} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[#55727C]" /><Input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Cari SKU atau nama barang…" className="h-11 bg-[#FFFFFF] pl-10" aria-label="Cari barang stock opname" /></div>
+            <div className="flex overflow-x-auto rounded-xl border border-[#9CCED8] bg-[#BAE4F0]/55 p-1">
               {(["all", "pending", "difference"] as const).map((value) => {
                 const label = value === "all" ? "Semua · " + rows.length : value === "pending" ? "Belum diisi · " + (rows.length - checkedRows.length) : "Selisih · " + changedRows.length;
-                return <button key={value} type="button" onClick={() => setFilter(value)} className={"whitespace-nowrap rounded-lg px-3 py-2 text-xs font-semibold transition " + (filter === value ? "bg-[#5a4738] text-[#fff9ea] shadow-sm" : "text-[#6f5e4e] hover:bg-[#f7efd7]")}>{label}</button>;
+                return <button key={value} type="button" onClick={() => setFilter(value)} className={"whitespace-nowrap rounded-lg px-3 py-2 text-xs font-semibold transition " + (filter === value ? "bg-[#07304A] text-[#FFFFFF] shadow-sm" : "text-[#315563] hover:bg-[#FFFFFF]")}>{label}</button>;
               })}
             </div>
             <div className="flex shrink-0 gap-2"><Button type="button" variant="outline" onClick={markAllAsSystem} disabled={!rows.length || busy || allChecked}>Isi = sistem</Button><Button type="button" variant="outline" onClick={clearAll} disabled={!checkedRows.length || busy}>Kosongkan</Button></div>
           </div>
-          <div className="overflow-hidden rounded-2xl border-2 border-[#b8a27a] bg-[#f7efd7]">
+          <div className="overflow-hidden rounded-2xl border-2 border-[#9CCED8] bg-[#FFFFFF]">
             <div className="hidden overflow-x-auto md:block">
               <table className="w-full min-w-[900px] text-left text-sm">
-                <thead className="border-b border-[#d0be97] bg-[#eee2bd] text-[11px] uppercase tracking-[0.12em] text-[#7e6b57]"><tr><th className="px-4 py-3">Barang</th><th className="px-4 py-3 text-right">Sistem</th><th className="px-4 py-3">Stok fisik</th><th className="px-4 py-3 text-right">Selisih</th><th className="px-4 py-3 text-center">Status</th></tr></thead>
-                <tbody className="divide-y divide-[#d8c9a8]/70">
+                <thead className="border-b border-[#B8D5DE] bg-[#F4FAFC] text-[11px] uppercase tracking-[0.12em] text-[#315563]"><tr><th className="px-4 py-3">Barang</th><th className="px-4 py-3 text-right">Sistem</th><th className="px-4 py-3">Stok fisik</th><th className="px-4 py-3 text-right">Selisih</th><th className="px-4 py-3 text-center">Status</th></tr></thead>
+                <tbody className="divide-y divide-[#C7E0E6]/70">
                   {visibleRows.map((row) => {
                     const meta = rowMeta(row);
-                    return <tr key={row.itemId} className={meta.difference !== null && meta.difference !== 0 ? "bg-[#fbefd1]/45" : "hover:bg-[#eee2bd]/30"}>
-                      <td className="px-4 py-4"><p className="font-semibold text-[#4e3f32]">{row.name}</p><p className="mt-1 text-xs text-[#8b7b67]">{row.sku} · {row.unit}</p></td>
-                      <td className="px-4 py-4 text-right"><p className="font-semibold text-[#5a4738]">{formatNumber(row.systemQty)}</p><p className="mt-1 text-[10px] uppercase tracking-[0.1em] text-[#9a896f]">saldo sistem</p></td>
-                      <td className="px-4 py-4"><Input type="number" min="0" step="1" value={row.physicalQty} onChange={(e) => setPhysicalQty(row.itemId, e.target.value)} placeholder="Isi hasil hitung" className="h-10 w-40 bg-[#fffaf0]" /></td>
-                      <td className={"px-4 py-4 text-right font-bold " + (meta.difference === null ? "text-[#b1a38f]" : meta.difference > 0 ? "text-[#5d7033]" : meta.difference < 0 ? "text-[#a95447]" : "text-[#6d7d3e]")}>{meta.difference === null ? "—" : meta.difference > 0 ? "+" + formatNumber(meta.difference) : formatNumber(meta.difference)}</td>
+                    return <tr key={row.itemId} className={meta.difference !== null && meta.difference !== 0 ? "bg-[#FFF6D6]/45" : "hover:bg-[#F4FAFC]/30"}>
+                      <td className="px-4 py-4"><p className="font-semibold text-[#07304A]">{row.name}</p><p className="mt-1 text-xs text-[#55727C]">{row.sku} · {row.unit}</p></td>
+                      <td className="px-4 py-4 text-right"><p className="font-semibold text-[#07304A]">{formatNumber(row.systemQty)}</p><p className="mt-1 text-[10px] uppercase tracking-[0.1em] text-[#55727C]">saldo sistem</p></td>
+                      <td className="px-4 py-4"><Input type="number" min="0" step="1" value={row.physicalQty} onChange={(e) => setPhysicalQty(row.itemId, e.target.value)} placeholder="Isi hasil hitung" className="h-10 w-40 bg-[#FFFFFF]" /></td>
+                      <td className={"px-4 py-4 text-right font-bold " + (meta.difference === null ? "text-[#b1a38f]" : meta.difference > 0 ? "text-[#004E9B]" : meta.difference < 0 ? "text-[#D94A1A]" : "text-[#6d7d3e]")}>{meta.difference === null ? "—" : meta.difference > 0 ? "+" + formatNumber(meta.difference) : formatNumber(meta.difference)}</td>
                       <td className="px-4 py-4 text-center"><Badge className={meta.className}>{meta.label}</Badge></td>
                     </tr>;
                   })}
-                  {!visibleRows.length && <tr><td colSpan={5} className="px-4 py-12 text-center text-sm text-[#8b7b67]">Tidak ada barang yang cocok dengan filter.</td></tr>}
+                  {!visibleRows.length && <tr><td colSpan={5} className="px-4 py-12 text-center text-sm text-[#55727C]">Tidak ada barang yang cocok dengan filter.</td></tr>}
                 </tbody>
               </table>
             </div>
-            <div className="divide-y divide-[#d8c9a8]/70 md:hidden">
+            <div className="divide-y divide-[#C7E0E6]/70 md:hidden">
               {visibleRows.map((row) => {
                 const meta = rowMeta(row);
                 return <div key={row.itemId} className="p-4">
-                  <div className="flex items-start gap-3"><div className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-[#e5d8ab] text-[#6b573f]"><ClipboardType size={20} /></div><div className="min-w-0 flex-1">
-                    <div className="flex items-start justify-between gap-3"><div className="min-w-0"><p className="truncate font-semibold text-[#4e3f32]">{row.name}</p><p className="mt-1 truncate text-xs text-[#8b7b67]">{row.sku} · {row.unit}</p></div><Badge className={meta.className}>{meta.label}</Badge></div>
-                    <div className="mt-4 grid grid-cols-2 gap-3"><div className="rounded-xl border border-[#d0be97] bg-[#eee2bd]/55 p-3"><p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-[#8b7b67]">Sistem</p><p className="mt-1 text-lg font-semibold text-[#5a4738]">{formatNumber(row.systemQty)}</p></div><div className="rounded-xl border border-[#d0be97] bg-[#fffaf0] p-3"><p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-[#8b7b67]">Selisih</p><p className={"mt-1 text-lg font-semibold " + (meta.difference === null ? "text-[#b1a38f]" : meta.difference > 0 ? "text-[#5d7033]" : meta.difference < 0 ? "text-[#a95447]" : "text-[#6d7d3e]")}>{meta.difference === null ? "—" : meta.difference > 0 ? "+" + formatNumber(meta.difference) : formatNumber(meta.difference)}</p></div></div>
-                    <div className="mt-3"><Field label="Stok fisik"><Input type="number" min="0" step="1" inputMode="numeric" value={row.physicalQty} onChange={(e) => setPhysicalQty(row.itemId, e.target.value)} placeholder="Isi hasil hitung" className="h-11 bg-[#fffaf0]" /></Field></div>
+                  <div className="flex items-start gap-3"><div className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-[#BAE4F0] text-[#6b573f]"><ClipboardType size={20} /></div><div className="min-w-0 flex-1">
+                    <div className="flex items-start justify-between gap-3"><div className="min-w-0"><p className="truncate font-semibold text-[#07304A]">{row.name}</p><p className="mt-1 truncate text-xs text-[#55727C]">{row.sku} · {row.unit}</p></div><Badge className={meta.className}>{meta.label}</Badge></div>
+                    <div className="mt-4 grid grid-cols-2 gap-3"><div className="rounded-xl border border-[#B8D5DE] bg-[#F4FAFC]/55 p-3"><p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-[#55727C]">Sistem</p><p className="mt-1 text-lg font-semibold text-[#07304A]">{formatNumber(row.systemQty)}</p></div><div className="rounded-xl border border-[#B8D5DE] bg-[#FFFFFF] p-3"><p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-[#55727C]">Selisih</p><p className={"mt-1 text-lg font-semibold " + (meta.difference === null ? "text-[#b1a38f]" : meta.difference > 0 ? "text-[#004E9B]" : meta.difference < 0 ? "text-[#D94A1A]" : "text-[#6d7d3e]")}>{meta.difference === null ? "—" : meta.difference > 0 ? "+" + formatNumber(meta.difference) : formatNumber(meta.difference)}</p></div></div>
+                    <div className="mt-3"><Field label="Stok fisik"><Input type="number" min="0" step="1" inputMode="numeric" value={row.physicalQty} onChange={(e) => setPhysicalQty(row.itemId, e.target.value)} placeholder="Isi hasil hitung" className="h-11 bg-[#FFFFFF]" /></Field></div>
                   </div></div>
                 </div>;
               })}
-              {!visibleRows.length && <div className="px-4 py-12 text-center text-sm text-[#8b7b67]">Tidak ada barang yang cocok dengan filter.</div>}
+              {!visibleRows.length && <div className="px-4 py-12 text-center text-sm text-[#55727C]">Tidak ada barang yang cocok dengan filter.</div>}
             </div>
           </div>
-          <div className="sticky bottom-3 z-10 rounded-2xl border-2 border-[#b8a27a] bg-[#f7efd7]/95 p-4 shadow-[0_14px_35px_rgba(90,71,56,0.15)] backdrop-blur">
+          <div className="sticky bottom-3 z-10 rounded-2xl border-2 border-[#9CCED8] bg-[#FFFFFF]/95 p-4 shadow-[0_14px_35px_rgba(90,71,56,0.15)] backdrop-blur">
             <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-              <div><p className="text-sm font-semibold text-[#5a4738]">Siap disimpan: {formatNumber(checkedRows.length)} barang</p><div className="mt-2 flex flex-wrap gap-2 text-[11px] font-semibold"><span className="rounded-lg border border-[#d0be97] bg-[#eee2bd] px-2.5 py-1 text-[#7e6b57]">Selisih bersih {totalDifference > 0 ? "+" : ""}{formatNumber(totalDifference)}</span>{changedRows.length > 0 && <span className="rounded-lg border border-[#d7aa71] bg-[#fbefd1] px-2.5 py-1 text-[#9b7040]">{formatNumber(changedRows.length)} koreksi</span>}{allChecked && <span className="rounded-lg border border-[#b8c68a] bg-[#eef0d5] px-2.5 py-1 text-[#5d7033]">Semua SKU diperiksa</span>}</div><p className="mt-2 text-xs leading-5 text-[#8b7b67]">Barang tanpa selisih tetap tercatat sebagai hasil pemeriksaan dan tidak membuat movement baru.</p></div>
+              <div><p className="text-sm font-semibold text-[#07304A]">Siap disimpan: {formatNumber(checkedRows.length)} barang</p><div className="mt-2 flex flex-wrap gap-2 text-[11px] font-semibold"><span className="rounded-lg border border-[#B8D5DE] bg-[#F4FAFC] px-2.5 py-1 text-[#315563]">Selisih bersih {totalDifference > 0 ? "+" : ""}{formatNumber(totalDifference)}</span>{changedRows.length > 0 && <span className="rounded-lg border border-[#FFB45C] bg-[#FFF6D6] px-2.5 py-1 text-[#FF6500]">{formatNumber(changedRows.length)} koreksi</span>}{allChecked && <span className="rounded-lg border border-[#FFD500] bg-[#E6F4F7] px-2.5 py-1 text-[#004E9B]">Semua SKU diperiksa</span>}</div><p className="mt-2 text-xs leading-5 text-[#55727C]">Barang tanpa selisih tetap tercatat sebagai hasil pemeriksaan dan tidak membuat movement baru.</p></div>
               <Button className="w-full sm:w-auto" disabled={busy || !checkedRows.length || reason.trim().length < 10} onClick={submit}><ClipboardCheck size={16} className="mr-2" />{busy ? "Menyimpan hasil…" : "Simpan " + formatNumber(checkedRows.length) + " hasil opname"}</Button>
             </div>
           </div>
         </CardContent>
       </Card>
       <Card className="overflow-hidden">
-        <CardHeader className="border-b border-[#b8a27a]/60"><p className="golog-kicker">Cara kerja</p><CardTitle className="mt-1">Satu sesi, satu koreksi terkontrol</CardTitle></CardHeader>
+        <CardHeader className="border-b border-[#9CCED8]/60"><p className="golog-kicker">Cara kerja</p><CardTitle className="mt-1">Satu sesi, satu koreksi terkontrol</CardTitle></CardHeader>
         <CardContent className="pt-5"><div className="grid gap-3 md:grid-cols-4">
-          {[["1", "Hitung fisik", "Masukkan jumlah nyata yang ditemukan di Gudang Pusat."], ["2", "Review", "Sistem menghitung fisik − saldo sistem secara langsung."], ["3", "Simpan", "Semua hasil diproses sekaligus dalam satu transaksi."], ["4", "Selesai", "Stok gudang dan histori koreksi langsung diperbarui."]].map(([number, title, text]) => <div key={number} className="rounded-2xl border-2 border-[#b8a27a] bg-[#f7efd7] p-4"><div className="grid h-8 w-8 place-items-center rounded-full bg-[#102a2b] text-sm font-semibold text-white">{number}</div><p className="mt-3 font-semibold text-[#4e3f32]">{title}</p><p className="mt-1 text-xs leading-5 text-[#7e6b57]">{text}</p></div>)}
+          {[["1", "Hitung fisik", "Masukkan jumlah nyata yang ditemukan di Gudang Pusat."], ["2", "Review", "Sistem menghitung fisik − saldo sistem secara langsung."], ["3", "Simpan", "Semua hasil diproses sekaligus dalam satu transaksi."], ["4", "Selesai", "Stok gudang dan histori koreksi langsung diperbarui."]].map(([number, title, text]) => <div key={number} className="rounded-2xl border-2 border-[#9CCED8] bg-[#FFFFFF] p-4"><div className="grid h-8 w-8 place-items-center rounded-full bg-[#07304A] text-sm font-semibold text-white">{number}</div><p className="mt-3 font-semibold text-[#07304A]">{title}</p><p className="mt-1 text-xs leading-5 text-[#315563]">{text}</p></div>)}
         </div></CardContent>
       </Card>
     </div>
