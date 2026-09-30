@@ -164,7 +164,7 @@ export const appRouter = router({
   }),
   analytics: router({
     roomDemand: adminProcedure.input(
-      z.object({ days: z.union([z.literal(30), z.literal(90)]).default(30) }),
+      z.object({ days: z.union([z.literal(7), z.literal(30), z.literal(90)]).default(30) }),
     ).query(({ input }) => getRoomDemandPatterns(input.days)),
   }),
   inbound: router({
