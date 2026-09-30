@@ -59,7 +59,7 @@ export const userRoomAccess = pgTable("user_room_access", {
   roomIdx: index("user_room_access_room_idx").on(table.roomId),
 }));
 
-
+export const items = pgTable("items", {
   id: integer("id").generatedByDefaultAsIdentity().primaryKey(),
   sku: varchar("sku", { length: 64 }).notNull().unique(),
   name: varchar("name", { length: 180 }).notNull(),
