@@ -1,24 +1,10 @@
-export type RequestStatus =
-  | "draft"
-  | "submitted"
-  | "approved"
-  | "partial"
-  | "rejected"
-  | "ready"
-  | "delivered"
-  | "received"
-  | "cancelled";
+export type RequestStatus = "submitted" | "approved" | "partial" | "rejected";
 
 const allowedTransitions: Record<RequestStatus, readonly RequestStatus[]> = {
-  draft: ["submitted", "cancelled"],
   submitted: ["approved", "partial", "rejected"],
   approved: [],
   partial: [],
   rejected: [],
-  ready: [],
-  delivered: [],
-  received: [],
-  cancelled: [],
 };
 
 export function canTransitionRequestStatus(from: RequestStatus, to: RequestStatus) {
