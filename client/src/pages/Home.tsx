@@ -736,38 +736,60 @@ function RoomDemandPanel({
   data: any;
   items: any[];
 }) {
+  const pageSize = 15;
   const [search, setSearch] = useState("");
+  const [page, setPage] = useState(1);
+  const [selectedSourceWarehouseId, setSelectedSourceWarehouseId] = useState<number | "all">("all");
+
   const roomSummary = Array.isArray(data?.roomSummary) ? data.roomSummary : [];
   const itemRows = Array.isArray(data?.itemRows) ? data.itemRows : [];
+  const sourceWarehouses = Array.isArray(data?.sourceWarehouses) ? data.sourceWarehouses : [];
 
   const roomColumns = useMemo(
     () => roomSummary.map((room: any) => ({ id: Number(room.roomId), name: room.roomName })),
     [roomSummary],
   );
 
+  const sourceNameById = useMemo(
+    () => new Map(sourceWarehouses.map((warehouse: any) => [Number(warehouse.id), warehouse.name])),
+    [sourceWarehouses],
+  );
+
   const itemMap = useMemo(() => {
     const map = new Map<number, any>();
+
     for (const item of items) {
+      const sourceWarehouseId = item.sourceWarehouseId == null ? null : Number(item.sourceWarehouseId);
       map.set(Number(item.id), {
         id: Number(item.id),
         name: item.name,
         sku: item.sku,
         unit: item.unit,
+        sourceWarehouseId,
+        sourceWarehouseName: sourceWarehouseId ? sourceNameById.get(sourceWarehouseId) ?? "Sumber tidak diketahui" : "Belum ditetapkan",
       });
     }
+
     for (const row of itemRows) {
       const id = Number(row.itemId);
-      if (!map.has(id)) {
-        map.set(id, {
-          id,
-          name: row.itemName,
-          sku: row.sku,
-          unit: row.unit,
-        });
-      }
+      const sourceWarehouseId = row.sourceWarehouseId == null ? null : Number(row.sourceWarehouseId);
+      const existing = map.get(id);
+
+      map.set(id, {
+        id,
+        name: existing?.name ?? row.itemName,
+        sku: existing?.sku ?? row.sku,
+        unit: existing?.unit ?? row.unit,
+        sourceWarehouseId: existing?.sourceWarehouseId ?? sourceWarehouseId,
+        sourceWarehouseName:
+          existing?.sourceWarehouseName ??
+          row.sourceWarehouseName ??
+          (sourceWarehouseId ? sourceNameById.get(sourceWarehouseId) ?? "Sumber tidak diketahui" : "Belum ditetapkan"),
+      });
     }
+
     return map;
-  }, [items, itemRows]);
+  }, [items, itemRows, sourceNameById]);
 
   const activityByItem = useMemo(() => {
     const map = new Map<number, Map<number, any>>();
@@ -788,38 +810,95 @@ function RoomDemandPanel({
       .filter((item) => {
         const activity = activityByItem.get(item.id);
         const hasActivity = Boolean(activity?.size);
+        const matchesSource =
+          selectedSourceWarehouseId === "all" ||
+          Number(item.sourceWarehouseId) === Number(selectedSourceWarehouseId);
+
+        if (!matchesSource) return false;
         if (!query) return hasActivity;
+
         return [item.name, item.sku, item.unit].some((value) =>
           String(value ?? "").toLowerCase().includes(query),
         );
       })
       .sort((a, b) => String(a.name).localeCompare(String(b.name), "id"));
-  }, [activityByItem, itemMap, search]);
+  }, [activityByItem, itemMap, search, selectedSourceWarehouseId]);
 
+  const totalPages = Math.max(1, Math.ceil(rows.length / pageSize));
+  const safePage = Math.min(page, totalPages);
+  const pagedRows = rows.slice((safePage - 1) * pageSize, safePage * pageSize);
   const searched = Boolean(search.trim());
+
+  useEffect(() => {
+    setPage(1);
+  }, [search, selectedSourceWarehouseId]);
+
+  useEffect(() => {
+    if (page !== safePage) setPage(safePage);
+  }, [page, safePage]);
+
+  const sourceLabel =
+    selectedSourceWarehouseId === "all"
+      ? "Semua gudang sumber"
+      : sourceWarehouses.find((warehouse: any) => Number(warehouse.id) === Number(selectedSourceWarehouseId))?.name ?? "Gudang sumber";
 
   return (
     <Card className="overflow-hidden border-[#b8a27a]/70 bg-[#fffaf0] shadow-sm">
       <CardHeader className="border-b border-[#d8c9a8]/70 bg-[#f7efd7]/55">
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-          <div>
-            <p className="golog-kicker">Perbandingan antar-ruangan</p>
-            <CardTitle className="mt-1">Distribusi per Barang</CardTitle>
-            <p className="mt-1 text-sm text-[#7e6b57]">
-              Baris = satu barang. Kolom = ruangan. Cari nama atau SKU untuk memeriksa item tertentu.
-            </p>
+        <div className="space-y-4">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+            <div>
+              <p className="golog-kicker">Perbandingan antar-ruangan</p>
+              <CardTitle className="mt-1">Distribusi per Barang</CardTitle>
+              <p className="mt-1 text-sm text-[#7e6b57]">
+                Baris = satu barang. Kolom = ruangan. Gunakan pencarian untuk item tertentu dan filter gudang sumber untuk memisahkan 4 gudang pusat.
+              </p>
+            </div>
+
+            <div className="w-full lg:max-w-md">
+              <div className="relative">
+                <Search size={17} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[#8b7b67]" />
+                <Input
+                  value={search}
+                  onChange={(event) => setSearch(event.target.value)}
+                  placeholder="Cari nama barang atau SKU…"
+                  className="h-11 rounded-xl border-2 border-[#b8a27a] bg-[#fffaf0] pl-10 text-[#5a4738]"
+                />
+              </div>
+            </div>
           </div>
 
-          <div className="w-full lg:max-w-md">
-            <div className="relative">
-              <Search size={17} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[#8b7b67]" />
-              <Input
-                value={search}
-                onChange={(event) => setSearch(event.target.value)}
-                placeholder="Cari nama barang atau SKU…"
-                className="h-11 rounded-xl border-2 border-[#b8a27a] bg-[#fffaf0] pl-10 text-[#5a4738]"
-              />
-            </div>
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={() => setSelectedSourceWarehouseId("all")}
+              className={
+                selectedSourceWarehouseId === "all"
+                  ? "rounded-full border border-[#102a2b] bg-[#102a2b] px-3 py-2 text-xs font-semibold text-white"
+                  : "rounded-full border border-[#d0be97] bg-[#fffaf0] px-3 py-2 text-xs font-semibold text-[#7e6b57] hover:bg-[#eee2bd]"
+              }
+            >
+              Semua sumber
+            </button>
+
+            {sourceWarehouses.map((warehouse: any) => {
+              const warehouseId = Number(warehouse.id);
+              const active = selectedSourceWarehouseId === warehouseId;
+              return (
+                <button
+                  key={warehouseId}
+                  type="button"
+                  onClick={() => setSelectedSourceWarehouseId(warehouseId)}
+                  className={
+                    active
+                      ? "rounded-full border border-[#7f9146] bg-[#dce4a7] px-3 py-2 text-xs font-semibold text-[#4e5e29]"
+                      : "rounded-full border border-[#d0be97] bg-[#fffaf0] px-3 py-2 text-xs font-semibold text-[#7e6b57] hover:bg-[#eee2bd]"
+                  }
+                >
+                  {warehouse.name}
+                </button>
+              );
+            })}
           </div>
         </div>
       </CardHeader>
@@ -828,8 +907,8 @@ function RoomDemandPanel({
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
           <div className="text-xs text-[#8b7b67]">
             {searched
-              ? `Hasil pencarian: ${formatNumber(rows.length)} item`
-              : `Menampilkan ${formatNumber(rows.length)} item yang memiliki distribusi pada periode ini`}
+              ? "Hasil pencarian: " + formatNumber(rows.length) + " item · " + sourceLabel
+              : "Menampilkan " + formatNumber(rows.length) + " item aktif pada " + sourceLabel}
           </div>
           <div className="rounded-full border border-[#d0be97] bg-[#f7efd7] px-3 py-1.5 text-[11px] font-semibold text-[#7e6b57]">
             Periode: {data?.days === 7 ? "1 minggu" : (data?.days ?? 0) + " hari"}
@@ -850,7 +929,7 @@ function RoomDemandPanel({
             </thead>
 
             <tbody className="divide-y divide-[#e4d9be] bg-[#fffaf0]">
-              {rows.map((item: any) => {
+              {pagedRows.map((item: any) => {
                 const byRoom = activityByItem.get(item.id) ?? new Map();
                 const totalQty = roomColumns.reduce((sum: number, room: any) => sum + Number(byRoom.get(room.id)?.totalQty ?? 0), 0);
                 const totalActiveDays = roomColumns.reduce((sum: number, room: any) => sum + Number(byRoom.get(room.id)?.activeDays ?? 0), 0);
@@ -873,8 +952,8 @@ function RoomDemandPanel({
                       return (
                         <td
                           key={room.id}
-                          title={row ? `${formatNumber(total)} ${item.unit} dalam ${formatNumber(activeDays)} hari aktif` : "Tidak ada distribusi"}
-                          className={`border-l border-[#eee4cf] px-3 py-3 text-right ${row ? "bg-[#eef0d5]/35" : ""}`}
+                          title={row ? formatNumber(total) + " " + item.unit + " dalam " + formatNumber(activeDays) + " hari aktif" : "Tidak ada distribusi"}
+                          className={"border-l border-[#eee4cf] px-3 py-3 text-right " + (row ? "bg-[#eef0d5]/35" : "")}
                         >
                           {row ? (
                             <>
@@ -896,7 +975,7 @@ function RoomDemandPanel({
                 );
               })}
 
-              {!rows.length && (
+              {!pagedRows.length && (
                 <tr>
                   <td colSpan={roomColumns.length + 3} className="px-5 py-12 text-center">
                     <Search className="mx-auto text-[#b4a58c]" size={24} />
@@ -904,7 +983,7 @@ function RoomDemandPanel({
                       {searched ? "Barang tidak ditemukan" : "Belum ada distribusi dalam periode ini"}
                     </p>
                     <p className="mt-1 text-sm text-[#8b7b67]">
-                      {searched ? "Coba nama barang atau SKU lain." : "Pilih periode lain untuk melihat histori distribusi."}
+                      {searched ? "Coba nama barang atau SKU lain." : "Pilih periode atau gudang sumber lain untuk melihat histori distribusi."}
                     </p>
                   </td>
                 </tr>
@@ -913,14 +992,42 @@ function RoomDemandPanel({
           </table>
         </div>
 
+        <div className="mt-4 flex flex-col gap-3 border-t border-[#e0d4b8] pt-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="text-xs text-[#8b7b67]">
+            {rows.length
+              ? "Menampilkan " + formatNumber((safePage - 1) * pageSize + 1) + "–" + formatNumber(Math.min(safePage * pageSize, rows.length)) + " dari " + formatNumber(rows.length) + " barang · maks. 15 baris per halaman"
+              : "Tidak ada baris untuk ditampilkan"}
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              disabled={safePage <= 1}
+              onClick={() => setPage((current) => Math.max(1, current - 1))}
+              className="rounded-lg border border-[#d0be97] bg-[#fffaf0] px-3 py-2 text-xs font-semibold text-[#7e6b57] hover:bg-[#eee2bd] disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              ‹ Sebelumnya
+            </button>
+            <span className="rounded-lg border border-[#d8c9a8] bg-[#f7efd7] px-3 py-2 text-xs font-semibold text-[#5a4738]">
+              {safePage} / {totalPages}
+            </span>
+            <button
+              type="button"
+              disabled={safePage >= totalPages}
+              onClick={() => setPage((current) => Math.min(totalPages, current + 1))}
+              className="rounded-lg border border-[#d0be97] bg-[#fffaf0] px-3 py-2 text-xs font-semibold text-[#7e6b57] hover:bg-[#eee2bd] disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              Berikutnya ›
+            </button>
+          </div>
+        </div>
+
         <div className="mt-4 rounded-xl border border-[#d8c9a8] bg-[#eee2bd]/45 px-4 py-3 text-xs leading-5 text-[#7e6b57]">
-          Angka utama di tiap kolom adalah <strong>rata-rata distribusi per hari aktif</strong>. Total ditampilkan kecil di bawahnya agar satu barang dapat dibandingkan antar-ruangan tanpa membuka halaman satu per satu.
+          Angka utama di tiap kolom adalah <strong>rata-rata distribusi per hari aktif</strong>. Data dapat dipisahkan berdasarkan gudang sumber: Gudang Farmasi, Gudang RT, CSSD, dan Laboratorium.
         </div>
       </CardContent>
     </Card>
   );
 }
-
 function Overview({
   dashboard,
   isAdmin,
