@@ -179,895 +179,379 @@
 }
 
 
+
 :root {
-  --golog-cream: #F4FAFC;
-  --golog-paper: #FFFFFF;
-  --golog-paper-strong: #BAE4F0;
-  --golog-olive: #0091B9;
-  --golog-olive-dark: #004E9B;
-  --golog-brown: #07304A;
-  --golog-brown-soft: #315563;
+  --golog-bg: #F4FAFC;
+  --golog-surface: #FFFFFF;
+  --golog-soft: #BAE4F0;
+  --golog-teal: #0091B9;
+  --golog-blue: #004E9B;
+  --golog-orange: #FF6500;
+  --golog-yellow: #FFD500;
+  --golog-navy: #07304A;
+  --golog-muted: #55727C;
   --golog-line: #9CCED8;
-  --golog-alert: #FF6500;
-  --golog-shadow: rgba(90, 71, 56, 0.16);
+  --golog-shadow: rgba(0, 78, 155, 0.12);
+  --radius: 0.9rem;
 }
 
 @layer base {
   body {
-    background: var(--golog-cream);
-    color: var(--golog-brown);
+    background: var(--golog-bg);
+    color: var(--golog-navy);
   }
+
   h1, h2, h3, h4, [data-slot="card-title"] {
     font-family: Georgia, "Times New Roman", serif;
-    color: var(--golog-brown);
+    color: var(--golog-navy);
   }
 }
 
 @layer components {
   .golog-app {
-    background:
-      radial-gradient(circle at 8% 0%, rgba(255, 250, 240, 0.75), transparent 28%),
-      radial-gradient(circle at 100% 100%, rgba(181, 159, 115, 0.18), transparent 34%),
-      var(--golog-cream);
-    color: var(--golog-brown);
+    min-height: 100vh;
+    background: var(--page-bg, var(--golog-bg));
+    color: var(--golog-navy);
   }
 
-  .golog-sidebar {
-    background:
-      linear-gradient(180deg, #5c4939 0%, #07304A 100%);
-    color: #f8f0db;
-    border-right: 1px solid rgba(255, 248, 231, 0.16);
-    box-shadow: 10px 0 28px rgba(78, 58, 42, 0.12);
+  .golog-app .golog-sidebar {
+    background: linear-gradient(180deg, var(--golog-navy) 0%, var(--golog-blue) 100%);
+    color: #FFFFFF;
+    border-right: 0;
+    box-shadow: 10px 0 28px rgba(0, 50, 90, 0.16);
   }
 
-  .golog-brand-mark {
-    border: 2px solid rgba(255, 248, 231, 0.5);
-    background: #BAE4F0;
-    color: var(--golog-brown);
-    box-shadow: inset 0 0 0 3px rgba(90, 71, 56, 0.12);
+  .golog-app .golog-brand-mark {
+    background: var(--golog-yellow);
+    color: var(--golog-blue);
+    border: 2px solid rgba(255,255,255,.82);
   }
 
-  .golog-topbar {
-    background: color-mix(in srgb, var(--golog-cream) 90%, transparent);
-    border-bottom: 1px solid rgba(184, 162, 122, 0.55);
+  .golog-app .golog-nav-active {
+    background: var(--page-soft, var(--golog-soft));
+    color: var(--page-strong, var(--golog-blue));
+    border: 0;
+    box-shadow: inset 4px 0 0 var(--page-signal, var(--golog-orange));
+  }
+
+  .golog-app .golog-bottom-nav {
+    background: var(--golog-navy);
+    border-top: 2px solid var(--page-accent, var(--golog-teal));
+  }
+
+  .golog-app .golog-bottom-active {
+    color: var(--page-signal, var(--golog-yellow));
+  }
+
+  .golog-app .golog-bottom-fab {
+    background: var(--page-accent, var(--golog-teal));
+    border-color: #FFFFFF;
+  }
+
+  .golog-app .golog-topbar {
+    background: rgba(255,255,255,.96);
+    border-bottom: 3px solid var(--page-accent, var(--golog-teal));
     backdrop-filter: blur(14px);
   }
 
+  .golog-app .golog-topbar h1 {
+    color: var(--page-strong, var(--golog-navy));
+    font-size: 1.5rem;
+  }
+
+  .golog-app .golog-topbar button {
+    color: var(--page-strong, var(--golog-navy));
+  }
+
+  .golog-app .golog-sidebar button {
+    border-radius: .7rem;
+  }
+
+  .golog-app .golog-sidebar button:not(.golog-nav-active) {
+    color: rgba(255,255,255,.82);
+  }
+
+  .golog-app .golog-sidebar button:not(.golog-nav-active):hover {
+    background: rgba(186,228,240,.12);
+    color: #FFFFFF;
+  }
+
   .golog-page {
-    color: var(--golog-brown);
+    min-height: calc(100vh - 5rem);
+    color: var(--golog-navy);
   }
 
   .golog-mobile-surface {
-    background:
-      linear-gradient(180deg, #F4FAFC 0%, #eadcad 100%);
+    background: var(--page-bg, var(--golog-bg));
   }
 
   .golog-panel {
-    background: var(--golog-paper);
+    background: var(--golog-surface);
     border: 2px solid var(--golog-line);
-    box-shadow:
-      inset 0 0 0 3px rgba(255, 250, 240, 0.68),
-      0 8px 18px var(--golog-shadow);
+    box-shadow: 0 8px 18px var(--golog-shadow);
   }
 
   .golog-panel-soft {
-    background: rgba(247, 239, 215, 0.72);
-    border: 1px solid rgba(184, 162, 122, 0.72);
+    background: color-mix(in srgb, var(--page-soft, var(--golog-soft)) 38%, var(--golog-surface));
+    border: 1px solid color-mix(in srgb, var(--page-accent, var(--golog-teal)) 28%, var(--golog-line));
   }
 
   .golog-display {
     font-family: Georgia, "Times New Roman", serif;
     font-style: italic;
-    letter-spacing: -0.02em;
+    letter-spacing: -.02em;
   }
 
   .golog-kicker {
-    color: var(--golog-brown-soft);
+    color: var(--page-accent, var(--golog-teal));
     font-family: Georgia, "Times New Roman", serif;
-    font-size: 0.72rem;
+    font-size: .72rem;
     font-weight: 700;
-    letter-spacing: 0.12em;
+    letter-spacing: .12em;
     text-transform: uppercase;
   }
 
   .golog-outline-button {
     border: 2px solid var(--golog-line);
-    background: var(--golog-paper);
-    color: var(--golog-brown);
-    box-shadow: inset 0 0 0 2px rgba(255, 250, 240, 0.55), 0 4px 10px var(--golog-shadow);
+    background: var(--golog-surface);
+    color: var(--page-strong, var(--golog-navy));
+    box-shadow: 0 4px 10px var(--golog-shadow);
   }
 
   .golog-primary-button {
-    border: 2px solid #5f6d32;
-    background: var(--golog-olive);
+    border: 2px solid var(--page-accent, var(--golog-teal));
+    background: var(--page-accent, var(--golog-teal));
     color: #FFFFFF;
-    box-shadow: inset 0 0 0 2px rgba(255, 250, 240, 0.12), 0 6px 14px rgba(100, 117, 58, 0.24);
+    box-shadow: 0 6px 14px var(--golog-shadow);
   }
 
   .golog-primary-button:hover {
-    background: var(--golog-olive-dark);
-  }
-
-  .golog-nav-active {
-    background: #BAE4F0 !important;
-    color: var(--golog-brown) !important;
-    border: 1px solid rgba(255, 248, 231, 0.2);
-    box-shadow: inset 0 0 0 2px rgba(90, 71, 56, 0.08);
+    filter: brightness(.92);
   }
 
   .golog-search {
-    background: rgba(247, 239, 215, 0.88);
+    background: var(--golog-surface);
     border: 2px solid var(--golog-line);
-    color: var(--golog-brown);
-    box-shadow: inset 0 0 0 3px rgba(255, 250, 240, 0.58);
+    color: var(--golog-navy);
   }
 
-  .golog-bottom-nav {
-    background: #07304A;
-    border-top: 2px solid #6D98A6;
-    box-shadow: 0 -10px 24px rgba(78, 58, 42, 0.16);
-  }
-
-  .golog-bottom-active {
-    color: #FFD500 !important;
-  }
-
-  .golog-bottom-fab {
-    background: var(--golog-olive);
-    border-color: var(--golog-paper);
-    box-shadow: 0 10px 22px rgba(100, 117, 58, 0.28);
-  }
-}
-
-
-@layer components {
   select {
     border: 2px solid var(--golog-line);
-    background: var(--golog-paper);
-    color: var(--golog-brown);
-    border-radius: 0.65rem;
-    box-shadow: inset 0 0 0 2px rgba(255, 250, 240, 0.52);
+    background: var(--golog-surface);
+    color: var(--golog-navy);
+    border-radius: .65rem;
   }
 
   select:focus {
     outline: none;
-    border-color: var(--golog-olive);
-    box-shadow: 0 0 0 3px rgba(127, 145, 70, 0.18), inset 0 0 0 2px rgba(255, 250, 240, 0.52);
+    border-color: var(--page-accent, var(--golog-teal));
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--page-accent, var(--golog-teal)) 18%, transparent);
   }
 
-  .golog-mobile-surface [data-slot="card"],
-  .golog-mobile-surface .bg-white {
-    background: var(--golog-paper) !important;
-  }
-
-  .golog-mobile-surface .bg-slate-50,
-  .golog-mobile-surface .bg-slate-50\/70 {
-    background: rgba(247, 239, 215, 0.72) !important;
-  }
-
-  .golog-mobile-surface .text-slate-400 {
-    color: var(--golog-brown-soft) !important;
-  }
-
-  .golog-mobile-surface .text-slate-500,
-  .golog-mobile-surface .text-slate-600 {
-    color: #315563 !important;
-  }
-
-  .golog-mobile-surface .border-slate-200,
-  .golog-mobile-surface .ring-slate-200\/70 {
-    border-color: rgba(184, 162, 122, 0.72) !important;
-  }
-}
-
-
-@layer components {
   .golog-app main {
     background: transparent;
   }
 
-  .golog-app main [data-slot="card"] {
-    border-color: var(--golog-line);
-    background: var(--golog-paper);
-    box-shadow:
-      inset 0 0 0 2px rgba(255, 250, 240, 0.58),
-      0 8px 18px var(--golog-shadow);
+  .golog-app main [data-slot="card"],
+  .golog-app main .golog-panel {
+    background: rgba(255,255,255,.97);
+    border-color: color-mix(in srgb, var(--page-accent, var(--golog-teal)) 28%, var(--golog-line));
+    box-shadow: 0 8px 24px var(--golog-shadow);
+  }
+
+  .golog-app main .golog-panel-soft {
+    background: color-mix(in srgb, var(--page-soft, var(--golog-soft)) 28%, #FFFFFF);
+    border-color: color-mix(in srgb, var(--page-accent, var(--golog-teal)) 22%, var(--golog-line));
   }
 
   .golog-app main [data-slot="card-header"] {
-    border-color: rgba(184, 162, 122, 0.58);
+    border-color: color-mix(in srgb, var(--page-accent, var(--golog-teal)) 20%, var(--golog-line));
   }
 
-  .golog-app main [data-slot="card-title"] {
-    color: var(--golog-brown);
-    letter-spacing: -0.015em;
+  .golog-app main [data-slot="card-title"],
+  .golog-app main h1,
+  .golog-app main h2,
+  .golog-app main h3,
+  .golog-app main h4 {
+    color: var(--page-strong, var(--golog-navy));
   }
 
-  .golog-app main [data-slot="input"],
+  .golog-app main input,
   .golog-app main textarea,
   .golog-app main select {
-    border-color: var(--golog-line);
-    background: rgba(247, 239, 215, 0.9);
-    color: var(--golog-brown);
+    background: #FFFFFF;
+    border-color: color-mix(in srgb, var(--page-accent, var(--golog-teal)) 38%, var(--golog-line));
+    color: var(--golog-navy);
+  }
+
+  .golog-app main input:focus,
+  .golog-app main textarea:focus,
+  .golog-app main select:focus {
+    border-color: var(--page-accent, var(--golog-teal));
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--page-accent, var(--golog-teal)) 18%, transparent);
   }
 
   .golog-app main table thead {
-    background: rgba(229, 216, 171, 0.5);
-    color: var(--golog-brown-soft);
+    background: var(--page-soft, var(--golog-soft));
+    color: var(--page-strong, var(--golog-blue));
   }
 
   .golog-app main table tbody tr:hover {
-    background: rgba(229, 216, 171, 0.18);
+    background: color-mix(in srgb, var(--page-soft, var(--golog-soft)) 38%, #FFFFFF);
+  }
+
+  .golog-app main .text-slate-400 {
+    color: var(--golog-muted);
+  }
+
+  .golog-app main .text-slate-500,
+  .golog-app main .text-slate-600 {
+    color: #315563;
+  }
+
+  .golog-app main .text-slate-700,
+  .golog-app main .text-slate-800,
+  .golog-app main .text-slate-900 {
+    color: var(--golog-navy);
   }
 
   .golog-app main .bg-slate-50,
   .golog-app main .bg-slate-50\/30,
   .golog-app main .bg-slate-50\/60,
   .golog-app main .bg-slate-50\/70 {
-    background: rgba(237, 226, 189, 0.42);
-  }
-
-  .golog-app main .bg-white {
-    background: var(--golog-paper);
-  }
-
-  .golog-app main .border-slate-200,
-  .golog-app main .border-slate-100 {
-    border-color: rgba(184, 162, 122, 0.72);
-  }
-
-  .golog-app main .divide-slate-100 > :not([hidden]) ~ :not([hidden]) {
-    border-color: rgba(184, 162, 122, 0.48);
-  }
-
-  .golog-app main .text-slate-400 {
-    color: var(--golog-brown-soft);
-  }
-
-  .golog-app main .text-slate-500 {
-    color: #315563;
-  }
-
-  .golog-app main .text-slate-600 {
-    color: #07304A;
-  }
-
-  .golog-app main .text-slate-700 {
-    color: var(--golog-brown);
-  }
-
-  .golog-app main .text-slate-800,
-  .golog-app main .text-slate-900 {
-    color: #07304A;
-  }
-
-  .golog-app main .hover\:bg-slate-50:hover,
-  .golog-app main .hover\:bg-slate-50\/70:hover {
-    background: rgba(229, 216, 171, 0.34);
-  }
-
-  .golog-app main .rounded-2xl,
-  .golog-app main .rounded-xl {
-    --tw-ring-color: rgba(184, 162, 122, 0.55);
-  }
-
-  .golog-page {
-    min-height: calc(100vh - 5rem);
-  }
-
-  .golog-topbar h1 {
-    font-family: Georgia, "Times New Roman", serif;
-    color: var(--golog-brown);
-    font-size: 1.5rem;
-  }
-
-  .golog-topbar button {
-    color: var(--golog-brown);
-  }
-
-  .golog-sidebar button {
-    border-radius: 0.7rem;
-  }
-
-  .golog-sidebar .text-teal-50\/70 {
-    color: rgba(247, 239, 215, 0.72);
-  }
-
-  .golog-bottom-nav button {
-    color: rgba(247, 239, 215, 0.62);
-  }
-
-  .golog-bottom-nav button.golog-bottom-active {
-    color: #BAE4F0 !important;
-  }
-}
-
-
-/* Golog.Irin — Fresh teal reference system.
-   Reference: stone wash + cerulean + teal + tomato + hunter.
-   Pages share structure, but each workspace gets a deliberate color composition. */
-:root {
-  --golog-stone: #d0d3c5;
-  --golog-cerulean: #0091B9;
-  --golog-teal: #004E9B;
-  --golog-tomato: #FF6500;
-  --golog-hunter: #07304A;
-  --golog-cream: #eef0ea;
-  --golog-paper: #fbfcf8;
-  --golog-paper-strong: #E6F4F7;
-  --golog-brown: #0B3D5C;
-  --golog-brown-soft: #55727C;
-  --golog-line: #9CCED8;
-  --golog-alert: #D94A1A;
-  --golog-shadow: rgba(3, 43, 47, 0.14);
-}
-
-@layer components {
-  /* Shared identity: deeper navigation, stronger contrast, softer content surfaces. */
-  .golog-app .golog-sidebar {
-    background: linear-gradient(180deg, var(--golog-hunter) 0%, color-mix(in srgb, var(--golog-hunter) 82%, var(--golog-teal)) 100%);
-    color: #FFFFFF;
-    border-right-color: rgba(255,255,255,0.12);
-  }
-
-  .golog-app .golog-brand-mark {
-    background: var(--golog-stone);
-    color: var(--golog-hunter);
-    border-color: rgba(255,255,255,0.62);
-  }
-
-  .golog-app .golog-nav-active {
-    background: var(--golog-nav-active, var(--golog-cerulean)) !important;
-    color: var(--golog-hunter) !important;
-  }
-
-  .golog-app .golog-bottom-nav {
-    background: var(--golog-hunter);
-    border-top-color: color-mix(in srgb, var(--golog-cerulean) 58%, transparent);
-  }
-
-  .golog-app .golog-bottom-active {
-    color: var(--golog-cerulean) !important;
-  }
-
-  .golog-app .golog-bottom-fab {
-    background: var(--golog-teal);
-    border-color: var(--golog-paper);
-  }
-
-  /* Login — calm and crisp: cerulean field, hunter copy, tiny tomato accent. */
-  .golog-theme-login {
-    --golog-cream: #eaf2f1;
-    --golog-paper: #FFFFFF;
-    --golog-paper-strong: #E6F4F7;
-    --golog-line: #9CCED8;
-    --golog-brown: #0B3D5C;
-    --golog-brown-soft: #55727C;
-    --golog-shadow: rgba(8,112,138,0.15);
-    --primary: #004E9B;
-    --primary-foreground: #FFFFFF;
-    --ring: #0091B9;
-    --background: #eaf2f1;
-    --card: #FFFFFF;
-    --popover: #FFFFFF;
-    --secondary: #E6F4F7;
-    --muted: #E6F4F7;
-    --accent: #FF6500;
-    --accent-foreground: #ffffff;
-    --golog-nav-active: #0091B9;
-  }
-
-  /* Overview — cerulean leads; tomato appears only as a signal. */
-  .golog-theme-overview {
-    --golog-cream: #e4f1f3;
-    --golog-paper: #FFFFFF;
-    --golog-paper-strong: #BAE4F0;
-    --golog-line: #9CCED8;
-    --golog-brown: #0B3D5C;
-    --golog-brown-soft: #55727C;
-    --golog-shadow: rgba(8,112,138,0.14);
-    --primary: #004E9B;
-    --primary-foreground: #FFFFFF;
-    --ring: #0091B9;
-    --background: #e4f1f3;
-    --card: #FFFFFF;
-    --popover: #FFFFFF;
-    --secondary: #BAE4F0;
-    --muted: #E6F4F7;
-    --accent: #FF6500;
-    --accent-foreground: #ffffff;
-    --golog-nav-active: #0091B9;
-  }
-
-  /* Requests — hunter frame + tomato action strip + cerulean support. */
-  .golog-theme-requests {
-    --golog-cream: #F4FAFC;
-    --golog-paper: #FFFFFF;
-    --golog-paper-strong: #D5E8ED;
-    --golog-line: #9eb4b5;
-    --golog-brown: #0B3D5C;
-    --golog-brown-soft: #55727C;
-    --golog-shadow: rgba(3,43,47,0.16);
-    --primary: #FF6500;
-    --primary-foreground: #ffffff;
-    --ring: #004E9B;
-    --background: #F4FAFC;
-    --card: #FFFFFF;
-    --popover: #FFFFFF;
-    --secondary: #D5E8ED;
-    --muted: #E6F4F7;
-    --accent: #0091B9;
-    --accent-foreground: #07304A;
-    --golog-nav-active: #BAE4F0;
-  }
-
-  /* Stock — stone wash is dominant, teal creates clear data hierarchy. */
-  .golog-theme-stock {
-    --golog-cream: #F4FAFC;
-    --golog-paper: #FFFFFF;
-    --golog-paper-strong: #d0d3c5;
-    --golog-line: #aab4aa;
-    --golog-brown: #294247;
-    --golog-brown-soft: #55727C;
-    --golog-shadow: rgba(3,43,47,0.11);
-    --primary: #004E9B;
-    --primary-foreground: #FFFFFF;
-    --ring: #0091B9;
-    --background: #F4FAFC;
-    --card: #FFFFFF;
-    --popover: #FFFFFF;
-    --secondary: #d0d3c5;
-    --muted: #E6F4F7;
-    --accent: #0091B9;
-    --accent-foreground: #07304A;
-    --golog-nav-active: #BAE4F0;
-  }
-
-  /* Inbound — cerulean surface with deep-teal controls. */
-  .golog-theme-inbound {
-    --golog-cream: #E6F4F7;
-    --golog-paper: #FFFFFF;
-    --golog-paper-strong: #BAE4F0;
-    --golog-line: #9CCED8;
-    --golog-brown: #0B3D5C;
-    --golog-brown-soft: #55727C;
-    --golog-shadow: rgba(8,112,138,0.15);
-    --primary: #004E9B;
-    --primary-foreground: #FFFFFF;
-    --ring: #FF6500;
-    --background: #E6F4F7;
-    --card: #FFFFFF;
-    --popover: #FFFFFF;
-    --secondary: #BAE4F0;
-    --muted: #E6F4F7;
-    --accent: #FF6500;
-    --accent-foreground: #ffffff;
-    --golog-nav-active: #0091B9;
-  }
-
-  /* Adjustments — deep, editorial, with tomato used for change state. */
-  .golog-theme-adjustments {
-    --golog-cream: #E6F4F7;
-    --golog-paper: #FFFFFF;
-    --golog-paper-strong: #D5E8ED;
-    --golog-line: #9CCED8;
-    --golog-brown: #0B3D5C;
-    --golog-brown-soft: #55727C;
-    --golog-shadow: rgba(3,43,47,0.18);
-    --primary: #07304A;
-    --primary-foreground: #FFFFFF;
-    --ring: #FF6500;
-    --background: #E6F4F7;
-    --card: #FFFFFF;
-    --popover: #FFFFFF;
-    --secondary: #D5E8ED;
-    --muted: #E6F4F7;
-    --accent: #FF6500;
-    --accent-foreground: #ffffff;
-    --golog-nav-active: #0091B9;
-  }
-
-  /* Stock Opname — neutral stone + high-contrast teal checkpoints. */
-  .golog-theme-stocktake {
-    --golog-cream: #F4FAFC;
-    --golog-paper: #FFFFFF;
-    --golog-paper-strong: #d0d3c5;
-    --golog-line: #aeb9af;
-    --golog-brown: #294247;
-    --golog-brown-soft: #55727C;
-    --golog-shadow: rgba(3,43,47,0.12);
-    --primary: #004E9B;
-    --primary-foreground: #FFFFFF;
-    --ring: #FF6500;
-    --background: #F4FAFC;
-    --card: #FFFFFF;
-    --popover: #FFFFFF;
-    --secondary: #d0d3c5;
-    --muted: #e0e3db;
-    --accent: #FF6500;
-    --accent-foreground: #ffffff;
-    --golog-nav-active: #0091B9;
-  }
-
-  /* Room Demand — most visual: cerulean body, deep-teal matrix, tomato only for alerts. */
-  .golog-theme-room-demand {
-    --golog-cream: #E6F4F7;
-    --golog-paper: #FFFFFF;
-    --golog-paper-strong: #BAE4F0;
-    --golog-line: #9CCED8;
-    --golog-brown: #0B3D5C;
-    --golog-brown-soft: #50727a;
-    --golog-shadow: rgba(8,112,138,0.16);
-    --primary: #004E9B;
-    --primary-foreground: #FFFFFF;
-    --ring: #FF6500;
-    --background: #E6F4F7;
-    --card: #FFFFFF;
-    --popover: #FFFFFF;
-    --secondary: #BAE4F0;
-    --muted: #E6F4F7;
-    --accent: #FF6500;
-    --accent-foreground: #ffffff;
-    --golog-nav-active: #0091B9;
-  }
-
-  /* Reports — hunter is dominant for a denser, more serious reading mode. */
-  .golog-theme-reports {
-    --golog-cream: #E6F4F7;
-    --golog-paper: #FFFFFF;
-    --golog-paper-strong: #D5E8ED;
-    --golog-line: #9CCED8;
-    --golog-brown: #0B3D5C;
-    --golog-brown-soft: #55727C;
-    --golog-shadow: rgba(3,43,47,0.18);
-    --primary: #07304A;
-    --primary-foreground: #FFFFFF;
-    --ring: #0091B9;
-    --background: #E6F4F7;
-    --card: #FFFFFF;
-    --popover: #FFFFFF;
-    --secondary: #D5E8ED;
-    --muted: #E6F4F7;
-    --accent: #0091B9;
-    --accent-foreground: #07304A;
-    --golog-nav-active: #0091B9;
-  }
-
-  /* Theme application: strengthen contrast without turning every page into a rainbow. */
-  .golog-app main [data-slot="card"],
-  .golog-app main [data-slot="popover"] {
-    background: var(--card) !important;
-    color: var(--card-foreground);
-    border-color: var(--golog-line) !important;
-  }
-
-  .golog-app .golog-topbar {
-    background: color-mix(in srgb, var(--golog-cream) 92%, transparent) !important;
-    border-bottom-color: color-mix(in srgb, var(--golog-line) 72%, transparent) !important;
-  }
-
-  .golog-app main [data-slot="input"],
-  .golog-app main textarea,
-  .golog-app main select {
-    background: color-mix(in srgb, var(--card) 90%, var(--golog-cream)) !important;
-    border-color: var(--golog-line) !important;
-    color: var(--golog-brown) !important;
-  }
-
-  .golog-app main table thead {
-    background: color-mix(in srgb, var(--golog-stone) 62%, var(--golog-cream)) !important;
-    color: var(--golog-brown) !important;
-  }
-
-  .golog-app main .golog-panel,
-  .golog-app main .golog-panel-soft,
-  .golog-app main .golog-outline-button,
-  .golog-app main .golog-search {
-    background: var(--card) !important;
-    border-color: var(--golog-line) !important;
-  }
-
-  .golog-app main .golog-primary-button {
-    background: var(--primary) !important;
-    color: var(--primary-foreground) !important;
-    border-color: color-mix(in srgb, var(--primary) 78%, #000) !important;
-  }
-
-  .golog-app main .golog-primary-button:hover {
-    background: color-mix(in srgb, var(--primary) 84%, #000) !important;
-  }
-
-  .golog-app main .golog-display,
-  .golog-app main h1,
-  .golog-app main h2,
-  .golog-app main h3,
-  .golog-app main h4,
-  .golog-app main [data-slot="card-title"] {
-    color: var(--golog-brown) !important;
-  }
-
-  .golog-app main .text-slate-400 { color: var(--golog-brown-soft) !important; }
-  .golog-app main .text-slate-500 { color: color-mix(in srgb, var(--golog-brown-soft) 88%, var(--golog-brown)) !important; }
-  .golog-app main .text-slate-600,
-  .golog-app main .text-slate-700 { color: var(--golog-brown) !important; }
-
-  .golog-app main .bg-slate-50,
-  .golog-app main .bg-slate-50\\/30,
-  .golog-app main .bg-slate-50\\/60,
-  .golog-app main .bg-slate-50\\/70 {
-    background: color-mix(in srgb, var(--golog-paper-strong) 34%, var(--card)) !important;
+    background: color-mix(in srgb, var(--page-soft, var(--golog-soft)) 24%, #FFFFFF);
   }
 
   .golog-app main .border-slate-100,
   .golog-app main .border-slate-200 {
-    border-color: color-mix(in srgb, var(--golog-line) 80%, var(--golog-stone)) !important;
+    border-color: color-mix(in srgb, var(--page-accent, var(--golog-teal)) 22%, var(--golog-line));
   }
 
-  .golog-app main table tbody tr:hover {
-    background: color-mix(in srgb, var(--golog-cerulean) 11%, var(--card)) !important;
+  .golog-app main .divide-slate-100 > :not([hidden]) ~ :not([hidden]) {
+    border-color: color-mix(in srgb, var(--page-accent, var(--golog-teal)) 18%, var(--golog-line));
   }
 
-  .golog-app .golog-theme-placeholder {
-    display: none;
+  .golog-app main .hover\\:bg-slate-50:hover,
+  .golog-app main .hover\\:bg-slate-50\\/70:hover {
+    background: color-mix(in srgb, var(--page-soft, var(--golog-soft)) 34%, #FFFFFF);
   }
 
-  /* Login uses the same family, but with a more welcoming entrance accent. */
-  .golog-theme-login button[type="submit"] {
-    background: var(--primary) !important;
-    color: var(--primary-foreground) !important;
-    border-color: var(--primary) !important;
+  .golog-app .golog-mobile-surface [data-slot="card"],
+  .golog-app .golog-mobile-surface .bg-white {
+    background: #FFFFFF;
   }
 
-  .golog-theme-login button[type="submit"]:hover {
-    background: var(--golog-hunter) !important;
+  .golog-app .golog-mobile-surface .bg-slate-50,
+  .golog-app .golog-mobile-surface .bg-slate-50\/70 {
+    background: color-mix(in srgb, var(--page-soft, var(--golog-soft)) 24%, #FFFFFF);
   }
 
-  /* Small-screen surfaces inherit the active page composition. */
-  .golog-app .golog-mobile-surface {
-    background: linear-gradient(180deg, var(--golog-cream) 0%, var(--golog-paper-strong) 100%);
+  .golog-app .golog-mobile-surface .text-slate-400 {
+    color: var(--golog-muted);
+  }
+
+  .golog-app .golog-mobile-surface .text-slate-500,
+  .golog-app .golog-mobile-surface .text-slate-600 {
+    color: #315563;
   }
 }
 
-
-@layer components {
-  /* Strong page-level contrast so the visual mood is immediately visible, not only through component variables. */
-  .golog-theme-login { background: linear-gradient(135deg, #E6F4F7 0%, #DCEEF2 52%, #eef0ea 100%) !important; }
-  .golog-theme-overview { background: linear-gradient(135deg, #E6F4F7 0%, #BAE4F0 50%, #F4FAFC 100%) !important; }
-  .golog-theme-requests { background: linear-gradient(135deg, #F4FAFC 0%, #E6F4F7 52%, #F4FAFC 100%) !important; }
-  .golog-theme-stock { background: linear-gradient(135deg, #F4FAFC 0%, #d0d3c5 52%, #F4FAFC 100%) !important; }
-  .golog-theme-inbound { background: linear-gradient(135deg, #E6F4F7 0%, #BAE4F0 52%, #F4FAFC 100%) !important; }
-  .golog-theme-adjustments { background: linear-gradient(135deg, #E6F4F7 0%, #D5E8ED 52%, #F4FAFC 100%) !important; }
-  .golog-theme-stocktake { background: linear-gradient(135deg, #F4FAFC 0%, #d0d3c5 52%, #eef0ea 100%) !important; }
-  .golog-theme-room-demand { background: linear-gradient(135deg, #E6F4F7 0%, #0091B9 42%, #E6F4F7 100%) !important; }
-  .golog-theme-reports { background: linear-gradient(135deg, #E6F4F7 0%, #BAE4F0 48%, #F4FAFC 100%) !important; }
-
-  .golog-theme-room-demand .golog-topbar { border-bottom: 3px solid #004E9B !important; }
-  .golog-theme-requests .golog-topbar { border-bottom: 3px solid #FF6500 !important; }
-  .golog-theme-stock .golog-topbar,
-  .golog-theme-stocktake .golog-topbar { border-bottom: 3px solid #004E9B !important; }
-  .golog-theme-inbound .golog-topbar,
-  .golog-theme-overview .golog-topbar { border-bottom: 3px solid #0091B9 !important; }
-  .golog-theme-adjustments .golog-topbar,
-  .golog-theme-reports .golog-topbar { border-bottom: 3px solid #07304A !important; }
+/* One shared page-personality system. */
+.golog-theme-login,
+.golog-theme-overview {
+  --page-bg: #E6F4F7;
+  --page-accent: #0091B9;
+  --page-strong: #004E9B;
+  --page-soft: #BAE4F0;
+  --page-signal: #FFD500;
 }
 
-
-@layer components {
-  /* Legacy inline utility bridge.
-     Home.tsx still contains a few hard-coded cream/olive utility classes from the previous visual system.
-     Re-map those surfaces into the active page theme so no old palette leaks through. */
-  .golog-app [class*="bg-[#FFFFFF]"] {
-    background: var(--card) !important;
-  }
-  .golog-app [class*="bg-[#FFFFFF]"] {
-    background: var(--card) !important;
-  }
-  .golog-app [class*="bg-[#F4FAFC]"] {
-    background: var(--golog-cream) !important;
-  }
-  .golog-app [class*="bg-[#BAE4F0]"] {
-    background: var(--golog-paper-strong) !important;
-  }
-  .golog-app [class*="bg-[#BAE4F0]"] {
-    background: var(--golog-nav-active) !important;
-  }
-  .golog-app [class*="bg-[#E6F4F7]"] {
-    background: color-mix(in srgb, var(--golog-cerulean) 16%, var(--card)) !important;
-  }
-
-  .golog-app [class*="border-[#9CCED8]"] {
-    border-color: var(--golog-line) !important;
-  }
-  .golog-app [class*="border-[#B8D5DE]"],
-  .golog-app [class*="border-[#C7E0E6]"],
-  .golog-app [class*="border-[#D5E8ED]"],
-  .golog-app [class*="border-[#D5E8ED]"] {
-    border-color: color-mix(in srgb, var(--golog-line) 86%, var(--golog-stone)) !important;
-  }
-
-  .golog-app [class*="text-[#07304A]"],
-  .golog-app [class*="text-[#07304A]"] {
-    color: var(--golog-brown) !important;
-  }
-  .golog-app [class*="text-[#55727C]"],
-  .golog-app [class*="text-[#315563]"],
-  .golog-app [class*="text-[#55727C]"],
-  .golog-app [class*="text-[#315563]"] {
-    color: var(--golog-brown-soft) !important;
-  }
-  .golog-app [class*="text-[#004E9B]"],
-  .golog-app [class*="text-[#004E9B]"],
-  .golog-app [class*="text-[#0091B9]"] {
-    color: var(--primary) !important;
-  }
-
-  /* Page-specific accents: the same old component can now look intentionally different per workspace. */
-  .golog-theme-overview [class*="bg-[#BAE4F0]"] { background: #0091B9 !important; }
-  .golog-theme-overview [class*="text-[#004E9B]"],
-  .golog-theme-overview [class*="text-[#004E9B]"] { color: #004E9B !important; }
-
-  .golog-theme-requests [class*="bg-[#BAE4F0]"] { background: #BAE4F0 !important; }
-  .golog-theme-requests [class*="text-[#004E9B]"],
-  .golog-theme-requests [class*="text-[#004E9B]"] { color: #004E9B !important; }
-
-  .golog-theme-stock [class*="bg-[#BAE4F0]"] { background: #BAE4F0 !important; }
-  .golog-theme-stock [class*="text-[#004E9B]"],
-  .golog-theme-stock [class*="text-[#004E9B]"] { color: #004E9B !important; }
-
-  .golog-theme-inbound [class*="bg-[#BAE4F0]"] { background: #0091B9 !important; }
-  .golog-theme-inbound [class*="text-[#004E9B]"],
-  .golog-theme-inbound [class*="text-[#004E9B]"] { color: #004E9B !important; }
-
-  .golog-theme-adjustments [class*="bg-[#BAE4F0]"] { background: #0091B9 !important; }
-  .golog-theme-adjustments [class*="text-[#004E9B]"],
-  .golog-theme-adjustments [class*="text-[#004E9B]"] { color: #07304A !important; }
-
-  .golog-theme-stocktake [class*="bg-[#BAE4F0]"] { background: #0091B9 !important; }
-  .golog-theme-stocktake [class*="text-[#004E9B]"],
-  .golog-theme-stocktake [class*="text-[#004E9B]"] { color: #004E9B !important; }
-
-  .golog-theme-room-demand [class*="bg-[#BAE4F0]"] { background: #0091B9 !important; }
-  .golog-theme-room-demand [class*="text-[#004E9B]"],
-  .golog-theme-room-demand [class*="text-[#004E9B]"] { color: #004E9B !important; }
-
-  .golog-theme-reports [class*="bg-[#BAE4F0]"] { background: #0091B9 !important; }
-  .golog-theme-reports [class*="text-[#004E9B]"],
-  .golog-theme-reports [class*="text-[#004E9B]"] { color: #07304A !important; }
-
-  .golog-theme-login [class*="bg-[#BAE4F0]"] { background: #0091B9 !important; }
-  .golog-theme-login [class*="text-[#004E9B]"],
-  .golog-theme-login [class*="text-[#004E9B]"] { color: #004E9B !important; }
-
-  /* Hard-coded page background classes are explicitly neutralized to stop old cream from winning. */
-  .golog-app.golog-theme-overview [class*="bg-[#F4FAFC]"] { background: #e4f1f3 !important; }
-  .golog-app.golog-theme-requests [class*="bg-[#F4FAFC]"] { background: #F4FAFC !important; }
-  .golog-app.golog-theme-stock [class*="bg-[#F4FAFC]"] { background: #F4FAFC !important; }
-  .golog-app.golog-theme-inbound [class*="bg-[#F4FAFC]"] { background: #E6F4F7 !important; }
-  .golog-app.golog-theme-adjustments [class*="bg-[#F4FAFC]"] { background: #E6F4F7 !important; }
-  .golog-app.golog-theme-stocktake [class*="bg-[#F4FAFC]"] { background: #F4FAFC !important; }
-  .golog-app.golog-theme-room-demand [class*="bg-[#F4FAFC]"] { background: #E6F4F7 !important; }
-  .golog-app.golog-theme-reports [class*="bg-[#F4FAFC]"] { background: #E6F4F7 !important; }
-}
-
-
-
-
-
-/* =========================================================
-   GOLOG.IRIN — PAGE PERSONALITY SYSTEM
-   One palette, one token model, distinct page personalities.
-   ========================================================= */
-:root {
-  --golog-teal: #0091B9;
-  --golog-light-blue: #BAE4F0;
-  --golog-deep-blue: #004E9B;
-  --golog-orange: #FF6500;
-  --golog-yellow: #FFD500;
-  --golog-dark: #07304A;
-  --golog-surface: #FFFFFF;
-  --golog-background: #F4FAFC;
-  --golog-line: #9CCED8;
-  --golog-shadow: rgba(0,78,155,.12);
-  --primary: #0091B9; --primary-foreground: #FFFFFF;
-  --background: #F4FAFC; --foreground: #07304A;
-  --card: #FFFFFF; --card-foreground: #07304A;
-  --popover: #FFFFFF; --popover-foreground: #07304A;
-  --secondary: #BAE4F0; --secondary-foreground: #004E9B;
-  --muted-foreground: #55727C;
-  --accent: #BAE4F0; --accent-foreground: #004E9B;
-  --destructive: #FF6500; --destructive-foreground: #FFFFFF;
-  --border: #9CCED8; --input: #9CCED8; --ring: #0091B9;
-  --sidebar: #07304A; --sidebar-foreground: #FFFFFF;
-  --sidebar-accent: #004E9B; --sidebar-accent-foreground: #FFFFFF;
-  --sidebar-border: #0B3D5C; --sidebar-ring: #0091B9;
-}
-
-/* Each page changes three things only: atmosphere, accent, signal. */
-.golog-theme-login,.golog-theme-overview {
-  --page-bg:#E6F4F7; --page-accent:#0091B9; --page-strong:#004E9B; --page-soft:#BAE4F0; --page-signal:#FFD500;
-}
 .golog-theme-requests {
-  --page-bg:#EAF0FA; --page-accent:#004E9B; --page-strong:#07304A; --page-soft:#D5E5F5; --page-signal:#FF6500;
+  --page-bg: #EAF0FA;
+  --page-accent: #004E9B;
+  --page-strong: #07304A;
+  --page-soft: #D5E5F5;
+  --page-signal: #FF6500;
 }
+
 .golog-theme-stock {
-  --page-bg:#E8F7F9; --page-accent:#0091B9; --page-strong:#004E9B; --page-soft:#BAE4F0; --page-signal:#FFD500;
+  --page-bg: #E8F7F9;
+  --page-accent: #0091B9;
+  --page-strong: #004E9B;
+  --page-soft: #BAE4F0;
+  --page-signal: #FFD500;
 }
+
 .golog-theme-inbound {
-  --page-bg:#FFF3EA; --page-accent:#FF6500; --page-strong:#07304A; --page-soft:#FFE0C7; --page-signal:#0091B9;
+  --page-bg: #FFF3EA;
+  --page-accent: #FF6500;
+  --page-strong: #07304A;
+  --page-soft: #FFE0C7;
+  --page-signal: #0091B9;
 }
+
 .golog-theme-adjustments {
-  --page-bg:#EEF0FA; --page-accent:#004E9B; --page-strong:#07304A; --page-soft:#DCE3F4; --page-signal:#FF6500;
+  --page-bg: #EEF0FA;
+  --page-accent: #004E9B;
+  --page-strong: #07304A;
+  --page-soft: #DCE3F4;
+  --page-signal: #FF6500;
 }
+
 .golog-theme-stocktake {
-  --page-bg:#E7F7F4; --page-accent:#0091B9; --page-strong:#004E9B; --page-soft:#CBEDE8; --page-signal:#FFD500;
+  --page-bg: #E7F7F4;
+  --page-accent: #0091B9;
+  --page-strong: #004E9B;
+  --page-soft: #CBEDE8;
+  --page-signal: #FFD500;
 }
+
 .golog-theme-room-demand {
-  --page-bg:#DDF4F8; --page-accent:#0091B9; --page-strong:#004E9B; --page-soft:#BAE4F0; --page-signal:#004E9B;
+  --page-bg: #DDF4F8;
+  --page-accent: #0091B9;
+  --page-strong: #004E9B;
+  --page-soft: #BAE4F0;
+  --page-signal: #004E9B;
 }
+
 .golog-theme-reports {
-  --page-bg:#F0F3F8; --page-accent:#004E9B; --page-strong:#07304A; --page-soft:#DCE5F1; --page-signal:#FF6500;
+  --page-bg: #F0F3F8;
+  --page-accent: #004E9B;
+  --page-strong: #07304A;
+  --page-soft: #DCE5F1;
+  --page-signal: #FF6500;
 }
 
-.golog-app { color:var(--golog-dark)!important; }
-.golog-app .golog-sidebar {
-  background:linear-gradient(180deg,#07304A 0%,#004E9B 100%)!important;
-  color:#FFF!important; border-right:0!important; box-shadow:10px 0 28px rgba(0,50,90,.16)!important;
-}
-.golog-app .golog-brand-mark { background:#FFD500!important;color:#004E9B!important;border-color:rgba(255,255,255,.8)!important; }
-.golog-app .golog-topbar { background:rgba(255,255,255,.96)!important;border-bottom:3px solid var(--page-accent,#0091B9)!important; }
-.golog-app .golog-sidebar button:not(.golog-nav-active){color:rgba(255,255,255,.78)!important;}
-.golog-app .golog-sidebar button:not(.golog-nav-active):hover{background:rgba(186,228,240,.12)!important;color:#FFF!important;}
-.golog-app .golog-nav-active{background:var(--page-soft,#BAE4F0)!important;color:var(--page-strong,#004E9B)!important;border:0!important;box-shadow:inset 4px 0 0 var(--page-signal,#FF6500)!important;}
-.golog-app .golog-bottom-nav{background:#07304A!important;border-top:2px solid var(--page-accent,#0091B9)!important;}
-.golog-app .golog-bottom-active{color:var(--page-signal,#FFD500)!important;}
-.golog-app .golog-bottom-fab{background:var(--page-accent,#FF6500)!important;border-color:#FFF!important;}
-
-.golog-app[class*="golog-theme-"],.golog-app[class*="golog-theme-"] main{background:var(--page-bg)!important;}
-.golog-app[class*="golog-theme-"] main [data-slot="card"],
-.golog-app[class*="golog-theme-"] main .golog-panel,
-.golog-app[class*="golog-theme-"] main .golog-panel-soft{
-  background:rgba(255,255,255,.97)!important;
-  border-color:color-mix(in srgb,var(--page-accent) 28%,#FFF)!important;
-  box-shadow:0 8px 24px var(--golog-shadow)!important;
-}
-.golog-app[class*="golog-theme-"] main h1,
-.golog-app[class*="golog-theme-"] main h2,
-.golog-app[class*="golog-theme-"] main h3,
-.golog-app[class*="golog-theme-"] main h4,
-.golog-app[class*="golog-theme-"] main [data-slot="card-title"]{color:var(--page-strong)!important;}
-.golog-app[class*="golog-theme-"] main input,
-.golog-app[class*="golog-theme-"] main textarea,
-.golog-app[class*="golog-theme-"] main select{
-  background:#FFF!important;border-color:color-mix(in srgb,var(--page-accent) 38%,#9CCED8)!important;color:#07304A!important;
-}
-.golog-app[class*="golog-theme-"] main input:focus,
-.golog-app[class*="golog-theme-"] main textarea:focus,
-.golog-app[class*="golog-theme-"] main select:focus{
-  border-color:var(--page-accent)!important;box-shadow:0 0 0 3px color-mix(in srgb,var(--page-accent) 18%,transparent)!important;
-}
-.golog-app[class*="golog-theme-"] main table thead{background:var(--page-soft)!important;color:var(--page-strong)!important;}
-.golog-app[class*="golog-theme-"] main table tbody tr:hover{background:color-mix(in srgb,var(--page-soft) 38%,#FFF)!important;}
-.golog-app[class*="golog-theme-"] main .text-slate-400{color:#55727C!important;}
-.golog-app[class*="golog-theme-"] main .text-slate-500,.golog-app[class*="golog-theme-"] main .text-slate-600{color:#315563!important;}
-.golog-app[class*="golog-theme-"] main .text-slate-700,.golog-app[class*="golog-theme-"] main .text-slate-800,.golog-app[class*="golog-theme-"] main .text-slate-900{color:#07304A!important;}
-.golog-app[class*="golog-theme-"] main .border-slate-100,.golog-app[class*="golog-theme-"] main .border-slate-200{border-color:color-mix(in srgb,var(--page-accent) 22%,#D5E8ED)!important;}
-
-/* Accent hierarchy: orange is deliberately visible on the pages where action matters. */
-.golog-app[class*="golog-theme-"] .golog-primary-button{
-  background:var(--page-accent)!important;border-color:var(--page-accent)!important;color:#FFF!important;
-}
+/* Action hierarchy: orange is reserved for workflows that need attention. */
 .golog-theme-requests .golog-primary-button,
 .golog-theme-adjustments .golog-primary-button,
-.golog-theme-reports .golog-primary-button{background:#FF6500!important;border-color:#FF6500!important;color:#FFF!important;}
-.golog-theme-inbound .golog-primary-button{background:#FF6500!important;border-color:#FF6500!important;color:#FFF!important;}
-.golog-theme-requests .golog-topbar,.golog-theme-adjustments .golog-topbar,.golog-theme-inbound .golog-topbar,.golog-theme-reports .golog-topbar{border-bottom-color:#FF6500!important;}
+.golog-theme-inbound .golog-primary-button,
+.golog-theme-reports .golog-primary-button {
+  background: var(--golog-orange);
+  border-color: var(--golog-orange);
+}
 
-.golog-app [class*="bg-[#F4FAFC]"],.golog-app [class*="bg-[#FFFFFF]"]{background:#FFF!important;}
-.golog-app [class*="bg-[#BAE4F0]"]{background:var(--page-soft,#BAE4F0)!important;}
-.golog-app [class*="border-[#9CCED8]"]{border-color:#9CCED8!important;}
-.golog-app [class*="text-[#07304A]"]{color:#07304A!important;}
-.golog-app [class*="text-[#004E9B]"]{color:#004E9B!important;}
-.golog-app [class*="text-[#0091B9]"]{color:#0091B9!important;}
-.golog-app [class*="text-[#FF6500]"]{color:#D94A1A!important;}
-.golog-app [class*="text-[#FFD500]"]{color:#8A6800!important;}
-.golog-app .golog-mobile-surface{background:var(--page-bg,#F4FAFC)!important;}
+.golog-theme-requests .golog-topbar,
+.golog-theme-adjustments .golog-topbar,
+.golog-theme-inbound .golog-topbar,
+.golog-theme-reports .golog-topbar {
+  border-bottom-color: var(--golog-orange);
+}
+
+/* Login action follows the same primary system. */
+.golog-theme-login button[type="submit"] {
+  background: var(--page-accent);
+  color: #FFFFFF;
+  border-color: var(--page-accent);
+}
+
+/* Explicit utility remaps keep legacy Tailwind literals visually aligned. */
+.golog-app [class*="bg-[#F4FAFC]"] { background: var(--page-bg) !important; }
+.golog-app [class*="bg-[#FFFFFF]"] { background: #FFFFFF !important; }
+.golog-app [class*="bg-[#BAE4F0]"] { background: var(--page-soft) !important; }
+.golog-app [class*="border-[#9CCED8]"] { border-color: var(--golog-line) !important; }
+.golog-app [class*="text-[#07304A]"] { color: var(--golog-navy) !important; }
+.golog-app [class*="text-[#004E9B]"] { color: var(--golog-blue) !important; }
+.golog-app [class*="text-[#0091B9]"] { color: var(--golog-teal) !important; }
+.golog-app [class*="text-[#FF6500]"] { color: #D94A1A !important; }
+.golog-app [class*="text-[#FFD500]"] { color: #8A6800 !important; }
