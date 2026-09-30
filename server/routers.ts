@@ -214,6 +214,7 @@ export const appRouter = router({
           requestDate: requestDayLocks.requestDate,
           requesterId: requestDayLocks.requesterId,
           requesterName: users.name,
+          isMine: sql<boolean>`(${requestDayLocks.requesterId} = ${ctx.user.id})`,
         })
         .from(requestDayLocks)
         .leftJoin(rooms, eq(requestDayLocks.roomId, rooms.id))
