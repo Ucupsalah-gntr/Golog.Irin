@@ -88,6 +88,9 @@ type AppNotification = {
   meta: string;
   kind: "approval" | "low-stock" | "status";
   nav: NavKey;
+  requestId?: number;
+  itemId?: number;
+  actionLabel: string;
 };
 
 function notificationKindIcon(kind: AppNotification["kind"]) {
@@ -124,6 +127,7 @@ export default function Home() {
   const [reportMonth, setReportMonth] = useState(getJakartaMonthKeyClient());
   const [notificationOpen, setNotificationOpen] = useState(false);
   const [readNotificationKeys, setReadNotificationKeys] = useState<string[]>([]);
+  const [notificationTarget, setNotificationTarget] = useState<{ nav: NavKey; requestId?: number; itemId?: number } | null>(null);
   const utils = trpc.useUtils();
   const catalog = trpc.catalog.all.useQuery(undefined, { enabled: isAuthenticated });
   const dashboard = trpc.dashboard.summary.useQuery({ roomId: selectedRoom }, { enabled: isAuthenticated });
@@ -202,6 +206,8 @@ export default function Home() {
           meta: `${row.lines?.length || 0} item · ${row.request.priority}`,
           kind: "approval",
           nav: "requests",
+          requestId: Number(row.request.id),
+          actionLabel: "Buka permintaan",
         });
       }
 
@@ -218,6 +224,8 @@ export default function Home() {
           meta: `Stok ${formatNumber(qty)} · minimum ${formatNumber(minimum)}`,
           kind: "low-stock",
           nav: "stock",
+          itemId,
+          actionLabel: "Buka stok",
         });
       }
     } else {
@@ -241,6 +249,8 @@ export default function Home() {
           meta: `${row.lines?.length || 0} item · ${formatDate(row.request.updatedAt || row.request.createdAt)}`,
           kind: status === "rejected" ? "status" : "approval",
           nav: "requests",
+          requestId: Number(row.request.id),
+          actionLabel: "Buka permintaan",
         });
       }
 
@@ -256,6 +266,8 @@ export default function Home() {
           meta: `Stok ${formatNumber(qty)} · minimum ${formatNumber(minimum)}`,
           kind: "low-stock",
           nav: "stock",
+          itemId,
+          actionLabel: "Buka stok ruangan",
         });
       }
     }
@@ -287,6 +299,7 @@ export default function Home() {
 
   function openNotification(item: AppNotification) {
     markNotificationRead(item.key);
+    setNotificationTarget({ nav: item.nav, requestId: item.requestId, itemId: item.itemId });
     setNotificationOpen(false);
     go(item.nav);
   }
@@ -343,9 +356,9 @@ export default function Home() {
             </button><button title="Refresh" onClick={refreshAll} className="rounded-xl border border-[#b8a27a] bg-[#f7efd7] p-2.5 text-slate-500 hover:text-teal-700"><RefreshCw size={17} /></button><div className="hidden rounded-xl border border-[#b8a27a] bg-[#f7efd7] px-3 py-2 text-right sm:block"><p className="text-xs font-semibold">{user?.name || "Akun aktif"}</p><p className="text-[11px] text-slate-500">{isAdmin ? "Kepala gudang" : "Petugas"}</p></div></div></header>
           <div className={`golog-page mx-auto max-w-[1500px] space-y-6 ${active === "overview" ? "p-0 pb-28 md:p-8 md:pb-8" : "p-5 md:p-8"}`}>
             {active === "overview" && <Overview dashboard={dashboard.data} isAdmin={isAdmin} onGo={go} report={isAdmin ? monthlyReport.data : null} requests={requests.data ?? []} userName={user?.name || user?.username || "Kepala Gudang"} unreadNotificationCount={unreadNotificationCount} onOpenNotifications={() => setNotificationOpen(true)} />}
-            {active === "stock" && <StockView stock={stock} isAdmin={isAdmin} items={items} warehouses={warehouses} onCreateItem={(input: any) => createItem.mutate(input)} busy={createItem.isPending} onImport={(rows: any[]) => importItems.mutate({ rows })} importBusy={importItems.isPending} />}
+            {active === "stock" && <StockView stock={stock} isAdmin={isAdmin} items={items} warehouses={warehouses} onCreateItem={(input: any) => createItem.mutate(input)} busy={createItem.isPending} onImport={(rows: any[]) => importItems.mutate({ rows })} importBusy={importItems.isPending} focusItemId={notificationTarget?.nav === "stock" ? notificationTarget.itemId : undefined} />}
             {active === "inbound" && <InboundView items={items} warehouses={warehouses} onSubmit={(input: any) => createInbound.mutate(input)} busy={createInbound.isPending} />}
-            {active === "requests" && <RequestsView requests={requests.data ?? []} rooms={rooms} items={items} isAdmin={isAdmin} currentUserId={user?.id} todayRoomLocks={todayRoomLocks.data ?? []} selectedRoom={selectedRoom} selectedRoomName={selectedRoomName} setSelectedRoom={setSelectedRoom} lines={requestLines} setLines={setRequestLines} total={requestTotal} onCreate={(input: any) => createRequest.mutate(input)} onVerify={(input: any) => verifyRequest.mutate(input)} busy={createRequest.isPending || verifyRequest.isPending} />}
+            {active === "requests" && <RequestsView requests={requests.data ?? []} rooms={rooms} items={items} isAdmin={isAdmin} currentUserId={user?.id} todayRoomLocks={todayRoomLocks.data ?? []} selectedRoom={selectedRoom} selectedRoomName={selectedRoomName} setSelectedRoom={setSelectedRoom} lines={requestLines} setLines={setRequestLines} total={requestTotal} onCreate={(input: any) => createRequest.mutate(input)} onVerify={(input: any) => verifyRequest.mutate(input)} busy={createRequest.isPending || verifyRequest.isPending} focusRequestId={notificationTarget?.nav === "requests" ? notificationTarget.requestId : undefined} />}
             {active === "adjustments" && <AdjustmentsView adjustments={adjustments.data ?? []} items={items} rooms={rooms} onSubmit={(input: any) => createAdjustment.mutate(input)} busy={createAdjustment.isPending} />}
             {active === "stocktake" && <StockOpnameView stock={stock} items={items} onSubmit={(input: any) => createBulkStocktake.mutate(input)} busy={createBulkStocktake.isPending} />}
             {active === "reports" && <ReportsView report={monthlyReport.data} month={reportMonth} onMonthChange={setReportMonth} />}
@@ -648,7 +661,7 @@ function NotificationCenter({
                       <p className="mt-1 truncate text-xs font-medium text-[#6f5e4e]">{item.message}</p>
                       <p className="mt-1 text-[11px] text-[#8b7b67]">{item.meta}</p>
                     </div>
-                    <ChevronRight size={16} className="mt-2 shrink-0 text-[#9a896f]" />
+                    <div className="mt-2 flex items-center gap-1 text-[11px] font-semibold text-[#64753a]">{item.actionLabel}<ChevronRight size={14} /></div>
                   </button>
                 );
               })}
@@ -1204,7 +1217,7 @@ function MobileUserOverview({
   );
 }
 
-function StockView({ stock, isAdmin, items, warehouses, onCreateItem, busy, onImport, importBusy }: any) {
+function StockView({ stock, isAdmin, items, warehouses, onCreateItem, busy, onImport, importBusy, focusItemId }: any) {
   const [show, setShow] = useState(false);
   const [showImport, setShowImport] = useState(false);
   const [expanded, setExpanded] = useState<number | null>(null);
@@ -1213,6 +1226,15 @@ function StockView({ stock, isAdmin, items, warehouses, onCreateItem, busy, onIm
   const [form, setForm] = useState({ sku: "", name: "", unit: "box", category: "", sourceWarehouseId: "", minStock: "0" });
   const [preview, setPreview] = useState<ImportPreview | null>(null);
   const [fileName, setFileName] = useState("");
+
+  useEffect(() => {
+    if (!focusItemId) return;
+    const targetId = Number(focusItemId);
+    if (!Number.isFinite(targetId)) return;
+    setExpanded(targetId);
+    const element = document.getElementById(`stock-item-${targetId}`);
+    window.requestAnimationFrame(() => element?.scrollIntoView({ behavior: "smooth", block: "center" }));
+  }, [focusItemId]);
 
   async function handleImportFile(file: File) {
     setFileName(file.name);
@@ -1403,7 +1425,7 @@ function StockView({ stock, isAdmin, items, warehouses, onCreateItem, busy, onIm
               const coverage = minQty > 0 ? Math.min(100, Math.max(0, (stockQty / minQty) * 100)) : stockQty > 0 ? 100 : 0;
 
               return (
-                <div key={row.itemId} className="overflow-hidden rounded-2xl border-2 border-[#b8a27a] bg-[#f7efd7] shadow-[inset_0_0_0_2px_rgba(255,250,240,0.45)]">
+                <div id={`stock-item-${row.itemId}`} key={row.itemId} className={`overflow-hidden rounded-2xl border-2 bg-[#f7efd7] shadow-[inset_0_0_0_2px_rgba(255,250,240,0.45)] ${Number(focusItemId) === Number(row.itemId) ? "border-[#7f9146] ring-2 ring-[#a9b567] ring-offset-2" : "border-[#b8a27a]"}`}>
                   <button
                     type="button"
                     onClick={() => setExpanded(open ? null : Number(row.itemId))}
@@ -1482,11 +1504,20 @@ function StockView({ stock, isAdmin, items, warehouses, onCreateItem, busy, onIm
 }
 function InboundView({ items, warehouses, onSubmit, busy }: any) { const [form, setForm] = useState({ itemId: "", quantity: "", sourceWarehouseId: "", notes: "", occurredAt: new Date().toISOString().slice(0, 10) }); return <Card className="max-w-3xl border-slate-200/80 shadow-sm"><CardHeader><CardTitle>Catat barang masuk</CardTitle><p className="mt-1 text-sm text-slate-500">Penerimaan dari Gudang Farmasi, Gudang RT, CSSD, atau Laboratorium.</p></CardHeader><CardContent><div className="grid gap-4 md:grid-cols-2"><Field label="Barang"><select className="h-10 w-full rounded-lg border-2 border-[#b8a27a] bg-[#f7efd7] px-3 text-sm text-[#5a4738] shadow-[inset_0_0_0_2px_rgba(255,250,240,0.52)]" value={form.itemId} onChange={(e) => setForm({ ...form, itemId: e.target.value })}><option value="">Pilih barang</option>{items.map((item: any) => <option key={item.id} value={item.id}>{item.name} · {item.sku}</option>)}</select></Field><Field label="Sumber gudang"><select className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm" value={form.sourceWarehouseId} onChange={(e) => setForm({ ...form, sourceWarehouseId: e.target.value })}><option value="">Pilih gudang sumber</option>{warehouses.filter((w: any) => w.kind === "source").map((w: any) => <option key={w.id} value={w.id}>{w.name}</option>)}</select></Field><Field label="Jumlah"><Input type="number" min="1" value={form.quantity} onChange={(e) => setForm({ ...form, quantity: e.target.value })} placeholder="0" /></Field><Field label="Tanggal kejadian"><Input type="date" value={form.occurredAt} onChange={(e) => setForm({ ...form, occurredAt: e.target.value })} /></Field><div className="md:col-span-2"><Field label="Catatan"><Textarea value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} placeholder="Nomor dokumen, nota, atau keterangan penerimaan" /></Field></div></div><Button className="mt-6" disabled={busy || !form.itemId || !form.quantity || !form.sourceWarehouseId} onClick={() => onSubmit({ itemId: Number(form.itemId), quantity: Number(form.quantity), sourceWarehouseId: Number(form.sourceWarehouseId), occurredAt: new Date(form.occurredAt) })}><ArrowDownToLine size={16} className="mr-2" />Simpan barang masuk</Button></CardContent></Card> }
 
-function RequestsView({ requests, rooms, items, isAdmin, currentUserId, todayRoomLocks, selectedRoom, selectedRoomName, setSelectedRoom, lines, setLines, total, onCreate, onVerify, busy }: any) {
+function RequestsView({ requests, rooms, items, isAdmin, currentUserId, todayRoomLocks, selectedRoom, selectedRoomName, setSelectedRoom, lines, setLines, total, onCreate, onVerify, busy, focusRequestId }: any) {
   const [priority, setPriority] = useState("normal");
   const [notes, setNotes] = useState("");
   const [filter, setFilter] = useState("all");
   const [approvalQty, setApprovalQty] = useState<Record<string, number>>({});
+
+  useEffect(() => {
+    if (!focusRequestId) return;
+    const targetId = Number(focusRequestId);
+    if (!Number.isFinite(targetId)) return;
+    const element = document.getElementById(`request-${targetId}`);
+    window.requestAnimationFrame(() => element?.scrollIntoView({ behavior: "smooth", block: "center" }));
+  }, [focusRequestId]);
+
   const filtered = filter === "all"
     ? requests
     : filter === "pending"
@@ -1623,7 +1654,7 @@ function RequestsView({ requests, rooms, items, isAdmin, currentUserId, todayRoo
           const meta = priorityMeta(row.request.priority);
           const approval = approvalSummary(row);
 
-          return <Card key={row.request.id} className={`overflow-hidden border-slate-200/80 shadow-sm ${isSubmitted ? "ring-1 ring-slate-100" : ""}`}>
+          return <Card id={`request-${row.request.id}`} key={row.request.id} className={`overflow-hidden border-slate-200/80 shadow-sm transition ${Number(focusRequestId) === Number(row.request.id) ? "ring-2 ring-[#7f9146] ring-offset-2" : isSubmitted ? "ring-1 ring-slate-100" : ""}`}>
             <CardContent className="p-0">
               <div className="flex flex-col gap-4 border-b border-slate-100 px-5 py-4 lg:flex-row lg:items-center lg:justify-between">
                 <div className="min-w-0">
