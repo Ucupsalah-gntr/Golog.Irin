@@ -460,6 +460,7 @@
 .golog-theme-login,
 .golog-theme-overview {
   --page-bg: #E6F4F7;
+  --primary: #0091B9;
   --page-accent: #0091B9;
   --page-strong: #004E9B;
   --page-soft: #BAE4F0;
@@ -468,6 +469,7 @@
 
 .golog-theme-requests {
   --page-bg: #EAF0FA;
+  --primary: #FF6500;
   --page-accent: #004E9B;
   --page-strong: #07304A;
   --page-soft: #D5E5F5;
@@ -476,6 +478,7 @@
 
 .golog-theme-stock {
   --page-bg: #E8F7F9;
+  --primary: #0091B9;
   --page-accent: #0091B9;
   --page-strong: #004E9B;
   --page-soft: #BAE4F0;
@@ -484,6 +487,7 @@
 
 .golog-theme-inbound {
   --page-bg: #FFF3EA;
+  --primary: #FF6500;
   --page-accent: #FF6500;
   --page-strong: #07304A;
   --page-soft: #FFE0C7;
@@ -492,6 +496,7 @@
 
 .golog-theme-adjustments {
   --page-bg: #EEF0FA;
+  --primary: #FF6500;
   --page-accent: #004E9B;
   --page-strong: #07304A;
   --page-soft: #DCE3F4;
@@ -500,6 +505,7 @@
 
 .golog-theme-stocktake {
   --page-bg: #E7F7F4;
+  --primary: #0091B9;
   --page-accent: #0091B9;
   --page-strong: #004E9B;
   --page-soft: #CBEDE8;
@@ -508,6 +514,7 @@
 
 .golog-theme-room-demand {
   --page-bg: #DDF4F8;
+  --primary: #0091B9;
   --page-accent: #0091B9;
   --page-strong: #004E9B;
   --page-soft: #BAE4F0;
@@ -516,6 +523,7 @@
 
 .golog-theme-reports {
   --page-bg: #F0F3F8;
+  --primary: #FF6500;
   --page-accent: #004E9B;
   --page-strong: #07304A;
   --page-soft: #DCE5F1;
