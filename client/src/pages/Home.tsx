@@ -207,10 +207,10 @@ export default function Home() {
 
       for (const row of stock) {
         const qty = Number(row?.movementQty ?? 0);
-        const minimum = Number(row?.minStock ?? row?.item?.minStock ?? 0);
+        const minimum = Number(row?.minStock ?? row?.minStock ?? 0);
         if (qty > minimum) continue;
-        const itemId = Number(row?.itemId ?? row?.item?.id ?? 0);
-        const name = row?.item?.name ?? row?.name ?? "Barang";
+        const itemId = Number(row?.itemId ?? row?.itemId ?? 0);
+        const name = row?.name ?? row?.name ?? "Barang";
         rows.push({
           key: `admin:low-stock:${itemId}`,
           title: "Stok perlu dicek",
@@ -246,13 +246,13 @@ export default function Home() {
 
       for (const row of stock) {
         const qty = Number(row?.movementQty ?? 0);
-        const minimum = Number(row?.minStock ?? row?.item?.minStock ?? 0);
+        const minimum = Number(row?.minStock ?? row?.minStock ?? 0);
         if (qty > minimum) continue;
-        const itemId = Number(row?.itemId ?? row?.item?.id ?? 0);
+        const itemId = Number(row?.itemId ?? row?.itemId ?? 0);
         rows.push({
           key: `user:low-stock:${itemId}`,
           title: "Stok ruangan perlu dicek",
-          message: row?.item?.name ?? row?.name ?? "Barang",
+          message: row?.name ?? row?.name ?? "Barang",
           meta: `Stok ${formatNumber(qty)} · minimum ${formatNumber(minimum)}`,
           kind: "low-stock",
           nav: "stock",
@@ -282,7 +282,7 @@ export default function Home() {
   }
 
   function markAllNotificationsRead() {
-    persistReadNotificationKeys([...new Set([...readNotificationKeys, ...notifications.map((item) => item.key)])]);
+    persistReadNotificationKeys(Array.from(new Set([...readNotificationKeys, ...notifications.map((item) => item.key)])));
   }
 
   function openNotification(item: AppNotification) {
@@ -356,6 +356,7 @@ export default function Home() {
         open={notificationOpen}
         notifications={notifications}
         unreadCount={unreadNotificationCount}
+        readNotificationKeys={readNotificationKeys}
         onClose={() => setNotificationOpen(false)}
         onMarkAllRead={markAllNotificationsRead}
         onOpen={openNotification}
@@ -582,6 +583,7 @@ function NotificationCenter({
   open,
   notifications,
   unreadCount,
+  readNotificationKeys,
   onClose,
   onMarkAllRead,
   onOpen,
@@ -589,6 +591,7 @@ function NotificationCenter({
   open: boolean;
   notifications: AppNotification[];
   unreadCount: number;
+  readNotificationKeys: string[];
   onClose: () => void;
   onMarkAllRead: () => void;
   onOpen: (item: AppNotification) => void;
