@@ -521,6 +521,27 @@
     color: #7bd4cc !important;
   }
 
+  /* Login — clean aqua with a restrained honey accent. */
+  .golog-theme-login {
+    --golog-cream: #e8f6f3;
+    --golog-paper: #fbfffd;
+    --golog-paper-strong: #d5ece7;
+    --golog-line: #99cec5;
+    --golog-brown: #24483f;
+    --golog-brown-soft: #5b766e;
+    --golog-shadow: rgba(3, 115, 103, 0.14);
+    --primary: #037367;
+    --primary-foreground: #f8fffd;
+    --ring: #bea42e;
+    --background: #e8f6f3;
+    --card: #fbfffd;
+    --popover: #fbfffd;
+    --secondary: #d5ece7;
+    --muted: #deefeb;
+    --accent: #bea42e;
+    --accent-foreground: #002b1f;
+  }
+
   /* Overview — fresh aqua. */
   .golog-theme-overview {
     --golog-cream: #e8f6f3;
@@ -757,5 +778,17 @@
 
   .golog-theme-room-demand main table tbody tr:hover {
     background: rgba(123, 212, 204, 0.12) !important;
+  }
+}
+
+@layer components {
+  .golog-theme-login button[type="submit"] {
+    background: #037367 !important;
+    color: #f8fffd !important;
+    border-color: #025f55 !important;
+  }
+
+  .golog-theme-login button[type="submit"]:hover {
+    background: #002b1f !important;
   }
 }
