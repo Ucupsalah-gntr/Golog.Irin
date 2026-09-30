@@ -510,4 +510,85 @@ export async function getGoogleSheetSyncData() {
   };
 }
 
+
+export async function getRoomDemandPatterns(days = 30) {
+  const db = await getDb();
+  const safeDays = days === 90 ? 90 : 30;
+  if (!db) {
+    return { days: safeDays, generatedAt: new Date().toISOString(), roomSummary: [], itemRows: [] };
+  }
+
+  const start = new Date(Date.now() - (safeDays - 1) * 24 * 60 * 60 * 1000);
+
+  const [roomSummaryRows, itemRows] = await Promise.all([
+    db
+      .select({
+        roomId: rooms.id,
+        roomName: rooms.name,
+        distributionEvents: sql<number>`COUNT(*)`,
+        activeDays: sql<number>`COUNT(DISTINCT ((${stockMovements.occurredAt} AT TIME ZONE 'Asia/Jakarta')::date))`,
+        itemCount: sql<number>`COUNT(DISTINCT ${stockMovements.itemId})`,
+      })
+      .from(stockMovements)
+      .innerJoin(rooms, eq(stockMovements.roomId, rooms.id))
+      .where(and(
+        eq(stockMovements.movementType, "in"),
+        gte(stockMovements.occurredAt, start),
+      ))
+      .groupBy(rooms.id, rooms.name)
+      .orderBy(desc(sql`COUNT(*)`), rooms.name),
+
+    db
+      .select({
+        roomId: rooms.id,
+        roomName: rooms.name,
+        itemId: items.id,
+        itemName: items.name,
+        sku: items.sku,
+        unit: items.unit,
+        totalQty: sql<number>`COALESCE(SUM(${stockMovements.quantity}), 0)`,
+        distributionEvents: sql<number>`COUNT(*)`,
+        activeDays: sql<number>`COUNT(DISTINCT ((${stockMovements.occurredAt} AT TIME ZONE 'Asia/Jakarta')::date))`,
+      })
+      .from(stockMovements)
+      .innerJoin(rooms, eq(stockMovements.roomId, rooms.id))
+      .innerJoin(items, eq(stockMovements.itemId, items.id))
+      .where(and(
+        eq(stockMovements.movementType, "in"),
+        gte(stockMovements.occurredAt, start),
+      ))
+      .groupBy(rooms.id, rooms.name, items.id, items.name, items.sku, items.unit)
+      .orderBy(rooms.name, desc(sql`COALESCE(SUM(${stockMovements.quantity}), 0)`)),
+  ]);
+
+  return {
+    days: safeDays,
+    startAt: start.toISOString(),
+    generatedAt: new Date().toISOString(),
+    roomSummary: roomSummaryRows.map((row) => ({
+      roomId: row.roomId,
+      roomName: row.roomName,
+      distributionEvents: Number(row.distributionEvents ?? 0),
+      activeDays: Number(row.activeDays ?? 0),
+      itemCount: Number(row.itemCount ?? 0),
+    })),
+    itemRows: itemRows.map((row) => {
+      const totalQty = Number(row.totalQty ?? 0);
+      const activeDays = Number(row.activeDays ?? 0);
+      return {
+        roomId: row.roomId,
+        roomName: row.roomName,
+        itemId: row.itemId,
+        itemName: row.itemName,
+        sku: row.sku,
+        unit: row.unit,
+        totalQty,
+        distributionEvents: Number(row.distributionEvents ?? 0),
+        activeDays,
+        avgPerActiveDay: activeDays > 0 ? totalQty / activeDays : 0,
+      };
+    }),
+  };
+}
+
 export { auditLogs, items, requestDayLocks, requestItems, requests, rooms, stockAdjustments, stockMovements, users, warehouses };
