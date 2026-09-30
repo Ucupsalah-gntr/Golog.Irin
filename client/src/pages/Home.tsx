@@ -182,7 +182,8 @@ export default function Home() {
     }
     try {
       const saved = window.localStorage.getItem(notificationStorageKey);
-      setReadNotificationKeys(saved ? JSON.parse(saved) : []);
+      const parsed = saved ? JSON.parse(saved) : [];
+      setReadNotificationKeys(Array.isArray(parsed) ? parsed.filter((value) => typeof value === "string") : []);
     } catch {
       setReadNotificationKeys([]);
     }
@@ -804,9 +805,9 @@ function MobileAdminOverview({
           </div>
           <button
             type="button"
-            onClick={() => onGo("requests")}
-            className="relative grid h-11 w-11 shrink-0 place-items-center rounded-full bg-white text-[#5a4738] shadow-sm ring-1 ring-slate-200/70"
-            aria-label="Permintaan"
+            onClick={() => onOpenNotifications?.()}
+            className="relative grid h-11 w-11 shrink-0 place-items-center rounded-full bg-[#f7efd7] text-[#5a4738] shadow-sm ring-1 ring-[#b8a27a]"
+            aria-label="Notifikasi"
           >
             <Bell size={20} />
             {unreadNotificationCount > 0 && <span className="absolute right-2 top-2 h-2 w-2 rounded-full bg-[#c87969] ring-2 ring-[#f7efd7]" />}
@@ -840,8 +841,8 @@ function MobileAdminOverview({
         <div className="rounded-[1.8rem] bg-[#7f9146] p-5 text-white shadow-[0_18px_45px_rgba(13,184,137,0.24)]">
           <div className="flex items-center justify-between gap-4">
             <div>
-              <p className="text-[20px] font-semibold tracking-tight">Stock Opname</p>
-              <p className="mt-1 text-sm text-emerald-50/90">Periksa banyak barang sekaligus dalam satu proses.</p>
+              <p className="text-[20px] font-semibold tracking-tight">Aksi Gudang</p>
+              <p className="mt-1 text-sm text-emerald-50/90">Akses cepat ke pekerjaan gudang utama.</p>
             </div>
             <button
               type="button"
@@ -1000,11 +1001,12 @@ function MobileAdminOverview({
           <div className="flex justify-center">
             <button
               type="button"
-              onClick={() => onGo("stocktake")}
-              className="relative -mt-9 grid h-16 w-16 place-items-center rounded-full border-4 border-[#f7efd7] bg-[#7f9146] text-white shadow-[0_12px_28px_rgba(13,184,137,0.35)]"
-              aria-label="Stock Opname"
+              onClick={() => onGo("inbound")}
+              className="relative -mt-9 grid h-16 w-16 place-items-center rounded-full border-4 border-[#f7efd7] bg-[#7f9146] text-white shadow-[0_12px_28px_rgba(90,71,56,0.24)]"
+              aria-label="Barang Masuk"
+              title="Barang Masuk"
             >
-              <ScanLine size={25} />
+              <PackagePlus size={25} />
             </button>
           </div>
           <button type="button" onClick={() => onGo("requests")} className="flex flex-col items-center gap-1 text-[10px] font-semibold text-slate-400">
@@ -1055,7 +1057,7 @@ function MobileUserOverview({
               <p className="truncate text-[11px] text-slate-400">{roomName || "Ruangan belum dipilih"}</p>
             </div>
           </div>
-          <button type="button" onClick={() => onGo("requests")} className="relative grid h-11 w-11 shrink-0 place-items-center rounded-full bg-white text-[#5a4738] shadow-sm ring-1 ring-slate-200/70" aria-label="Status permintaan">
+          <button type="button" onClick={() => onOpenNotifications?.()} className="relative grid h-11 w-11 shrink-0 place-items-center rounded-full bg-[#f7efd7] text-[#5a4738] shadow-sm ring-1 ring-[#b8a27a]" aria-label="Notifikasi">
             <Bell size={20} />
             {pendingRequests.length > 0 && <span className="absolute right-2 top-2 h-2 w-2 rounded-full bg-rose-500 ring-2 ring-white" />}
           </button>
