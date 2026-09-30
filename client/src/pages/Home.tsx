@@ -1799,314 +1799,137 @@ function RequestsView({ requests, rooms, items, isAdmin, currentUserId, todayRoo
   </div>;
 }
 function StockOpnameView({ stock, items, onSubmit, busy }: any) {
-  type OpnameRow = {
-    itemId: number;
-    sku: string;
-    name: string;
-    unit: string;
-    systemQty: number;
-    physicalQty: string;
-  };
-
-  const initialRows = useMemo<OpnameRow[]>(
-    () =>
-      items.map((item: any) => {
-        const stockRow = stock.find((row: any) => Number(row.itemId) === Number(item.id));
-        return {
-          itemId: Number(item.id),
-          sku: item.sku || "",
-          name: item.name || "",
-          unit: item.unit || "unit",
-          systemQty: Number(stockRow?.movementQty ?? 0),
-          physicalQty: "",
-        };
-      }),
-    [items, stock],
-  );
-
+  type OpnameRow = { itemId: number; sku: string; name: string; unit: string; systemQty: number; physicalQty: string; };
+  const initialRows = useMemo<OpnameRow[]>(() => items.map((item: any) => {
+    const stockRow = stock.find((row: any) => Number(row.itemId) === Number(item.id));
+    return { itemId: Number(item.id), sku: item.sku || "", name: item.name || "", unit: item.unit || "unit", systemQty: Number(stockRow?.movementQty ?? 0), physicalQty: "" };
+  }), [items, stock]);
   const [rows, setRows] = useState<OpnameRow[]>(initialRows);
   const [reason, setReason] = useState("");
-  const [incidentDate, setIncidentDate] = useState(new Date().toISOString().slice(0, 10));
+  const [incidentDate, setIncidentDate] = useState(getJakartaDateKeyClient());
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<"all" | "pending" | "difference">("all");
-
-  useEffect(() => {
-    setRows(initialRows);
-  }, [initialRows]);
-
+  useEffect(() => { setRows(initialRows); }, [initialRows]);
   const visibleRows = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();
-
     return rows.filter((row) => {
-      const matchesQuery =
-        !normalizedQuery ||
-        row.name.toLowerCase().includes(normalizedQuery) ||
-        row.sku.toLowerCase().includes(normalizedQuery);
-
+      const matchesQuery = !normalizedQuery || row.name.toLowerCase().includes(normalizedQuery) || row.sku.toLowerCase().includes(normalizedQuery);
       const physical = row.physicalQty === "" ? null : Number(row.physicalQty);
-      const difference = physical === null || !Number.isFinite(physical)
-        ? null
-        : physical - row.systemQty;
-
-      const matchesFilter =
-        filter === "all" ||
-        (filter === "pending" && physical === null) ||
-        (filter === "difference" && difference !== null && difference !== 0);
-
+      const difference = physical === null || !Number.isFinite(physical) ? null : physical - row.systemQty;
+      const matchesFilter = filter === "all" || (filter === "pending" && physical === null) || (filter === "difference" && difference !== null && difference !== 0);
       return matchesQuery && matchesFilter;
     });
   }, [rows, query, filter]);
-
   const checkedRows = rows.filter((row) => row.physicalQty !== "");
   const changedRows = checkedRows.filter((row) => Number(row.physicalQty) !== row.systemQty);
   const increaseRows = changedRows.filter((row) => Number(row.physicalQty) > row.systemQty);
   const decreaseRows = changedRows.filter((row) => Number(row.physicalQty) < row.systemQty);
   const allChecked = rows.length > 0 && checkedRows.length === rows.length;
-
-  const totalDifference = changedRows.reduce(
-    (sum, row) => sum + (Number(row.physicalQty) - row.systemQty),
-    0,
-  );
-
+  const totalDifference = changedRows.reduce((sum, row) => sum + (Number(row.physicalQty) - row.systemQty), 0);
+  const positiveDifference = increaseRows.reduce((sum, row) => sum + (Number(row.physicalQty) - row.systemQty), 0);
+  const negativeDifference = decreaseRows.reduce((sum, row) => sum + (row.systemQty - Number(row.physicalQty)), 0);
+  const progress = rows.length ? Math.round((checkedRows.length / rows.length) * 100) : 0;
   function setPhysicalQty(itemId: number, value: string) {
     if (value !== "" && (!/^\d+$/.test(value) || Number(value) < 0)) return;
-    setRows((current) =>
-      current.map((row) => row.itemId === itemId ? { ...row, physicalQty: value } : row),
-    );
+    setRows((current) => current.map((row) => row.itemId === itemId ? { ...row, physicalQty: value } : row));
   }
-
-  function markAllAsSystem() {
-    setRows((current) =>
-      current.map((row) => ({ ...row, physicalQty: String(row.systemQty) })),
-    );
-  }
-
-  function clearAll() {
-    setRows((current) => current.map((row) => ({ ...row, physicalQty: "" })));
-  }
-
+  function markAllAsSystem() { setRows((current) => current.map((row) => ({ ...row, physicalQty: String(row.systemQty) }))); }
+  function clearAll() { setRows((current) => current.map((row) => ({ ...row, physicalQty: "" }))); }
   function submit() {
-    if (!reason.trim() || reason.trim().length < 10) {
-      toast.error("Catatan opname minimal 10 karakter.");
-      return;
-    }
-
-    const filled = rows
-      .filter((row) => row.physicalQty !== "")
-      .map((row) => ({
-        itemId: row.itemId,
-        physicalQty: Number(row.physicalQty),
-      }));
-
-    if (!filled.length) {
-      toast.error("Isi minimal satu stok fisik sebelum menyimpan.");
-      return;
-    }
-
-    if (filled.some((row) => !Number.isInteger(row.physicalQty) || row.physicalQty < 0)) {
-      toast.error("Stok fisik harus berupa bilangan bulat 0 atau lebih.");
-      return;
-    }
-
-    onSubmit({
-      lines: filled,
-      reason: reason.trim(),
-      incidentDate: new Date(incidentDate),
-    });
+    if (!reason.trim() || reason.trim().length < 10) { toast.error("Catatan opname minimal 10 karakter."); return; }
+    const filled = rows.filter((row) => row.physicalQty !== "").map((row) => ({ itemId: row.itemId, physicalQty: Number(row.physicalQty) }));
+    if (!filled.length) { toast.error("Isi minimal satu stok fisik sebelum menyimpan."); return; }
+    if (filled.some((row) => !Number.isInteger(row.physicalQty) || row.physicalQty < 0)) { toast.error("Stok fisik harus berupa bilangan bulat 0 atau lebih."); return; }
+    onSubmit({ lines: filled, reason: reason.trim(), incidentDate: new Date(incidentDate) });
   }
-
+  function rowMeta(row: OpnameRow) {
+    const physical = row.physicalQty === "" ? null : Number(row.physicalQty);
+    const difference = physical === null ? null : physical - row.systemQty;
+    if (physical === null) return { physical, difference, label: "Belum diisi", className: "border-[#d0be97] bg-[#f7efd7] text-[#8b7b67]" };
+    if (difference === 0) return { physical, difference, label: "Sesuai", className: "border-[#b8c68a] bg-[#eef0d5] text-[#5d7033]" };
+    if (difference! > 0) return { physical, difference, label: "Tambah", className: "border-[#b8d0de] bg-[#e7f0f4] text-[#4d7182]" };
+    return { physical, difference, label: "Kurang", className: "border-[#dca69a] bg-[#f8e3de] text-[#9b5146]" };
+  }
   return (
     <div className="space-y-5">
-      <Card className="border-slate-200/80 shadow-sm">
-        <CardHeader className="pb-4">
-          <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
-            <div>
-              <CardTitle>Stock Opname Gudang Pusat</CardTitle>
-              <p className="mt-1 max-w-3xl text-sm text-slate-500">
-                Periksa banyak barang sekaligus. Isi stok fisik pada tabel, lalu sistem otomatis menghitung selisih dan menerapkan seluruh koreksi dalam satu transaksi.
-              </p>
-            </div>
-            <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-              <div className="rounded-xl bg-slate-50 px-4 py-3">
-                <p className="text-[11px] text-slate-400">Diperiksa</p>
-                <p className="mt-1 text-xl font-semibold">{formatNumber(checkedRows.length)} / {formatNumber(rows.length)}</p>
-              </div>
-              <div className="rounded-xl bg-amber-50 px-4 py-3">
-                <p className="text-[11px] text-amber-700">Ada selisih</p>
-                <p className="mt-1 text-xl font-semibold text-amber-800">{formatNumber(changedRows.length)}</p>
-              </div>
-              <div className="rounded-xl bg-emerald-50 px-4 py-3">
-                <p className="text-[11px] text-emerald-700">Kelebihan</p>
-                <p className="mt-1 text-xl font-semibold text-emerald-800">+{formatNumber(increaseRows.reduce((sum, row) => sum + (Number(row.physicalQty) - row.systemQty), 0))}</p>
-              </div>
-              <div className="rounded-xl bg-rose-50 px-4 py-3">
-                <p className="text-[11px] text-rose-700">Kekurangan</p>
-                <p className="mt-1 text-xl font-semibold text-rose-800">-{formatNumber(decreaseRows.reduce((sum, row) => sum + (row.systemQty - Number(row.physicalQty)), 0))}</p>
-              </div>
+      <Card className="overflow-hidden">
+        <CardHeader className="border-b border-[#b8a27a]/60 pb-5">
+          <div className="flex flex-col gap-5 xl:flex-row xl:items-end xl:justify-between">
+            <div className="max-w-3xl"><p className="golog-kicker">Warehouse control</p><CardTitle className="mt-1">Stock Opname Gudang Pusat</CardTitle><p className="mt-2 text-sm leading-6 text-[#6f5e4e]">Hitung stok fisik, bandingkan dengan saldo sistem, lalu simpan seluruh koreksi sekaligus dalam satu transaksi.</p></div>
+            <div className="rounded-2xl border-2 border-[#b8a27a] bg-[#f7efd7] px-4 py-3 xl:min-w-[250px]">
+              <div className="flex items-center justify-between gap-3"><p className="text-xs font-semibold uppercase tracking-[0.14em] text-[#8b7b67]">Progres opname</p><span className="text-sm font-bold text-[#5a4738]">{progress}%</span></div>
+              <div className="mt-3 h-2 overflow-hidden rounded-full bg-[#dfd1a7]"><div className="h-full rounded-full bg-[#7f9146] transition-all" style={{ width: progress + "%" }} /></div>
+              <p className="mt-2 text-xs text-[#8b7b67]">{formatNumber(checkedRows.length)} dari {formatNumber(rows.length)} barang diperiksa</p>
             </div>
           </div>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid gap-3 md:grid-cols-[1fr_180px]">
-            <Field label="Catatan opname *">
-              <Textarea
-                value={reason}
-                onChange={(e) => setReason(e.target.value)}
-                placeholder="Contoh: Stock opname akhir bulan, dihitung bersama petugas gudang."
-              />
-            </Field>
-            <Field label="Tanggal opname">
-              <Input type="date" value={incidentDate} onChange={(e) => setIncidentDate(e.target.value)} />
-            </Field>
+        <CardContent className="space-y-5 pt-5">
+          <div className="grid gap-3 md:grid-cols-[1fr_190px]">
+            <Field label="Catatan opname *"><Textarea value={reason} onChange={(e) => setReason(e.target.value)} placeholder="Contoh: Stock opname akhir bulan, dihitung bersama petugas gudang." className="min-h-[86px]" /></Field>
+            <Field label="Tanggal opname"><Input type="date" value={incidentDate} onChange={(e) => setIncidentDate(e.target.value)} /></Field>
           </div>
-
-          <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-            <div className="flex flex-col gap-2 sm:flex-row">
-              <Input
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                placeholder="Cari SKU atau nama barang…"
-                className="sm:w-72"
-              />
-              <div className="grid grid-cols-3 gap-1 rounded-xl bg-slate-100 p-1">
-                {([
-                  ["all", `Semua · ${rows.length}`],
-                  ["pending", `Belum diisi · ${rows.length - checkedRows.length}`],
-                  ["difference", `Selisih · ${changedRows.length}`],
-                ] as Array<[typeof filter, string]>).map(([value, label]) => (
-                  <button
-                    key={value}
-                    type="button"
-                    onClick={() => setFilter(value)}
-                    className={`rounded-lg px-3 py-2 text-xs font-semibold transition ${filter === value ? "bg-white text-slate-900 shadow-sm" : "text-slate-500 hover:text-slate-900"}`}
-                  >
-                    {label}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <div className="flex flex-wrap gap-2">
-              <Button type="button" variant="outline" onClick={markAllAsSystem} disabled={!rows.length || busy}>
-                Isi = sistem
-              </Button>
-              <Button type="button" variant="outline" onClick={clearAll} disabled={!checkedRows.length || busy}>
-                Kosongkan
-              </Button>
-            </div>
+          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+            <div className="golog-panel-soft rounded-2xl p-4"><p className="text-xs font-semibold uppercase tracking-[0.14em] text-[#8b7b67]">Diperiksa</p><p className="mt-2 text-3xl font-semibold tracking-tight">{formatNumber(checkedRows.length)}</p><p className="mt-1 text-xs text-[#7e6b57]">dari {formatNumber(rows.length)} SKU</p></div>
+            <div className="rounded-2xl border-2 border-[#d7aa71] bg-[#fbefd1] p-4"><p className="text-xs font-semibold uppercase tracking-[0.14em] text-[#9b7040]">Ada selisih</p><p className="mt-2 text-3xl font-semibold tracking-tight text-[#6d4c2f]">{formatNumber(changedRows.length)}</p><p className="mt-1 text-xs text-[#9b7040]">perlu dikonfirmasi</p></div>
+            <div className="rounded-2xl border-2 border-[#b8c68a] bg-[#eef0d5] p-4"><p className="text-xs font-semibold uppercase tracking-[0.14em] text-[#5d7033]">Kelebihan</p><p className="mt-2 text-3xl font-semibold tracking-tight text-[#4e6328]">+{formatNumber(positiveDifference)}</p><p className="mt-1 text-xs text-[#5d7033]">{formatNumber(increaseRows.length)} barang</p></div>
+            <div className="rounded-2xl border-2 border-[#dca69a] bg-[#f8e3de] p-4"><p className="text-xs font-semibold uppercase tracking-[0.14em] text-[#9b5146]">Kekurangan</p><p className="mt-2 text-3xl font-semibold tracking-tight text-[#8f493f]">−{formatNumber(negativeDifference)}</p><p className="mt-1 text-xs text-[#9b5146]">{formatNumber(decreaseRows.length)} barang</p></div>
           </div>
-
-          <div className="overflow-hidden rounded-2xl border border-slate-200">
-            <div className="max-h-[560px] overflow-auto">
-              <table className="w-full min-w-[860px] text-left text-sm">
-                <thead className="sticky top-0 z-10 bg-slate-50 text-[11px] uppercase tracking-[0.12em] text-slate-400">
-                  <tr>
-                    <th className="px-4 py-3">Barang</th>
-                    <th className="px-4 py-3 text-right">Sistem</th>
-                    <th className="px-4 py-3">Stok Fisik</th>
-                    <th className="px-4 py-3 text-right">Selisih</th>
-                    <th className="px-4 py-3 text-center">Status</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100">
+          <div className="flex flex-col gap-3 rounded-2xl border-2 border-[#b8a27a] bg-[#eee2bd]/45 p-3 md:flex-row md:items-center md:justify-between">
+            <div className="relative min-w-0 flex-1"><Search size={18} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[#8b7b67]" /><Input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Cari SKU atau nama barang…" className="h-11 bg-[#f7efd7] pl-10" aria-label="Cari barang stock opname" /></div>
+            <div className="flex overflow-x-auto rounded-xl border border-[#b8a27a] bg-[#e5d8ab]/55 p-1">
+              {(["all", "pending", "difference"] as const).map((value) => {
+                const label = value === "all" ? "Semua · " + rows.length : value === "pending" ? "Belum diisi · " + (rows.length - checkedRows.length) : "Selisih · " + changedRows.length;
+                return <button key={value} type="button" onClick={() => setFilter(value)} className={"whitespace-nowrap rounded-lg px-3 py-2 text-xs font-semibold transition " + (filter === value ? "bg-[#5a4738] text-[#fff9ea] shadow-sm" : "text-[#6f5e4e] hover:bg-[#f7efd7]")}>{label}</button>;
+              })}
+            </div>
+            <div className="flex shrink-0 gap-2"><Button type="button" variant="outline" onClick={markAllAsSystem} disabled={!rows.length || busy || allChecked}>Isi = sistem</Button><Button type="button" variant="outline" onClick={clearAll} disabled={!checkedRows.length || busy}>Kosongkan</Button></div>
+          </div>
+          <div className="overflow-hidden rounded-2xl border-2 border-[#b8a27a] bg-[#f7efd7]">
+            <div className="hidden overflow-x-auto md:block">
+              <table className="w-full min-w-[900px] text-left text-sm">
+                <thead className="border-b border-[#d0be97] bg-[#eee2bd] text-[11px] uppercase tracking-[0.12em] text-[#7e6b57]"><tr><th className="px-4 py-3">Barang</th><th className="px-4 py-3 text-right">Sistem</th><th className="px-4 py-3">Stok fisik</th><th className="px-4 py-3 text-right">Selisih</th><th className="px-4 py-3 text-center">Status</th></tr></thead>
+                <tbody className="divide-y divide-[#d8c9a8]/70">
                   {visibleRows.map((row) => {
-                    const physical = row.physicalQty === "" ? null : Number(row.physicalQty);
-                    const difference = physical === null ? null : physical - row.systemQty;
-                    const status =
-                      physical === null
-                        ? { label: "Belum diisi", className: "border-slate-200 bg-slate-50 text-slate-500" }
-                        : difference === null
-                          ? { label: "Belum diisi", className: "border-slate-200 bg-slate-50 text-slate-500" }
-                          : difference === 0
-                            ? { label: "Sesuai", className: "border-emerald-200 bg-emerald-50 text-emerald-700" }
-                            : difference > 0
-                              ? { label: "Tambah", className: "border-sky-200 bg-sky-50 text-sky-700" }
-                              : { label: "Kurang", className: "border-rose-200 bg-rose-50 text-rose-700" };
-
-                    return (
-                      <tr key={row.itemId} className={difference !== null && difference !== 0 ? "bg-amber-50/30" : "bg-white"}>
-                        <td className="px-4 py-3">
-                          <p className="font-medium text-slate-800">{row.name}</p>
-                          <p className="mt-0.5 text-xs text-slate-400">{row.sku} · {row.unit}</p>
-                        </td>
-                        <td className="px-4 py-3 text-right font-semibold text-slate-700">
-                          {formatNumber(row.systemQty)}
-                        </td>
-                        <td className="px-4 py-3">
-                          <Input
-                            type="number"
-                            min="0"
-                            step="1"
-                            value={row.physicalQty}
-                            onChange={(e) => setPhysicalQty(row.itemId, e.target.value)}
-                            placeholder="Isi hasil hitung"
-                            className="h-9 w-36"
-                          />
-                        </td>
-                        <td className={`px-4 py-3 text-right font-semibold ${difference === null ? "text-slate-300" : difference > 0 ? "text-emerald-700" : difference < 0 ? "text-rose-700" : "text-sky-700"}`}>
-                          {difference === null ? "—" : difference > 0 ? `+${formatNumber(difference)}` : formatNumber(difference)}
-                        </td>
-                        <td className="px-4 py-3 text-center">
-                          <Badge className={status.className}>{status.label}</Badge>
-                        </td>
-                      </tr>
-                    );
+                    const meta = rowMeta(row);
+                    return <tr key={row.itemId} className={meta.difference !== null && meta.difference !== 0 ? "bg-[#fbefd1]/45" : "hover:bg-[#eee2bd]/30"}>
+                      <td className="px-4 py-4"><p className="font-semibold text-[#4e3f32]">{row.name}</p><p className="mt-1 text-xs text-[#8b7b67]">{row.sku} · {row.unit}</p></td>
+                      <td className="px-4 py-4 text-right"><p className="font-semibold text-[#5a4738]">{formatNumber(row.systemQty)}</p><p className="mt-1 text-[10px] uppercase tracking-[0.1em] text-[#9a896f]">saldo sistem</p></td>
+                      <td className="px-4 py-4"><Input type="number" min="0" step="1" value={row.physicalQty} onChange={(e) => setPhysicalQty(row.itemId, e.target.value)} placeholder="Isi hasil hitung" className="h-10 w-40 bg-[#fffaf0]" /></td>
+                      <td className={"px-4 py-4 text-right font-bold " + (meta.difference === null ? "text-[#b1a38f]" : meta.difference > 0 ? "text-[#5d7033]" : meta.difference < 0 ? "text-[#a95447]" : "text-[#6d7d3e]")}>{meta.difference === null ? "—" : meta.difference > 0 ? "+" + formatNumber(meta.difference) : formatNumber(meta.difference)}</td>
+                      <td className="px-4 py-4 text-center"><Badge className={meta.className}>{meta.label}</Badge></td>
+                    </tr>;
                   })}
-                  {!visibleRows.length && (
-                    <tr>
-                      <td colSpan={5} className="px-4 py-10 text-center text-sm text-slate-400">
-                        Tidak ada barang yang cocok dengan filter.
-                      </td>
-                    </tr>
-                  )}
+                  {!visibleRows.length && <tr><td colSpan={5} className="px-4 py-12 text-center text-sm text-[#8b7b67]">Tidak ada barang yang cocok dengan filter.</td></tr>}
                 </tbody>
               </table>
             </div>
-          </div>
-
-          <div className="flex flex-col gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-4 md:flex-row md:items-center md:justify-between">
-            <div className="text-sm text-slate-600">
-              <p>
-                Akan diproses: <strong>{formatNumber(checkedRows.length)}</strong> barang ·
-                Selisih bersih: <strong className={totalDifference > 0 ? "text-emerald-700" : totalDifference < 0 ? "text-rose-700" : "text-slate-700"}>
-                  {totalDifference > 0 ? "+" : ""}{formatNumber(totalDifference)}
-                </strong>
-              </p>
-              <p className="mt-1 text-xs text-slate-400">
-                Barang tanpa selisih tetap diperiksa, tetapi tidak membuat movement penyesuaian.
-              </p>
+            <div className="divide-y divide-[#d8c9a8]/70 md:hidden">
+              {visibleRows.map((row) => {
+                const meta = rowMeta(row);
+                return <div key={row.itemId} className="p-4">
+                  <div className="flex items-start gap-3"><div className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-[#e5d8ab] text-[#6b573f]"><ClipboardType size={20} /></div><div className="min-w-0 flex-1">
+                    <div className="flex items-start justify-between gap-3"><div className="min-w-0"><p className="truncate font-semibold text-[#4e3f32]">{row.name}</p><p className="mt-1 truncate text-xs text-[#8b7b67]">{row.sku} · {row.unit}</p></div><Badge className={meta.className}>{meta.label}</Badge></div>
+                    <div className="mt-4 grid grid-cols-2 gap-3"><div className="rounded-xl border border-[#d0be97] bg-[#eee2bd]/55 p-3"><p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-[#8b7b67]">Sistem</p><p className="mt-1 text-lg font-semibold text-[#5a4738]">{formatNumber(row.systemQty)}</p></div><div className="rounded-xl border border-[#d0be97] bg-[#fffaf0] p-3"><p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-[#8b7b67]">Selisih</p><p className={"mt-1 text-lg font-semibold " + (meta.difference === null ? "text-[#b1a38f]" : meta.difference > 0 ? "text-[#5d7033]" : meta.difference < 0 ? "text-[#a95447]" : "text-[#6d7d3e]")}>{meta.difference === null ? "—" : meta.difference > 0 ? "+" + formatNumber(meta.difference) : formatNumber(meta.difference)}</p></div></div>
+                    <div className="mt-3"><Field label="Stok fisik"><Input type="number" min="0" step="1" inputMode="numeric" value={row.physicalQty} onChange={(e) => setPhysicalQty(row.itemId, e.target.value)} placeholder="Isi hasil hitung" className="h-11 bg-[#fffaf0]" /></Field></div>
+                  </div></div>
+                </div>;
+              })}
+              {!visibleRows.length && <div className="px-4 py-12 text-center text-sm text-[#8b7b67]">Tidak ada barang yang cocok dengan filter.</div>}
             </div>
-            <Button
-              disabled={busy || !checkedRows.length || reason.trim().length < 10}
-              onClick={submit}
-            >
-              <ClipboardCheck size={16} className="mr-2" />
-              {busy ? "Menyimpan…" : `Simpan ${formatNumber(checkedRows.length)} hasil opname`}
-            </Button>
+          </div>
+          <div className="sticky bottom-3 z-10 rounded-2xl border-2 border-[#b8a27a] bg-[#f7efd7]/95 p-4 shadow-[0_14px_35px_rgba(90,71,56,0.15)] backdrop-blur">
+            <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+              <div><p className="text-sm font-semibold text-[#5a4738]">Siap disimpan: {formatNumber(checkedRows.length)} barang</p><div className="mt-2 flex flex-wrap gap-2 text-[11px] font-semibold"><span className="rounded-lg border border-[#d0be97] bg-[#eee2bd] px-2.5 py-1 text-[#7e6b57]">Selisih bersih {totalDifference > 0 ? "+" : ""}{formatNumber(totalDifference)}</span>{changedRows.length > 0 && <span className="rounded-lg border border-[#d7aa71] bg-[#fbefd1] px-2.5 py-1 text-[#9b7040]">{formatNumber(changedRows.length)} koreksi</span>}{allChecked && <span className="rounded-lg border border-[#b8c68a] bg-[#eef0d5] px-2.5 py-1 text-[#5d7033]">Semua SKU diperiksa</span>}</div><p className="mt-2 text-xs leading-5 text-[#8b7b67]">Barang tanpa selisih tetap tercatat sebagai hasil pemeriksaan dan tidak membuat movement baru.</p></div>
+              <Button className="w-full sm:w-auto" disabled={busy || !checkedRows.length || reason.trim().length < 10} onClick={submit}><ClipboardCheck size={16} className="mr-2" />{busy ? "Menyimpan hasil…" : "Simpan " + formatNumber(checkedRows.length) + " hasil opname"}</Button>
+            </div>
           </div>
         </CardContent>
       </Card>
-
-      <Card className="border-slate-200/80 shadow-sm">
-        <CardHeader>
-          <CardTitle>Alur stock opname</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid gap-3 md:grid-cols-4">
-            {[
-              ["1", "Isi stok fisik", "Masukkan hasil hitung pada barang yang diperiksa."],
-              ["2", "Review selisih", "Sistem menghitung fisik − sistem secara otomatis."],
-              ["3", "Simpan sekaligus", "Semua koreksi diproses dalam satu transaksi atomik."],
-              ["4", "Stok terbarui", "Dashboard dan stok gudang langsung ikut berubah."],
-            ].map(([number, title, text]) => (
-              <div key={number} className="rounded-2xl border border-[#b8a27a] bg-[#f7efd7] p-4">
-                <div className="grid h-8 w-8 place-items-center rounded-full bg-[#102a2b] text-sm font-semibold text-white">{number}</div>
-                <p className="mt-3 font-semibold text-slate-800">{title}</p>
-                <p className="mt-1 text-xs leading-5 text-slate-500">{text}</p>
-              </div>
-            ))}
-          </div>
-        </CardContent>
+      <Card className="overflow-hidden">
+        <CardHeader className="border-b border-[#b8a27a]/60"><p className="golog-kicker">Cara kerja</p><CardTitle className="mt-1">Satu sesi, satu koreksi terkontrol</CardTitle></CardHeader>
+        <CardContent className="pt-5"><div className="grid gap-3 md:grid-cols-4">
+          {[["1", "Hitung fisik", "Masukkan jumlah nyata yang ditemukan di Gudang Pusat."], ["2", "Review", "Sistem menghitung fisik − saldo sistem secara langsung."], ["3", "Simpan", "Semua hasil diproses sekaligus dalam satu transaksi."], ["4", "Selesai", "Stok gudang dan histori koreksi langsung diperbarui."]].map(([number, title, text]) => <div key={number} className="rounded-2xl border-2 border-[#b8a27a] bg-[#f7efd7] p-4"><div className="grid h-8 w-8 place-items-center rounded-full bg-[#102a2b] text-sm font-semibold text-white">{number}</div><p className="mt-3 font-semibold text-[#4e3f32]">{title}</p><p className="mt-1 text-xs leading-5 text-[#7e6b57]">{text}</p></div>)}
+        </div></CardContent>
       </Card>
     </div>
   );
