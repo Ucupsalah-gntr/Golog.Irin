@@ -1330,7 +1330,7 @@ function StockView({ stock, isAdmin, items, warehouses, onCreateItem, busy, onIm
     </CardContent>
   </Card>;
 }
-function InboundView({ items, warehouses, onSubmit, busy }: any) { const [form, setForm] = useState({ itemId: "", quantity: "", sourceWarehouseId: "", notes: "", occurredAt: new Date().toISOString().slice(0, 10) }); return <Card className="max-w-3xl border-slate-200/80 shadow-sm"><CardHeader><CardTitle>Catat barang masuk</CardTitle><p className="mt-1 text-sm text-slate-500">Penerimaan dari Gudang Farmasi, Gudang RT, CSSD, atau Laboratorium.</p></CardHeader><CardContent><div className="grid gap-4 md:grid-cols-2"><Field label="Barang"><select className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm" value={form.itemId} onChange={(e) => setForm({ ...form, itemId: e.target.value })}><option value="">Pilih barang</option>{items.map((item: any) => <option key={item.id} value={item.id}>{item.name} · {item.sku}</option>)}</select></Field><Field label="Sumber gudang"><select className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm" value={form.sourceWarehouseId} onChange={(e) => setForm({ ...form, sourceWarehouseId: e.target.value })}><option value="">Pilih gudang sumber</option>{warehouses.filter((w: any) => w.kind === "source").map((w: any) => <option key={w.id} value={w.id}>{w.name}</option>)}</select></Field><Field label="Jumlah"><Input type="number" min="1" value={form.quantity} onChange={(e) => setForm({ ...form, quantity: e.target.value })} placeholder="0" /></Field><Field label="Tanggal kejadian"><Input type="date" value={form.occurredAt} onChange={(e) => setForm({ ...form, occurredAt: e.target.value })} /></Field><div className="md:col-span-2"><Field label="Catatan"><Textarea value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} placeholder="Nomor dokumen, nota, atau keterangan penerimaan" /></Field></div></div><Button className="mt-6" disabled={busy || !form.itemId || !form.quantity || !form.sourceWarehouseId} onClick={() => onSubmit({ itemId: Number(form.itemId), quantity: Number(form.quantity), sourceWarehouseId: Number(form.sourceWarehouseId), occurredAt: new Date(form.occurredAt) })}><ArrowDownToLine size={16} className="mr-2" />Simpan barang masuk</Button></CardContent></Card> }
+function InboundView({ items, warehouses, onSubmit, busy }: any) { const [form, setForm] = useState({ itemId: "", quantity: "", sourceWarehouseId: "", notes: "", occurredAt: new Date().toISOString().slice(0, 10) }); return <Card className="max-w-3xl border-slate-200/80 shadow-sm"><CardHeader><CardTitle>Catat barang masuk</CardTitle><p className="mt-1 text-sm text-slate-500">Penerimaan dari Gudang Farmasi, Gudang RT, CSSD, atau Laboratorium.</p></CardHeader><CardContent><div className="grid gap-4 md:grid-cols-2"><Field label="Barang"><select className="h-10 w-full rounded-lg border-2 border-[#b8a27a] bg-[#f7efd7] px-3 text-sm text-[#5a4738] shadow-[inset_0_0_0_2px_rgba(255,250,240,0.52)]" value={form.itemId} onChange={(e) => setForm({ ...form, itemId: e.target.value })}><option value="">Pilih barang</option>{items.map((item: any) => <option key={item.id} value={item.id}>{item.name} · {item.sku}</option>)}</select></Field><Field label="Sumber gudang"><select className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm" value={form.sourceWarehouseId} onChange={(e) => setForm({ ...form, sourceWarehouseId: e.target.value })}><option value="">Pilih gudang sumber</option>{warehouses.filter((w: any) => w.kind === "source").map((w: any) => <option key={w.id} value={w.id}>{w.name}</option>)}</select></Field><Field label="Jumlah"><Input type="number" min="1" value={form.quantity} onChange={(e) => setForm({ ...form, quantity: e.target.value })} placeholder="0" /></Field><Field label="Tanggal kejadian"><Input type="date" value={form.occurredAt} onChange={(e) => setForm({ ...form, occurredAt: e.target.value })} /></Field><div className="md:col-span-2"><Field label="Catatan"><Textarea value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} placeholder="Nomor dokumen, nota, atau keterangan penerimaan" /></Field></div></div><Button className="mt-6" disabled={busy || !form.itemId || !form.quantity || !form.sourceWarehouseId} onClick={() => onSubmit({ itemId: Number(form.itemId), quantity: Number(form.quantity), sourceWarehouseId: Number(form.sourceWarehouseId), occurredAt: new Date(form.occurredAt) })}><ArrowDownToLine size={16} className="mr-2" />Simpan barang masuk</Button></CardContent></Card> }
 
 function RequestsView({ requests, rooms, items, isAdmin, currentUserId, todayRoomLocks, selectedRoom, selectedRoomName, setSelectedRoom, lines, setLines, total, onCreate, onVerify, busy }: any) {
   const [priority, setPriority] = useState("normal");
@@ -1377,6 +1377,17 @@ function RequestsView({ requests, rooms, items, isAdmin, currentUserId, todayRoo
     const key = `${requestId}:${lineId}`;
     const parsed = value === "" ? 0 : Number(value);
     setApprovalQty((current) => ({ ...current, [key]: Number.isFinite(parsed) ? parsed : 0 }));
+  }
+
+  function approvalSummary(row: any) {
+    const requested = row.lines.reduce((sum: number, line: any) => sum + Number(line.line.requestedQty || 0), 0);
+    const approved = row.lines.reduce((sum: number, line: any) => sum + Math.max(0, Math.trunc(getApprovalQty(row.request.id, line))), 0);
+    const exceedsStock = row.lines.some((line: any) => {
+      const warehouseItem = items.find((candidate: any) => Number(candidate.id) === Number(line.line.itemId));
+      const warehouseQty = Number(warehouseItem?.warehouseStockQty ?? 0);
+      return getApprovalQty(row.request.id, line) > warehouseQty;
+    });
+    return { requested, approved, exceedsStock };
   }
 
   function submitApproval(row: any) {
@@ -1445,11 +1456,12 @@ function RequestsView({ requests, rooms, items, isAdmin, currentUserId, todayRoo
               <CardTitle>Antrean permintaan</CardTitle>
               <p className="mt-1 max-w-3xl text-sm text-slate-500">Prioritas permintaan ditampilkan lebih dulu. Kepala gudang menentukan jumlah yang benar-benar dipindahkan berdasarkan stok yang tersedia.</p>
             </div>
-            <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 xl:grid-cols-5">
               <button type="button" onClick={() => setFilter("all")} className={`rounded-xl border px-4 py-3 text-left transition ${filter === "all" ? "border-[#102a2b] bg-[#102a2b] text-white" : "border-[#b8a27a] bg-[#f7efd7] hover:bg-slate-50"}`}><p className="text-[11px] opacity-70">Semua</p><p className="mt-1 text-xl font-semibold">{formatNumber(requestCounts.all)}</p></button>
               <button type="button" onClick={() => setFilter("pending")} className={`rounded-xl border px-4 py-3 text-left transition ${filter === "pending" ? "border-amber-500 bg-amber-50 text-amber-900" : "border-[#b8a27a] bg-[#f7efd7] hover:bg-slate-50"}`}><p className="text-[11px] opacity-70">Menunggu</p><p className="mt-1 text-xl font-semibold">{formatNumber(requestCounts.pending)}</p></button>
               <button type="button" onClick={() => setFilter("partial")} className={`rounded-xl border px-4 py-3 text-left transition ${filter === "partial" ? "border-amber-500 bg-amber-50 text-amber-900" : "border-[#b8a27a] bg-[#f7efd7] hover:bg-slate-50"}`}><p className="text-[11px] opacity-70">Sebagian</p><p className="mt-1 text-xl font-semibold">{formatNumber(requestCounts.partial)}</p></button>
               <button type="button" onClick={() => setFilter("approved")} className={`rounded-xl border px-4 py-3 text-left transition ${filter === "approved" ? "border-emerald-500 bg-emerald-50 text-emerald-900" : "border-[#b8a27a] bg-[#f7efd7] hover:bg-slate-50"}`}><p className="text-[11px] opacity-70">Disetujui</p><p className="mt-1 text-xl font-semibold">{formatNumber(requestCounts.approved)}</p></button>
+              <button type="button" onClick={() => setFilter("rejected")} className={`rounded-xl border px-4 py-3 text-left transition ${filter === "rejected" ? "border-rose-500 bg-rose-50 text-rose-900" : "border-[#b8a27a] bg-[#f7efd7] hover:bg-slate-50"}`}><p className="text-[11px] opacity-70">Ditolak</p><p className="mt-1 text-xl font-semibold">{formatNumber(requestCounts.rejected)}</p></button>
             </div>
           </div>
         </CardHeader>
@@ -1459,6 +1471,7 @@ function RequestsView({ requests, rooms, items, isAdmin, currentUserId, todayRoo
         {sortedRequests.map((row: any) => {
           const isSubmitted = row.request.status === "submitted";
           const meta = priorityMeta(row.request.priority);
+          const approval = approvalSummary(row);
 
           return <Card key={row.request.id} className={`overflow-hidden border-slate-200/80 shadow-sm ${isSubmitted ? "ring-1 ring-slate-100" : ""}`}>
             <CardContent className="p-0">
@@ -1471,11 +1484,19 @@ function RequestsView({ requests, rooms, items, isAdmin, currentUserId, todayRoo
                   </div>
                   <p className="mt-1 text-sm text-slate-500">{row.room?.name || "Ruangan"} · {formatDate(row.request.createdAt)}</p>
                   {row.request.notes && <p className="mt-2 text-xs leading-5 text-slate-500">{row.request.notes}</p>}
+                  {isSubmitted && (
+                    <div className="mt-3 flex flex-wrap gap-2 text-[11px] font-semibold text-[#7e6b57]">
+                      <span className="rounded-lg border border-[#b8a27a] bg-[#f7efd7] px-2.5 py-1">
+                        Dipindahkan {formatNumber(approval.approved)} / {formatNumber(approval.requested)}
+                      </span>
+                      {approval.exceedsStock && <span className="rounded-lg border border-[#dca69a] bg-[#f7ded7] px-2.5 py-1 text-[#a95447]">Melebihi stok gudang</span>}
+                    </div>
+                  )}
                 </div>
 
                 {isSubmitted && <div className="flex flex-wrap gap-2">
                   <Button size="sm" variant="outline" onClick={() => fillFullApproval(row)}>Isi penuh</Button>
-                  <Button size="sm" onClick={() => submitApproval(row)} disabled={busy}><Truck size={15} className="mr-2" />Terapkan distribusi</Button>
+                  <Button size="sm" onClick={() => submitApproval(row)} disabled={busy || approval.exceedsStock || approval.approved <= 0}><Truck size={15} className="mr-2" />Terapkan distribusi</Button>
                   <Button size="sm" variant="outline" onClick={() => onVerify({ requestId: row.request.id, status: "rejected" })} disabled={busy}>Tolak</Button>
                 </div>}
               </div>
@@ -1564,7 +1585,7 @@ function RequestsView({ requests, rooms, items, isAdmin, currentUserId, todayRoo
       <CardHeader><CardTitle>Buat permintaan</CardTitle><p className="mt-1 text-sm text-slate-500">Pilih ruangan yang sedang Anda layani hari ini. Stok Gudang Pusat ditampilkan sebelum mengajukan.</p></CardHeader>
       <CardContent>
         <Field label="Ruangan yang dilayani *"><select className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm" value={selectedRoom ?? ""} onChange={(e) => setSelectedRoom(Number(e.target.value) || null)}><option value="">Pilih ruangan sebelum lanjut</option>{rooms.map((room: any) => { const lock = getRoomLock(room.id); const lockedByOther = Boolean(lock && lock.requesterId !== currentUserId); return <option key={room.id} value={room.id} disabled={lockedByOther}>{room.name}{lock ? lock.requesterId === currentUserId ? " — Anda" : ` — ${lock.requesterName || "petugas lain"}` : " — belum ada PIC"} </option>; })}</select></Field>
-        <div className={`mt-4 rounded-xl p-3 text-sm ${selectedLockedByOther ? "bg-rose-50 text-rose-800" : selectedLock ? "bg-emerald-50 text-emerald-800" : "bg-teal-50 text-teal-800"}`}>{selectedLock ? selectedLock.requesterId === currentUserId ? <>Anda adalah PIC request <strong>{selectedRoomName}</strong> hari ini. Anda dapat membuat request susulan.</> : <>Ruangan <strong>{selectedRoomName}</strong> sudah memiliki PIC request hari ini: <strong>{selectedLock.requesterName || "petugas lain"}</strong>.</> : <>Permintaan akan menjadi request pertama untuk <strong>{selectedRoomName || "ruangan yang dipilih"}</strong> hari ini.</>}</div>
+        <div className={`mt-4 rounded-xl p-3 text-sm ${selectedLockedByOther ? "border-[#dca69a] bg-[#f8e3de] text-[#9b5146]" : selectedLock ? "bg-emerald-50 text-emerald-800" : "border-[#b8c68a] bg-[#eef0d5] text-[#5d7033]"}`}>{selectedLock ? selectedLock.requesterId === currentUserId ? <>Anda adalah PIC request <strong>{selectedRoomName}</strong> hari ini. Anda dapat membuat request susulan.</> : <>Ruangan <strong>{selectedRoomName}</strong> sudah memiliki PIC request hari ini: <strong>{selectedLock.requesterName || "petugas lain"}</strong>.</> : <>Permintaan akan menjadi request pertama untuk <strong>{selectedRoomName || "ruangan yang dipilih"}</strong> hari ini.</>}</div>
         <div className="mt-5"><Field label="Prioritas"><select className="h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm" value={priority} onChange={(e) => setPriority(e.target.value)}><option value="normal">Normal</option><option value="mendesak">Mendesak</option><option value="darurat">Darurat</option></select></Field></div>
         <div className="mt-5 space-y-3">
           {lines.map((line: Line, index: number) => {
@@ -1588,7 +1609,7 @@ function RequestsView({ requests, rooms, items, isAdmin, currentUserId, todayRoo
     </Card>
 
     <Card className="border-slate-200/80 shadow-sm">
-      <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"><div><CardTitle>Daftar permintaan</CardTitle><p className="mt-1 text-sm text-slate-500">Riwayat permintaan yang Anda buat</p></div><select className="h-9 rounded-lg border border-input bg-background px-2 text-xs" value={filter} onChange={(e) => setFilter(e.target.value)}><option value="all">Semua status</option><option value="submitted">Diajukan</option><option value="approved">Disetujui</option><option value="partial">Sebagian</option><option value="rejected">Ditolak</option></select></CardHeader>
+      <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"><div><CardTitle>Daftar permintaan</CardTitle><p className="mt-1 text-sm text-slate-500">Riwayat permintaan yang Anda buat</p></div><select className="h-9 rounded-lg border-2 border-[#b8a27a] bg-[#f7efd7] px-2 text-xs text-[#5a4738]" value={filter} onChange={(e) => setFilter(e.target.value)}><option value="all">Semua status</option><option value="submitted">Diajukan</option><option value="approved">Disetujui</option><option value="partial">Sebagian</option><option value="rejected">Ditolak</option></select></CardHeader>
       <CardContent><div className="space-y-3">{sortedRequests.map((row: any) => <div key={row.request.id} className="rounded-2xl border border-slate-200 p-4">
         <div className="flex flex-wrap items-start justify-between gap-3"><div><div className="flex items-center gap-2"><span className="font-semibold">{row.request.requestNo}</span><Badge className={statusTone(row.request.status)}>{statusLabel(row.request.status)}</Badge></div><p className="mt-1 text-sm text-slate-500">{row.room?.name || "Ruangan"} · {formatDate(row.request.createdAt)} · <span className="capitalize">{row.request.priority}</span></p></div></div>
         <div className="mt-4 grid gap-2 border-t border-slate-100 pt-3 text-sm">{row.lines.map((line: any) => <div key={line.line.id} className="flex justify-between gap-4"><span>{line.item?.name || "Item"}</span><span className="font-medium">{line.line.requestedQty} diminta · {line.line.approvedQty} dipindahkan</span></div>)}</div>
