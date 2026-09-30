@@ -72,12 +72,12 @@ function getReportDay(value: unknown) {
   return Number(getJakartaDateKeyClient(new Date(String(value))).slice(-2));
 }
 function statusLabel(status: string) {
-  return ({ submitted: "Diajukan", approved: "Disetujui", partial: "Sebagian", rejected: "Ditolak", ready: "Siap diambil", delivered: "Diserahkan", received: "Diterima", cancelled: "Dibatalkan", draft: "Draft" } as Record<string, string>)[status] ?? status;
+  return ({ submitted: "Diajukan", approved: "Disetujui", partial: "Sebagian", rejected: "Ditolak" } as Record<string, string>)[status] ?? status;
 }
 function statusTone(status: string) {
-  if (["approved", "received", "ready"].includes(status)) return "bg-emerald-100 text-emerald-700 border-emerald-200";
-  if (["rejected", "cancelled"].includes(status)) return "bg-rose-100 text-rose-700 border-rose-200";
-  if (["delivered", "partial"].includes(status)) return "bg-amber-100 text-amber-700 border-amber-200";
+  if (status === "approved") return "bg-emerald-100 text-emerald-700 border-emerald-200";
+  if (status === "rejected") return "bg-rose-100 text-rose-700 border-rose-200";
+  if (status === "partial") return "bg-amber-100 text-amber-700 border-amber-200";
   return "bg-sky-100 text-sky-700 border-sky-200";
 }
 
