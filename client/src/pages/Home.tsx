@@ -125,6 +125,7 @@ export default function Home() {
   const [selectedRoom, setSelectedRoom] = useState<number | null>(null);
   const [requestLines, setRequestLines] = useState<Line[]>([{ itemId: 0, requestedQty: 1 }]);
   const [reportMonth, setReportMonth] = useState(getJakartaMonthKeyClient());
+  const [roomDemandDays, setRoomDemandDays] = useState<30 | 90>(30);
   const [notificationOpen, setNotificationOpen] = useState(false);
   const [readNotificationKeys, setReadNotificationKeys] = useState<string[]>([]);
   const [notificationTarget, setNotificationTarget] = useState<{ nav: NavKey; requestId?: number; itemId?: number } | null>(null);
@@ -137,6 +138,10 @@ export default function Home() {
   const monthlyReport = trpc.reports.monthly.useQuery(
     { month: reportMonth },
     { enabled: isAuthenticated && user?.role === "admin" && (active === "reports" || active === "overview") },
+  );
+  const roomDemand = trpc.analytics.roomDemand.useQuery(
+    { days: roomDemandDays },
+    { enabled: isAuthenticated && user?.role === "admin" && active === "overview" },
   );
   const createRequest = trpc.requests.create.useMutation({
     onSuccess: () => {
@@ -355,7 +360,7 @@ export default function Home() {
               {unreadNotificationCount > 0 && <span className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-[#c87969] ring-2 ring-[#f7efd7]" />}
             </button><button title="Refresh" onClick={refreshAll} className="rounded-xl border border-[#b8a27a] bg-[#f7efd7] p-2.5 text-slate-500 hover:text-teal-700"><RefreshCw size={17} /></button><div className="hidden rounded-xl border border-[#b8a27a] bg-[#f7efd7] px-3 py-2 text-right sm:block"><p className="text-xs font-semibold">{user?.name || "Akun aktif"}</p><p className="text-[11px] text-slate-500">{isAdmin ? "Kepala gudang" : "Petugas"}</p></div></div></header>
           <div className={`golog-page mx-auto max-w-[1500px] space-y-6 ${active === "overview" ? "p-0 pb-28 md:p-8 md:pb-8" : "p-5 md:p-8"}`}>
-            {active === "overview" && <Overview dashboard={dashboard.data} isAdmin={isAdmin} onGo={go} report={isAdmin ? monthlyReport.data : null} requests={requests.data ?? []} userName={user?.name || user?.username || "Kepala Gudang"} unreadNotificationCount={unreadNotificationCount} onOpenNotifications={() => setNotificationOpen(true)} />}
+            {active === "overview" && <Overview dashboard={dashboard.data} isAdmin={isAdmin} onGo={go} report={isAdmin ? monthlyReport.data : null} requests={requests.data ?? []} items={items} userName={user?.name || user?.username || "Kepala Gudang"} unreadNotificationCount={unreadNotificationCount} onOpenNotifications={() => setNotificationOpen(true)} roomDemand={isAdmin ? roomDemand.data : null} roomDemandDays={roomDemandDays} onRoomDemandDaysChange={setRoomDemandDays} />}
             {active === "stock" && <StockView stock={stock} isAdmin={isAdmin} items={items} warehouses={warehouses} onCreateItem={(input: any) => createItem.mutate(input)} busy={createItem.isPending} onImport={(rows: any[]) => importItems.mutate({ rows })} importBusy={importItems.isPending} focusItemId={notificationTarget?.nav === "stock" ? notificationTarget.itemId : undefined} />}
             {active === "inbound" && <InboundView items={items} warehouses={warehouses} onSubmit={(input: any) => createInbound.mutate(input)} busy={createInbound.isPending} />}
             {active === "requests" && <RequestsView requests={requests.data ?? []} rooms={rooms} items={items} isAdmin={isAdmin} currentUserId={user?.id} todayRoomLocks={todayRoomLocks.data ?? []} selectedRoom={selectedRoom} selectedRoomName={selectedRoomName} setSelectedRoom={setSelectedRoom} lines={requestLines} setLines={setRequestLines} total={requestTotal} onCreate={(input: any) => createRequest.mutate(input)} onVerify={(input: any) => verifyRequest.mutate(input)} busy={createRequest.isPending || verifyRequest.isPending} focusRequestId={notificationTarget?.nav === "requests" ? notificationTarget.requestId : undefined} />}
@@ -679,6 +684,203 @@ function NotificationCenter({
   );
 }
 
+
+function RoomDemandPanel({
+  data,
+  items,
+  days,
+  onDaysChange,
+}: {
+  data: any;
+  items: any[];
+  days: 30 | 90;
+  onDaysChange: (value: 30 | 90) => void;
+}) {
+  const [selectedItemId, setSelectedItemId] = useState("");
+  const roomSummary = Array.isArray(data?.roomSummary) ? data.roomSummary : [];
+  const itemRows = Array.isArray(data?.itemRows) ? data.itemRows : [];
+  const selectedRows = selectedItemId
+    ? itemRows
+        .filter((row: any) => Number(row.itemId) === Number(selectedItemId))
+        .sort((a: any, b: any) => Number(b.avgPerActiveDay) - Number(a.avgPerActiveDay))
+    : [];
+  const selectedItem = items.find((item: any) => Number(item.id) === Number(selectedItemId));
+  const totalSelectedQty = selectedRows.reduce((sum: number, row: any) => sum + Number(row.totalQty ?? 0), 0);
+  const averagePerActiveRoom = selectedRows.length
+    ? selectedRows.reduce((sum: number, row: any) => sum + Number(row.avgPerActiveDay ?? 0), 0) / selectedRows.length
+    : 0;
+
+  return (
+    <Card className="overflow-hidden border-[#b8a27a]/70 bg-[#fffaf0] shadow-sm">
+      <CardHeader className="border-b border-[#d8c9a8]/70 bg-[#f7efd7]/55">
+        <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
+          <div>
+            <p className="golog-kicker">Pola penggunaan ruangan</p>
+            <CardTitle className="mt-1">Pola Permintaan Ruangan</CardTitle>
+            <p className="mt-1 max-w-3xl text-sm text-[#7e6b57]">
+              Sistem membaca histori distribusi yang benar-benar diterima tiap ruangan. Pilih satu barang untuk membandingkan kebiasaannya antar-ruangan.
+            </p>
+          </div>
+          <div className="flex shrink-0 rounded-xl border border-[#b8a27a] bg-[#fffaf0] p-1">
+            {[30, 90].map((value) => (
+              <button
+                key={value}
+                type="button"
+                onClick={() => onDaysChange(value as 30 | 90)}
+                className={`rounded-lg px-3 py-2 text-xs font-semibold transition ${days === value ? "bg-[#102a2b] text-white" : "text-[#7e6b57] hover:bg-[#eee2bd]"}`}
+              >
+                {value} hari
+              </button>
+            ))}
+          </div>
+        </div>
+      </CardHeader>
+
+      <CardContent className="p-5">
+        <div className="grid gap-4 md:grid-cols-[minmax(0,1fr)_auto] md:items-end">
+          <Field label="Barang yang dibandingkan">
+            <select
+              className="h-11 w-full rounded-xl border-2 border-[#b8a27a] bg-[#fffaf0] px-3 text-sm text-[#5a4738]"
+              value={selectedItemId}
+              onChange={(e) => setSelectedItemId(e.target.value)}
+            >
+              <option value="">Semua barang — lihat aktivitas ruangan</option>
+              {items.map((item: any) => (
+                <option key={item.id} value={item.id}>
+                  {item.name} · {item.sku} · {item.unit}
+                </option>
+              ))}
+            </select>
+          </Field>
+
+          {selectedItemId && (
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+              <div className="rounded-xl border border-[#d0be97] bg-[#f7efd7] px-3 py-2">
+                <p className="text-[10px] uppercase tracking-[0.12em] text-[#8b7b67]">Ruang terdata</p>
+                <p className="mt-1 text-lg font-semibold text-[#5a4738]">{formatNumber(selectedRows.length)}</p>
+              </div>
+              <div className="rounded-xl border border-[#d0be97] bg-[#f7efd7] px-3 py-2">
+                <p className="text-[10px] uppercase tracking-[0.12em] text-[#8b7b67]">Total distribusi</p>
+                <p className="mt-1 text-lg font-semibold text-[#5a4738]">{formatNumber(totalSelectedQty)}</p>
+              </div>
+              <div className="rounded-xl border border-[#d0be97] bg-[#f7efd7] px-3 py-2">
+                <p className="text-[10px] uppercase tracking-[0.12em] text-[#8b7b67]">Rata-rata ruang</p>
+                <p className="mt-1 text-lg font-semibold text-[#5a4738]">{formatNumber(averagePerActiveRoom)}</p>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {!selectedItemId ? (
+          <div className="mt-5">
+            <div className="rounded-xl border border-[#d8c9a8] bg-[#eee2bd]/45 px-4 py-3 text-xs leading-5 text-[#7e6b57]">
+              Mode ini menampilkan <strong>aktivitas distribusi</strong>, bukan menjumlahkan semua satuan barang menjadi satu angka. Untuk membandingkan jumlah, pilih satu barang.
+            </div>
+            <div className="mt-4 overflow-x-auto rounded-2xl border border-[#d8c9a8]">
+              <table className="w-full min-w-[620px] text-sm">
+                <thead className="bg-[#f7efd7] text-left text-xs uppercase tracking-[0.12em] text-[#8b7b67]">
+                  <tr>
+                    <th className="px-4 py-3">Ruangan</th>
+                    <th className="px-4 py-3 text-right">Hari aktif</th>
+                    <th className="px-4 py-3 text-right">Item</th>
+                    <th className="px-4 py-3 text-right">Distribusi</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-[#e4d9be] bg-[#fffaf0]">
+                  {roomSummary.map((row: any) => (
+                    <tr key={row.roomId} className="hover:bg-[#f7efd7]/60">
+                      <td className="px-4 py-3 font-semibold text-[#5a4738]">{row.roomName}</td>
+                      <td className="px-4 py-3 text-right text-[#6f5f50]">{formatNumber(row.activeDays)}</td>
+                      <td className="px-4 py-3 text-right text-[#6f5f50]">{formatNumber(row.itemCount)}</td>
+                      <td className="px-4 py-3 text-right font-semibold text-[#5a4738]">{formatNumber(row.distributionEvents)} kali</td>
+                    </tr>
+                  ))}
+                  {!roomSummary.length && (
+                    <tr><td colSpan={4} className="px-4 py-10 text-center text-sm text-[#8b7b67]">Belum ada data distribusi dalam periode ini.</td></tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        ) : (
+          <div className="mt-5">
+            <div className="mb-4 flex items-center justify-between gap-3">
+              <div>
+                <p className="text-sm font-semibold text-[#5a4738]">{selectedItem?.name || "Barang"}</p>
+                <p className="text-xs text-[#8b7b67]">{selectedItem?.sku || ""} · rata-rata dihitung dari hari saat ruangan menerima distribusi</p>
+              </div>
+              <span className="rounded-full border border-[#d0be97] bg-[#f7efd7] px-3 py-1 text-[11px] font-semibold text-[#7e6b57]">{data?.days ?? days} hari</span>
+            </div>
+
+            <div className="hidden overflow-x-auto rounded-2xl border border-[#d8c9a8] md:block">
+              <table className="w-full min-w-[720px] text-sm">
+                <thead className="bg-[#f7efd7] text-left text-xs uppercase tracking-[0.12em] text-[#8b7b67]">
+                  <tr>
+                    <th className="px-4 py-3">Ruangan</th>
+                    <th className="px-4 py-3 text-right">Total diterima</th>
+                    <th className="px-4 py-3 text-right">Hari aktif</th>
+                    <th className="px-4 py-3 text-right">Rata-rata / hari aktif</th>
+                    <th className="px-4 py-3 text-right">Distribusi</th>
+                    <th className="px-4 py-3 text-right">Posisi</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-[#e4d9be] bg-[#fffaf0]">
+                  {selectedRows.map((row: any, index: number) => (
+                    <tr key={row.roomId} className={index === 0 ? "bg-[#eef0d5]/50" : "hover:bg-[#f7efd7]/60"}>
+                      <td className="px-4 py-3 font-semibold text-[#5a4738]">{row.roomName}</td>
+                      <td className="px-4 py-3 text-right font-semibold text-[#5a4738]">{formatNumber(row.totalQty)} {row.unit}</td>
+                      <td className="px-4 py-3 text-right text-[#6f5f50]">{formatNumber(row.activeDays)}</td>
+                      <td className="px-4 py-3 text-right font-semibold text-[#5d7033]">{formatNumber(row.avgPerActiveDay)} {row.unit}</td>
+                      <td className="px-4 py-3 text-right text-[#6f5f50]">{formatNumber(row.distributionEvents)} kali</td>
+                      <td className="px-4 py-3 text-right">
+                        <span className={`inline-flex rounded-full border px-2.5 py-1 text-[11px] font-semibold ${index === 0 ? "border-[#b8c68a] bg-[#eef0d5] text-[#5d7033]" : index === selectedRows.length - 1 && selectedRows.length > 1 ? "border-[#d8c9a8] bg-[#f7efd7] text-[#8b7b67]" : "border-[#d8c9a8] bg-[#fffaf0] text-[#7e6b57]"}`}>
+                          {index === 0 ? "Tertinggi" : index === selectedRows.length - 1 && selectedRows.length > 1 ? "Terendah" : "—"}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                  {!selectedRows.length && (
+                    <tr><td colSpan={6} className="px-4 py-10 text-center text-sm text-[#8b7b67]">Belum ada distribusi untuk barang ini dalam periode yang dipilih.</td></tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+
+            <div className="space-y-3 md:hidden">
+              {selectedRows.map((row: any, index: number) => (
+                <div key={row.roomId} className={`rounded-2xl border p-4 ${index === 0 ? "border-[#b8c68a] bg-[#eef0d5]/45" : "border-[#d8c9a8] bg-[#fffaf0]"}`}>
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <p className="font-semibold text-[#5a4738]">{row.roomName}</p>
+                      <p className="mt-1 text-xs text-[#8b7b67]">{formatNumber(row.distributionEvents)} distribusi · {formatNumber(row.activeDays)} hari aktif</p>
+                    </div>
+                    <span className="rounded-full border border-[#d0be97] bg-[#f7efd7] px-2.5 py-1 text-[10px] font-semibold text-[#7e6b57]">
+                      {index === 0 ? "Tertinggi" : index === selectedRows.length - 1 && selectedRows.length > 1 ? "Terendah" : "—"}
+                    </span>
+                  </div>
+                  <div className="mt-4 grid grid-cols-2 gap-3">
+                    <div className="rounded-xl border border-[#d8c9a8] bg-[#f7efd7] p-3">
+                      <p className="text-[10px] uppercase tracking-[0.12em] text-[#8b7b67]">Total</p>
+                      <p className="mt-1 text-lg font-semibold text-[#5a4738]">{formatNumber(row.totalQty)} {row.unit}</p>
+                    </div>
+                    <div className="rounded-xl border border-[#d8c9a8] bg-[#fffaf0] p-3">
+                      <p className="text-[10px] uppercase tracking-[0.12em] text-[#8b7b67]">Rata-rata</p>
+                      <p className="mt-1 text-lg font-semibold text-[#5d7033]">{formatNumber(row.avgPerActiveDay)} {row.unit}</p>
+                    </div>
+                  </div>
+                </div>
+              ))}
+              {!selectedRows.length && (
+                <div className="rounded-2xl border border-[#d8c9a8] bg-[#fffaf0] px-4 py-10 text-center text-sm text-[#8b7b67]">Belum ada distribusi untuk barang ini dalam periode yang dipilih.</div>
+              )}
+            </div>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
 function Overview({
   dashboard,
   isAdmin,
@@ -688,15 +890,23 @@ function Overview({
   userName = "Pengguna",
   unreadNotificationCount = 0,
   onOpenNotifications,
+  items = [],
+  roomDemand,
+  roomDemandDays,
+  onRoomDemandDaysChange,
 }: {
   dashboard: any;
   isAdmin: boolean;
   onGo: (key: NavKey) => void;
   report?: any;
   requests?: any[];
+  items?: any[];
   userName?: string;
   unreadNotificationCount?: number;
   onOpenNotifications?: () => void;
+  roomDemand?: any;
+  roomDemandDays: 30 | 90;
+  onRoomDemandDaysChange: (value: 30 | 90) => void;
 }) {
   const stats = dashboard?.stats ?? { items: 0, lowStock: 0, pending: 0, todayIn: 0 };
   const roomName = dashboard?.roomName;
@@ -722,7 +932,7 @@ function Overview({
 
     return <>
       <div className="md:hidden">
-        <MobileAdminOverview dashboard={dashboard} requests={requests} userName={userName} onGo={onGo} unreadNotificationCount={unreadNotificationCount} onOpenNotifications={onOpenNotifications} />
+        <MobileAdminOverview dashboard={dashboard} requests={requests} userName={userName} onGo={onGo} unreadNotificationCount={unreadNotificationCount} onOpenNotifications={onOpenNotifications} roomDemand={roomDemand} items={items} roomDemandDays={roomDemandDays} onRoomDemandDaysChange={onRoomDemandDaysChange} />
       </div>
       <div className="hidden md:block space-y-6">
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
@@ -732,6 +942,7 @@ function Overview({
           })}
         </div>
         {report && <CategoryPivotTable report={report} />}
+        <RoomDemandPanel data={roomDemand} items={items} days={roomDemandDays} onDaysChange={onRoomDemandDaysChange} />
         <Card className="border-slate-200/80 shadow-sm">
           <CardHeader className="flex flex-row items-center justify-between">
             <div><CardTitle>Aktivitas Gudang Pusat</CardTitle><p className="mt-1 text-sm text-slate-500">Pergerakan terakhir di Gudang Pusat.</p></div>
@@ -788,6 +999,10 @@ function MobileAdminOverview({
   onGo,
   unreadNotificationCount = 0,
   onOpenNotifications,
+  roomDemand,
+  items,
+  roomDemandDays,
+  onRoomDemandDaysChange,
 }: {
   dashboard: any;
   requests: any[];
@@ -795,6 +1010,10 @@ function MobileAdminOverview({
   onGo: (key: NavKey) => void;
   unreadNotificationCount?: number;
   onOpenNotifications?: () => void;
+  roomDemand?: any;
+  items?: any[];
+  roomDemandDays: 30 | 90;
+  onRoomDemandDaysChange: (value: 30 | 90) => void;
 }) {
   const stats = dashboard?.stats ?? { items: 0, lowStock: 0, pending: 0, todayIn: 0 };
   const pendingRequests = requests.filter((row) => row?.request?.status === "submitted");
@@ -995,6 +1214,8 @@ function MobileAdminOverview({
             )}
           </div>
         </div>
+
+        <RoomDemandPanel data={roomDemand} items={items ?? []} days={roomDemandDays} onDaysChange={onRoomDemandDaysChange} />
 
         <div className="px-1 text-xs text-slate-400">
           <div className="flex items-center gap-2">
