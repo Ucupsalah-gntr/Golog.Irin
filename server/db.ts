@@ -515,12 +515,18 @@ export async function getRoomDemandPatterns(days = 30) {
   const db = await getDb();
   const safeDays = days === 90 ? 90 : days === 30 ? 30 : 7;
   if (!db) {
-    return { days: safeDays, generatedAt: new Date().toISOString(), roomSummary: [], itemRows: [] };
+    return {
+      days: safeDays,
+      generatedAt: new Date().toISOString(),
+      sourceWarehouses: [],
+      roomSummary: [],
+      itemRows: [],
+    };
   }
 
   const start = new Date(Date.now() - (safeDays - 1) * 24 * 60 * 60 * 1000);
 
-  const [roomSummaryRows, itemRows] = await Promise.all([
+  const [roomSummaryRows, itemRows, sourceWarehouseRows] = await Promise.all([
     db
       .select({
         roomId: rooms.id,
@@ -546,6 +552,8 @@ export async function getRoomDemandPatterns(days = 30) {
         itemName: items.name,
         sku: items.sku,
         unit: items.unit,
+        sourceWarehouseId: items.sourceWarehouseId,
+        sourceWarehouseName: warehouses.name,
         totalQty: sql<number>`COALESCE(SUM(${stockMovements.quantity}), 0)`,
         distributionEvents: sql<number>`COUNT(*)`,
         activeDays: sql<number>`COUNT(DISTINCT ((${stockMovements.occurredAt} AT TIME ZONE 'Asia/Jakarta')::date))`,
@@ -553,18 +561,46 @@ export async function getRoomDemandPatterns(days = 30) {
       .from(stockMovements)
       .innerJoin(rooms, eq(stockMovements.roomId, rooms.id))
       .innerJoin(items, eq(stockMovements.itemId, items.id))
+      .leftJoin(warehouses, eq(items.sourceWarehouseId, warehouses.id))
       .where(and(
         eq(stockMovements.movementType, "in"),
         gte(stockMovements.occurredAt, start),
       ))
-      .groupBy(rooms.id, rooms.name, items.id, items.name, items.sku, items.unit)
+      .groupBy(
+        rooms.id,
+        rooms.name,
+        items.id,
+        items.name,
+        items.sku,
+        items.unit,
+        items.sourceWarehouseId,
+        warehouses.name,
+      )
       .orderBy(rooms.name, desc(sql`COALESCE(SUM(${stockMovements.quantity}), 0)`)),
+
+    db
+      .select({
+        id: warehouses.id,
+        code: warehouses.code,
+        name: warehouses.name,
+      })
+      .from(warehouses)
+      .where(and(
+        eq(warehouses.kind, "source"),
+        eq(warehouses.active, true),
+      ))
+      .orderBy(warehouses.name),
   ]);
 
   return {
     days: safeDays,
     startAt: start.toISOString(),
     generatedAt: new Date().toISOString(),
+    sourceWarehouses: sourceWarehouseRows.map((row) => ({
+      id: row.id,
+      code: row.code,
+      name: row.name,
+    })),
     roomSummary: roomSummaryRows.map((row) => ({
       roomId: row.roomId,
       roomName: row.roomName,
@@ -582,6 +618,8 @@ export async function getRoomDemandPatterns(days = 30) {
         itemName: row.itemName,
         sku: row.sku,
         unit: row.unit,
+        sourceWarehouseId: row.sourceWarehouseId,
+        sourceWarehouseName: row.sourceWarehouseName,
         totalQty,
         distributionEvents: Number(row.distributionEvents ?? 0),
         activeDays,
@@ -590,5 +628,4 @@ export async function getRoomDemandPatterns(days = 30) {
     }),
   };
 }
-
 export { auditLogs, items, requestDayLocks, requestItems, requests, rooms, stockAdjustments, stockMovements, users, warehouses };
