@@ -483,236 +483,259 @@
 }
 
 
-/* Golog.Irin — Aqua / Olive / Honey visual system.
-   Each workspace page gets its own color composition while sharing the same interaction language. */
+/* Golog.Irin — Fresh teal reference system.
+   Reference: stone wash + cerulean + teal + tomato + hunter.
+   Pages share structure, but each workspace gets a deliberate color composition. */
 :root {
-  --golog-aqua: #7bd4cc;
-  --golog-honey: #bea42e;
-  --golog-olive: #7b895b;
-  --golog-celadon: #037367;
-  --golog-deep: #002b1f;
-  --golog-cream: #f5efd7;
-  --golog-paper: #fffaf0;
-  --golog-paper-strong: #eee3bf;
-  --golog-brown: #4b3d2f;
-  --golog-brown-soft: #756650;
-  --golog-line: #c8b98a;
-  --golog-alert: #bd7060;
-  --golog-shadow: rgba(0, 43, 31, 0.12);
+  --golog-stone: #d0d3c5;
+  --golog-cerulean: #56b1bf;
+  --golog-teal: #08708a;
+  --golog-tomato: #d73a31;
+  --golog-hunter: #032b2f;
+  --golog-cream: #eef0ea;
+  --golog-paper: #fbfcf8;
+  --golog-paper-strong: #dfe4dc;
+  --golog-brown: #173b40;
+  --golog-brown-soft: #567178;
+  --golog-line: #aec1c4;
+  --golog-alert: #b52f28;
+  --golog-shadow: rgba(3, 43, 47, 0.14);
 }
 
 @layer components {
-  /* Shared shell: identity stays stable, page mood changes. */
-  .golog-app .golog-brand-mark {
-    background: var(--golog-aqua);
-    color: var(--golog-deep);
+  /* Shared identity: deeper navigation, stronger contrast, softer content surfaces. */
+  .golog-app .golog-sidebar {
+    background: linear-gradient(180deg, var(--golog-hunter) 0%, color-mix(in srgb, var(--golog-hunter) 82%, var(--golog-teal)) 100%);
+    color: #f5fbfa;
+    border-right-color: rgba(255,255,255,0.12);
   }
 
-  .golog-app .golog-sidebar {
-    background: linear-gradient(180deg, #002b1f 0%, #174b40 100%);
+  .golog-app .golog-brand-mark {
+    background: var(--golog-stone);
+    color: var(--golog-hunter);
+    border-color: rgba(255,255,255,0.62);
+  }
+
+  .golog-app .golog-nav-active {
+    background: var(--golog-nav-active, var(--golog-cerulean)) !important;
+    color: var(--golog-hunter) !important;
   }
 
   .golog-app .golog-bottom-nav {
-    background: #002b1f;
-    border-top-color: rgba(123, 212, 204, 0.45);
+    background: var(--golog-hunter);
+    border-top-color: color-mix(in srgb, var(--golog-cerulean) 58%, transparent);
   }
 
   .golog-app .golog-bottom-active {
-    color: #7bd4cc !important;
+    color: var(--golog-cerulean) !important;
   }
 
-  /* Login — clean aqua with a restrained honey accent. */
+  .golog-app .golog-bottom-fab {
+    background: var(--golog-teal);
+    border-color: var(--golog-paper);
+  }
+
+  /* Login — calm and crisp: cerulean field, hunter copy, tiny tomato accent. */
   .golog-theme-login {
-    --golog-cream: #e8f6f3;
-    --golog-paper: #fbfffd;
-    --golog-paper-strong: #d5ece7;
-    --golog-line: #99cec5;
-    --golog-brown: #24483f;
-    --golog-brown-soft: #5b766e;
-    --golog-shadow: rgba(3, 115, 103, 0.14);
-    --primary: #037367;
-    --primary-foreground: #f8fffd;
-    --ring: #bea42e;
-    --background: #e8f6f3;
-    --card: #fbfffd;
-    --popover: #fbfffd;
-    --secondary: #d5ece7;
-    --muted: #deefeb;
-    --accent: #bea42e;
-    --accent-foreground: #002b1f;
+    --golog-cream: #eaf2f1;
+    --golog-paper: #fbfdfc;
+    --golog-paper-strong: #d4e4e3;
+    --golog-line: #8fbcc4;
+    --golog-brown: #173b40;
+    --golog-brown-soft: #5c7277;
+    --golog-shadow: rgba(8,112,138,0.15);
+    --primary: #08708a;
+    --primary-foreground: #f8ffff;
+    --ring: #56b1bf;
+    --background: #eaf2f1;
+    --card: #fbfdfc;
+    --popover: #fbfdfc;
+    --secondary: #d4e4e3;
+    --muted: #dfeceb;
+    --accent: #d73a31;
+    --accent-foreground: #ffffff;
+    --golog-nav-active: #56b1bf;
   }
 
-  /* Overview — fresh aqua. */
+  /* Overview — cerulean leads; tomato appears only as a signal. */
   .golog-theme-overview {
-    --golog-cream: #e8f6f3;
-    --golog-paper: #f8fffd;
-    --golog-paper-strong: #d7eee9;
-    --golog-line: #9ccfc8;
-    --golog-brown: #25463f;
-    --golog-brown-soft: #58766e;
-    --golog-shadow: rgba(3, 115, 103, 0.12);
-    --primary: #037367;
-    --primary-foreground: #f7fffd;
-    --ring: #037367;
-    --background: #e8f6f3;
-    --card: #f8fffd;
-    --popover: #f8fffd;
-    --secondary: #d7eee9;
-    --muted: #dcefeb;
-    --accent: #7bd4cc;
-    --accent-foreground: #002b1f;
+    --golog-cream: #e4f1f3;
+    --golog-paper: #fbfdfd;
+    --golog-paper-strong: #cfe4e8;
+    --golog-line: #85bac4;
+    --golog-brown: #123d45;
+    --golog-brown-soft: #4f6f77;
+    --golog-shadow: rgba(8,112,138,0.14);
+    --primary: #08708a;
+    --primary-foreground: #f8ffff;
+    --ring: #56b1bf;
+    --background: #e4f1f3;
+    --card: #fbfdfd;
+    --popover: #fbfdfd;
+    --secondary: #cfe4e8;
+    --muted: #d9ebee;
+    --accent: #d73a31;
+    --accent-foreground: #ffffff;
+    --golog-nav-active: #56b1bf;
   }
 
-  /* Requests — warm honey accent. */
+  /* Requests — hunter frame + tomato action strip + cerulean support. */
   .golog-theme-requests {
-    --golog-cream: #f8efd2;
-    --golog-paper: #fff9e9;
-    --golog-paper-strong: #eee0aa;
-    --golog-line: #cfb96a;
-    --golog-brown: #4d4028;
-    --golog-brown-soft: #756744;
-    --golog-shadow: rgba(137, 107, 20, 0.12);
-    --primary: #bea42e;
-    --primary-foreground: #fffdf3;
-    --ring: #bea42e;
-    --background: #f8efd2;
-    --card: #fff9e9;
-    --popover: #fff9e9;
-    --secondary: #eee0aa;
-    --muted: #f1e7bf;
-    --accent: #7b895b;
-    --accent-foreground: #002b1f;
+    --golog-cream: #e7ecea;
+    --golog-paper: #fbfcf9;
+    --golog-paper-strong: #cfd9d5;
+    --golog-line: #9eb4b5;
+    --golog-brown: #0a3639;
+    --golog-brown-soft: #557074;
+    --golog-shadow: rgba(3,43,47,0.16);
+    --primary: #d73a31;
+    --primary-foreground: #ffffff;
+    --ring: #08708a;
+    --background: #e7ecea;
+    --card: #fbfcf9;
+    --popover: #fbfcf9;
+    --secondary: #cfd9d5;
+    --muted: #dde5e1;
+    --accent: #56b1bf;
+    --accent-foreground: #032b2f;
+    --golog-nav-active: #d3e6e7;
   }
 
-  /* Stock — calm olive / aqua. */
+  /* Stock — stone wash is dominant, teal creates clear data hierarchy. */
   .golog-theme-stock {
-    --golog-cream: #eef2df;
-    --golog-paper: #fbfdf5;
-    --golog-paper-strong: #dfe8c7;
-    --golog-line: #b8c596;
-    --golog-brown: #34412c;
-    --golog-brown-soft: #667356;
-    --golog-shadow: rgba(78, 96, 54, 0.13);
-    --primary: #7b895b;
-    --primary-foreground: #fafff6;
-    --ring: #7b895b;
-    --background: #eef2df;
-    --card: #fbfdf5;
-    --popover: #fbfdf5;
-    --secondary: #dfe8c7;
-    --muted: #e7edd8;
-    --accent: #7bd4cc;
-    --accent-foreground: #002b1f;
+    --golog-cream: #e5e7df;
+    --golog-paper: #fcfcf8;
+    --golog-paper-strong: #d0d3c5;
+    --golog-line: #aab4aa;
+    --golog-brown: #294247;
+    --golog-brown-soft: #607275;
+    --golog-shadow: rgba(3,43,47,0.11);
+    --primary: #08708a;
+    --primary-foreground: #f8ffff;
+    --ring: #56b1bf;
+    --background: #e5e7df;
+    --card: #fcfcf8;
+    --popover: #fcfcf8;
+    --secondary: #d0d3c5;
+    --muted: #dfe2d8;
+    --accent: #56b1bf;
+    --accent-foreground: #032b2f;
+    --golog-nav-active: #c8dfe2;
   }
 
-  /* Inbound — bright celadon with a small honey note. */
+  /* Inbound — cerulean surface with deep-teal controls. */
   .golog-theme-inbound {
-    --golog-cream: #e4f4ef;
-    --golog-paper: #f9fffc;
-    --golog-paper-strong: #cfe9e1;
-    --golog-line: #94c7bb;
-    --golog-brown: #25453d;
-    --golog-brown-soft: #5d756c;
-    --golog-shadow: rgba(3, 115, 103, 0.13);
-    --primary: #037367;
-    --primary-foreground: #f8fffd;
-    --ring: #bea42e;
-    --background: #e4f4ef;
-    --card: #f9fffc;
-    --popover: #f9fffc;
-    --secondary: #cfe9e1;
-    --muted: #dcefe9;
-    --accent: #bea42e;
-    --accent-foreground: #002b1f;
+    --golog-cream: #dceff2;
+    --golog-paper: #fbfdfc;
+    --golog-paper-strong: #bddfe5;
+    --golog-line: #7db6c0;
+    --golog-brown: #123b43;
+    --golog-brown-soft: #4f7078;
+    --golog-shadow: rgba(8,112,138,0.15);
+    --primary: #08708a;
+    --primary-foreground: #f8ffff;
+    --ring: #d73a31;
+    --background: #dceff2;
+    --card: #fbfdfc;
+    --popover: #fbfdfc;
+    --secondary: #bddfe5;
+    --muted: #d2e8eb;
+    --accent: #d73a31;
+    --accent-foreground: #ffffff;
+    --golog-nav-active: #8ccbd3;
   }
 
-  /* Adjustments — deep green / honey for a more deliberate workspace. */
+  /* Adjustments — deep, editorial, with tomato used for change state. */
   .golog-theme-adjustments {
-    --golog-cream: #e3eee9;
-    --golog-paper: #f7fcf8;
-    --golog-paper-strong: #cbded6;
-    --golog-line: #8eb1a6;
-    --golog-brown: #183c32;
-    --golog-brown-soft: #587067;
-    --golog-shadow: rgba(0, 43, 31, 0.16);
-    --primary: #002b1f;
-    --primary-foreground: #f8fffc;
-    --ring: #bea42e;
-    --background: #e3eee9;
-    --card: #f7fcf8;
-    --popover: #f7fcf8;
-    --secondary: #cbded6;
-    --muted: #deebe6;
-    --accent: #bea42e;
-    --accent-foreground: #002b1f;
+    --golog-cream: #dfe8e5;
+    --golog-paper: #f9fcfa;
+    --golog-paper-strong: #c3d4d0;
+    --golog-line: #8fabaa;
+    --golog-brown: #082f31;
+    --golog-brown-soft: #557071;
+    --golog-shadow: rgba(3,43,47,0.18);
+    --primary: #032b2f;
+    --primary-foreground: #f6ffff;
+    --ring: #d73a31;
+    --background: #dfe8e5;
+    --card: #f9fcfa;
+    --popover: #f9fcfa;
+    --secondary: #c3d4d0;
+    --muted: #d6e2de;
+    --accent: #d73a31;
+    --accent-foreground: #ffffff;
+    --golog-nav-active: #9bc2c4;
   }
 
-  /* Stocktake — olive structure with honey checkpoints. */
+  /* Stock Opname — neutral stone + high-contrast teal checkpoints. */
   .golog-theme-stocktake {
-    --golog-cream: #f0f1df;
-    --golog-paper: #fcfdf6;
-    --golog-paper-strong: #e0e6c2;
-    --golog-line: #bbc68d;
-    --golog-brown: #35402d;
-    --golog-brown-soft: #687253;
-    --golog-shadow: rgba(74, 91, 47, 0.13);
-    --primary: #7b895b;
-    --primary-foreground: #fbfff7;
-    --ring: #bea42e;
-    --background: #f0f1df;
-    --card: #fcfdf6;
-    --popover: #fcfdf6;
-    --secondary: #e0e6c2;
-    --muted: #e9edd9;
-    --accent: #bea42e;
-    --accent-foreground: #002b1f;
+    --golog-cream: #e8eae3;
+    --golog-paper: #fdfdf9;
+    --golog-paper-strong: #d0d3c5;
+    --golog-line: #aeb9af;
+    --golog-brown: #294247;
+    --golog-brown-soft: #637276;
+    --golog-shadow: rgba(3,43,47,0.12);
+    --primary: #08708a;
+    --primary-foreground: #f8ffff;
+    --ring: #d73a31;
+    --background: #e8eae3;
+    --card: #fdfdf9;
+    --popover: #fdfdf9;
+    --secondary: #d0d3c5;
+    --muted: #e0e3db;
+    --accent: #d73a31;
+    --accent-foreground: #ffffff;
+    --golog-nav-active: #b9dadd;
   }
 
-  /* Room demand — aqua first, olive second. */
+  /* Room Demand — most visual: cerulean body, deep-teal matrix, tomato only for alerts. */
   .golog-theme-room-demand {
-    --golog-cream: #e5f5f2;
-    --golog-paper: #fbfffd;
-    --golog-paper-strong: #d2ebe5;
-    --golog-line: #96c9bf;
-    --golog-brown: #24483f;
-    --golog-brown-soft: #5d776e;
-    --golog-shadow: rgba(3, 115, 103, 0.13);
-    --primary: #037367;
-    --primary-foreground: #f8fffd;
-    --ring: #7b895b;
-    --background: #e5f5f2;
-    --card: #fbfffd;
-    --popover: #fbfffd;
-    --secondary: #d2ebe5;
-    --muted: #deefeb;
-    --accent: #7b895b;
-    --accent-foreground: #fffef6;
+    --golog-cream: #dff1f3;
+    --golog-paper: #fbfdfc;
+    --golog-paper-strong: #bddfe5;
+    --golog-line: #7eb6c1;
+    --golog-brown: #0a3942;
+    --golog-brown-soft: #50727a;
+    --golog-shadow: rgba(8,112,138,0.16);
+    --primary: #08708a;
+    --primary-foreground: #f8ffff;
+    --ring: #d73a31;
+    --background: #dff1f3;
+    --card: #fbfdfc;
+    --popover: #fbfdfc;
+    --secondary: #bddfe5;
+    --muted: #d3e8eb;
+    --accent: #d73a31;
+    --accent-foreground: #ffffff;
+    --golog-nav-active: #7fc6d0;
   }
 
-  /* Reports — editorial deep green / aqua. */
+  /* Reports — hunter is dominant for a denser, more serious reading mode. */
   .golog-theme-reports {
-    --golog-cream: #e2eeeb;
-    --golog-paper: #f8fcfb;
-    --golog-paper-strong: #cbddd7;
-    --golog-line: #8dada3;
-    --golog-brown: #173d33;
-    --golog-brown-soft: #597268;
-    --golog-shadow: rgba(0, 43, 31, 0.15);
-    --primary: #002b1f;
-    --primary-foreground: #f8fffc;
-    --ring: #7bd4cc;
-    --background: #e2eeeb;
-    --card: #f8fcfb;
-    --popover: #f8fcfb;
-    --secondary: #cbddd7;
-    --muted: #dbe9e5;
-    --accent: #7bd4cc;
-    --accent-foreground: #002b1f;
+    --golog-cream: #dfe8e5;
+    --golog-paper: #f8fcfa;
+    --golog-paper-strong: #c4d5d1;
+    --golog-line: #8ea9a6;
+    --golog-brown: #082f31;
+    --golog-brown-soft: #5a7271;
+    --golog-shadow: rgba(3,43,47,0.18);
+    --primary: #032b2f;
+    --primary-foreground: #f7ffff;
+    --ring: #56b1bf;
+    --background: #dfe8e5;
+    --card: #f8fcfa;
+    --popover: #f8fcfa;
+    --secondary: #c4d5d1;
+    --muted: #d5e1de;
+    --accent: #56b1bf;
+    --accent-foreground: #032b2f;
+    --golog-nav-active: #8bc5cb;
   }
 
-  /* Apply the theme variables to the shadcn/Tailwind surfaces already in the app. */
-  .golog-app [data-slot="card"],
-  .golog-app [data-slot="popover"] {
+  /* Theme application: strengthen contrast without turning every page into a rainbow. */
+  .golog-app main [data-slot="card"],
+  .golog-app main [data-slot="popover"] {
     background: var(--card) !important;
     color: var(--card-foreground);
     border-color: var(--golog-line) !important;
@@ -720,20 +743,20 @@
 
   .golog-app .golog-topbar {
     background: color-mix(in srgb, var(--golog-cream) 92%, transparent) !important;
-    border-bottom-color: color-mix(in srgb, var(--golog-line) 66%, transparent) !important;
+    border-bottom-color: color-mix(in srgb, var(--golog-line) 72%, transparent) !important;
   }
 
   .golog-app main [data-slot="input"],
   .golog-app main textarea,
   .golog-app main select {
-    background: color-mix(in srgb, var(--card) 92%, var(--golog-cream)) !important;
+    background: color-mix(in srgb, var(--card) 90%, var(--golog-cream)) !important;
     border-color: var(--golog-line) !important;
     color: var(--golog-brown) !important;
   }
 
   .golog-app main table thead {
-    background: color-mix(in srgb, var(--golog-cream) 76%, var(--golog-aqua)) !important;
-    color: var(--golog-brown-soft) !important;
+    background: color-mix(in srgb, var(--golog-stone) 62%, var(--golog-cream)) !important;
+    color: var(--golog-brown) !important;
   }
 
   .golog-app main .golog-panel,
@@ -747,11 +770,11 @@
   .golog-app main .golog-primary-button {
     background: var(--primary) !important;
     color: var(--primary-foreground) !important;
-    border-color: color-mix(in srgb, var(--primary) 82%, #000) !important;
+    border-color: color-mix(in srgb, var(--primary) 78%, #000) !important;
   }
 
   .golog-app main .golog-primary-button:hover {
-    background: color-mix(in srgb, var(--primary) 86%, #000) !important;
+    background: color-mix(in srgb, var(--primary) 84%, #000) !important;
   }
 
   .golog-app main .golog-display,
@@ -763,32 +786,44 @@
     color: var(--golog-brown) !important;
   }
 
-  /* Preserve the explicit warning/negative states. */
-  .golog-app main .text-rose-700,
-  .golog-app main .bg-rose-50,
-  .golog-app main .border-rose-200 {
-    color: #a84e43;
+  .golog-app main .text-slate-400 { color: var(--golog-brown-soft) !important; }
+  .golog-app main .text-slate-500 { color: color-mix(in srgb, var(--golog-brown-soft) 88%, var(--golog-brown)) !important; }
+  .golog-app main .text-slate-600,
+  .golog-app main .text-slate-700 { color: var(--golog-brown) !important; }
+
+  .golog-app main .bg-slate-50,
+  .golog-app main .bg-slate-50\\/30,
+  .golog-app main .bg-slate-50\\/60,
+  .golog-app main .bg-slate-50\\/70 {
+    background: color-mix(in srgb, var(--golog-paper-strong) 34%, var(--card)) !important;
   }
 
-  /* The room-demand matrix keeps its compact layout but inherits the new theme. */
-  .golog-theme-room-demand main [data-slot="card-header"],
-  .golog-theme-room-demand main [data-slot="card-content"] {
-    background: transparent;
+  .golog-app main .border-slate-100,
+  .golog-app main .border-slate-200 {
+    border-color: color-mix(in srgb, var(--golog-line) 80%, var(--golog-stone)) !important;
   }
 
-  .golog-theme-room-demand main table tbody tr:hover {
-    background: rgba(123, 212, 204, 0.12) !important;
+  .golog-app main table tbody tr:hover {
+    background: color-mix(in srgb, var(--golog-cerulean) 11%, var(--card)) !important;
   }
-}
 
-@layer components {
+  .golog-app .golog-theme-placeholder {
+    display: none;
+  }
+
+  /* Login uses the same family, but with a more welcoming entrance accent. */
   .golog-theme-login button[type="submit"] {
-    background: #037367 !important;
-    color: #f8fffd !important;
-    border-color: #025f55 !important;
+    background: var(--primary) !important;
+    color: var(--primary-foreground) !important;
+    border-color: var(--primary) !important;
   }
 
   .golog-theme-login button[type="submit"]:hover {
-    background: #002b1f !important;
+    background: var(--golog-hunter) !important;
+  }
+
+  /* Small-screen surfaces inherit the active page composition. */
+  .golog-app .golog-mobile-surface {
+    background: linear-gradient(180deg, var(--golog-cream) 0%, var(--golog-paper-strong) 100%);
   }
 }
