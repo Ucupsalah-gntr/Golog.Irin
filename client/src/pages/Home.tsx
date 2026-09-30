@@ -1224,7 +1224,11 @@ function StockView({ stock, isAdmin, items, warehouses, onCreateItem, busy, onIm
       const rows = XLSX.utils.sheet_to_json<Record<string, unknown>>(firstSheet, { defval: "" });
       setPreview(validateItemImport(rows));
     } catch (error) {
-      setPreview({ rows: [], errors: [{ rowNumber: 1, field: "file", message: error instanceof Error ? error.message : "File Excel tidak dapat dibaca." }], duplicateSkus: [] });
+      setPreview({
+        rows: [],
+        errors: [{ rowNumber: 1, field: "file", message: error instanceof Error ? error.message : "File Excel tidak dapat dibaca." }],
+        duplicateSkus: [],
+      });
     }
   }
 
@@ -1248,87 +1252,233 @@ function StockView({ stock, isAdmin, items, warehouses, onCreateItem, busy, onIm
   });
 
   const lowCount = rows.filter((row: any) => Number(row.movementQty) <= Number(row.minStock)).length;
-  const totalQty = rows.reduce((sum: number, row: any) => sum + Number(row.movementQty || 0), 0);
+  const safeCount = Math.max(0, rows.length - lowCount);
   const canImport = Boolean(preview && preview.rows.length && preview.errors.length === 0);
 
-  return <Card className="border-slate-200/80 shadow-sm">
-    <CardHeader className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-      <div>
-        <CardTitle>{isAdmin ? "Stok Gudang Pusat" : "Stok Ruangan"}</CardTitle>
-        <p className="mt-1 text-sm text-slate-500">{isAdmin ? "Pantau saldo stok gudang tanpa perlu membuka detail transaksi." : "Pantau stok yang sudah berada di ruangan Anda."}</p>
-      </div>
-      {isAdmin && <div className="flex flex-wrap gap-2">
-        <Button variant="outline" onClick={() => setShowImport(!showImport)}><Upload size={16} className="mr-2" />Impor Excel</Button>
-        <Button onClick={() => setShow(!show)}><PackagePlus size={16} className="mr-2" />Tambah barang</Button>
-      </div>}
-    </CardHeader>
+  return (
+    <div className="space-y-5">
+      <Card className="overflow-hidden">
+        <CardHeader className="border-b border-[#b8a27a]/60 pb-5">
+          <div className="flex flex-col gap-5 xl:flex-row xl:items-end xl:justify-between">
+            <div className="max-w-2xl">
+              <p className="golog-kicker">Inventory workspace</p>
+              <CardTitle className="mt-1">{isAdmin ? "Stok Gudang Pusat" : "Stok Ruangan"}</CardTitle>
+              <p className="mt-2 text-sm leading-6 text-[#6f5e4e]">
+                {isAdmin
+                  ? "Pantau saldo BMHP Gudang Pusat dan prioritaskan barang yang sudah menyentuh batas minimum."
+                  : "Pantau saldo BMHP yang tersedia di ruangan Anda sebelum membuat permintaan baru."}
+              </p>
+            </div>
 
-    <CardContent>
-      {showImport && isAdmin && <div className="mb-6 rounded-2xl border border-teal-100 bg-teal-50/60 p-5">
-        <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-          <div><p className="font-semibold">Impor master barang</p><p className="text-xs leading-5 text-slate-500">Upload .xlsx, .xls, atau .csv. Data divalidasi dulu sebelum disimpan.</p></div>
-          <Button variant="outline" size="sm" onClick={downloadTemplate}>Unduh template CSV</Button>
-        </div>
-        <div className="mt-4 flex flex-wrap items-center gap-3"><Input type="file" accept=".xlsx,.xls,.csv" onChange={(e) => e.target.files?.[0] && handleImportFile(e.target.files[0])} />{fileName && <span className="text-xs text-slate-500">{fileName}</span>}</div>
-        {preview && <div className="mt-4 space-y-3">
-          <div className="grid gap-3 sm:grid-cols-3"><div className="rounded-xl bg-white p-3"><p className="text-xs text-slate-400">Baris terbaca</p><p className="mt-1 text-lg font-semibold">{preview.rows.length}</p></div><div className="rounded-xl bg-white p-3"><p className="text-xs text-slate-400">Error</p><p className="mt-1 text-lg font-semibold">{preview.errors.length}</p></div><div className="rounded-xl bg-white p-3"><p className="text-xs text-slate-400">SKU duplikat</p><p className="mt-1 text-lg font-semibold">{preview.duplicateSkus.length}</p></div></div>
-          {preview.errors.length > 0 && <div className="rounded-xl border border-rose-200 bg-rose-50 p-3 text-sm text-rose-700">{preview.errors.slice(0, 8).map((error, i) => <p key={i}>Baris {error.rowNumber} · {error.field}: {error.message}</p>)}{preview.errors.length > 8 && <p className="mt-1">+ {preview.errors.length - 8} error lainnya.</p>}</div>}
-          {canImport && <div className="flex flex-col gap-3 rounded-xl border border-emerald-200 bg-emerald-50 p-3 sm:flex-row sm:items-center sm:justify-between"><p className="text-sm text-emerald-700">Semua {preview.rows.length} baris lolos validasi dan siap diimpor.</p><Button disabled={importBusy} onClick={() => onImport(preview.rows)}>{importBusy ? "Mengimpor…" : "Impor ke master barang"}</Button></div>}
-        </div>}
-      </div>}
-
-      {show && <div className="mb-6 grid gap-3 rounded-2xl bg-slate-50 p-4 md:grid-cols-3">
-        <Field label="SKU"><Input value={form.sku} onChange={(e) => setForm({ ...form, sku: e.target.value })} placeholder="FAR-001" /></Field>
-        <Field label="Nama barang"><Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Sarung tangan" /></Field>
-        <Field label="Satuan"><Input value={form.unit} onChange={(e) => setForm({ ...form, unit: e.target.value })} /></Field>
-        <Field label="Kategori"><Input value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })} placeholder="Alat kesehatan" /></Field>
-        <Field label="Batas minimum"><Input type="number" value={form.minStock} onChange={(e) => setForm({ ...form, minStock: e.target.value })} /></Field>
-        <div className="flex items-end"><Button disabled={busy || !form.sku || !form.name} onClick={() => onCreateItem({ ...form, minStock: Number(form.minStock), sourceWarehouseId: form.sourceWarehouseId ? Number(form.sourceWarehouseId) : null })}>Simpan master barang</Button></div>
-      </div>}
-
-      <div className="grid gap-3 sm:grid-cols-3">
-        <div className="rounded-2xl border border-[#b8a27a] bg-[#f7efd7] p-4"><p className="text-xs font-medium text-slate-400">Jenis barang</p><p className="mt-1 text-2xl font-semibold">{formatNumber(rows.length)}</p><p className="mt-1 text-xs text-slate-400">SKU aktif</p></div>
-        <div className="rounded-2xl border border-[#b8a27a] bg-[#f7efd7] p-4"><p className="text-xs font-medium text-slate-400">Total stok</p><p className="mt-1 text-2xl font-semibold">{formatNumber(totalQty)}</p><p className="mt-1 text-xs text-slate-400">seluruh satuan tercatat</p></div>
-        <button type="button" onClick={() => setStatusFilter(statusFilter === "low" ? "all" : "low")} className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-left transition hover:bg-amber-100"><p className="text-xs font-medium text-amber-700">Perlu cek</p><p className="mt-1 text-2xl font-semibold text-amber-900">{formatNumber(lowCount)}</p><p className="mt-1 text-xs text-amber-700/70">stok ≤ minimum</p></button>
-      </div>
-
-      <div className="mt-5 flex flex-col gap-3 md:flex-row">
-        <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Cari nama barang, SKU, atau kategori…" className="h-11 md:flex-1" />
-        <div className="flex rounded-xl border border-[#b8a27a] bg-[#f7efd7] p-1">
-          {([["all", "Semua"], ["safe", "Aman"], ["low", "Perlu cek"]] as const).map(([value, label]) => <button key={value} type="button" onClick={() => setStatusFilter(value)} className={`rounded-lg px-3 py-2 text-xs font-medium transition ${statusFilter === value ? "bg-[#102a2b] text-white" : "text-slate-500 hover:bg-slate-50"}`}>{label}</button>)}
-        </div>
-      </div>
-
-      <div className="mt-4 space-y-2">
-        {filtered.map((row: any) => {
-          const low = Number(row.movementQty) <= Number(row.minStock);
-          const open = expanded === Number(row.itemId);
-          return <div key={row.itemId} className="overflow-hidden rounded-2xl border border-[#b8a27a] bg-[#f7efd7] transition">
-            <button type="button" onClick={() => setExpanded(open ? null : Number(row.itemId))} className="flex w-full items-center justify-between gap-4 p-4 text-left hover:bg-slate-50/70">
-              <div className="min-w-0 flex-1">
-                <p className="truncate font-semibold text-slate-800">{row.name}</p>
-                <p className="mt-1 truncate text-xs text-slate-400">{row.sku} · {row.category || "Umum"} · {row.unit}</p>
+            {isAdmin && (
+              <div className="flex flex-wrap gap-2">
+                <Button variant="outline" onClick={() => setShowImport(!showImport)}>
+                  <Upload size={16} className="mr-2" />
+                  {showImport ? "Tutup impor" : "Impor Excel"}
+                </Button>
+                <Button onClick={() => setShow(!show)}>
+                  <PackagePlus size={16} className="mr-2" />
+                  {show ? "Tutup form" : "Tambah barang"}
+                </Button>
               </div>
-              <div className="flex shrink-0 items-center gap-3">
-                <div className="text-right"><p className={`text-lg font-bold ${low ? "text-amber-700" : "text-slate-800"}`}>{formatNumber(row.movementQty)}</p><p className="text-[11px] text-slate-400">{row.unit}</p></div>
-                <Badge className={low ? "border-amber-200 bg-amber-50 text-amber-700" : "border-emerald-200 bg-emerald-50 text-emerald-700"}>{low ? "Perlu cek" : "Aman"}</Badge>
+            )}
+          </div>
+        </CardHeader>
+
+        <CardContent className="pt-5">
+          {showImport && isAdmin && (
+            <div className="mb-6 rounded-2xl border-2 border-[#b8a27a] bg-[#eee2bd]/45 p-5 shadow-[inset_0_0_0_2px_rgba(255,250,240,0.55)]">
+              <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                <div>
+                  <p className="font-semibold text-[#5a4738]">Impor master barang</p>
+                  <p className="mt-1 text-xs leading-5 text-[#7e6b57]">Upload .xlsx, .xls, atau .csv. Data diperiksa dahulu dan tidak akan disimpan jika masih ada error.</p>
+                </div>
+                <Button variant="outline" size="sm" onClick={downloadTemplate}>Unduh template CSV</Button>
               </div>
+
+              <div className="mt-4 rounded-xl border border-[#b8a27a] bg-[#f7efd7] p-3">
+                <Input type="file" accept=".xlsx,.xls,.csv" onChange={(e) => e.target.files?.[0] && handleImportFile(e.target.files[0])} />
+                {fileName && <p className="mt-2 text-xs text-[#7e6b57]">File dipilih: <strong>{fileName}</strong></p>}
+              </div>
+
+              {preview && (
+                <div className="mt-4 space-y-3">
+                  <div className="grid gap-3 sm:grid-cols-3">
+                    <div className="golog-panel-soft rounded-xl p-3"><p className="text-xs text-[#8b7b67]">Baris terbaca</p><p className="mt-1 text-lg font-semibold">{preview.rows.length}</p></div>
+                    <div className="golog-panel-soft rounded-xl p-3"><p className="text-xs text-[#8b7b67]">Error</p><p className="mt-1 text-lg font-semibold">{preview.errors.length}</p></div>
+                    <div className="golog-panel-soft rounded-xl p-3"><p className="text-xs text-[#8b7b67]">SKU duplikat</p><p className="mt-1 text-lg font-semibold">{preview.duplicateSkus.length}</p></div>
+                  </div>
+
+                  {preview.errors.length > 0 && (
+                    <div className="rounded-xl border border-[#dca69a] bg-[#f8e3de] p-3 text-sm text-[#9b5146]">
+                      {preview.errors.slice(0, 8).map((error, i) => <p key={i}>Baris {error.rowNumber} · {error.field}: {error.message}</p>)}
+                      {preview.errors.length > 8 && <p className="mt-1">+ {preview.errors.length - 8} error lainnya.</p>}
+                    </div>
+                  )}
+
+                  {canImport && (
+                    <div className="flex flex-col gap-3 rounded-xl border border-[#b8c68a] bg-[#eef0d5] p-3 sm:flex-row sm:items-center sm:justify-between">
+                      <p className="text-sm text-[#5d7033]">Semua {preview.rows.length} baris lolos validasi dan siap diimpor.</p>
+                      <Button disabled={importBusy} onClick={() => onImport(preview.rows)}>{importBusy ? "Mengimpor…" : "Impor ke master barang"}</Button>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+
+          {show && (
+            <div className="mb-6 rounded-2xl border-2 border-[#b8a27a] bg-[#eee2bd]/45 p-5 shadow-[inset_0_0_0_2px_rgba(255,250,240,0.55)]">
+              <div className="mb-4 flex items-center justify-between gap-3">
+                <div>
+                  <p className="font-semibold text-[#5a4738]">Tambah master barang</p>
+                  <p className="mt-1 text-xs text-[#7e6b57]">Tetapkan SKU dan minimum stok agar monitoring segera aktif.</p>
+                </div>
+              </div>
+              <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+                <Field label="SKU"><Input value={form.sku} onChange={(e) => setForm({ ...form, sku: e.target.value })} placeholder="FAR-001" /></Field>
+                <Field label="Nama barang"><Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Sarung tangan" /></Field>
+                <Field label="Satuan"><Input value={form.unit} onChange={(e) => setForm({ ...form, unit: e.target.value })} placeholder="box" /></Field>
+                <Field label="Kategori"><Input value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })} placeholder="Alat kesehatan" /></Field>
+                <Field label="Minimum stok"><Input type="number" min="0" value={form.minStock} onChange={(e) => setForm({ ...form, minStock: e.target.value })} /></Field>
+                <div className="flex items-end">
+                  <Button className="w-full" disabled={busy || !form.sku || !form.name} onClick={() => onCreateItem({ ...form, minStock: Number(form.minStock), sourceWarehouseId: form.sourceWarehouseId ? Number(form.sourceWarehouseId) : null })}>
+                    <PackagePlus size={16} className="mr-2" />
+                    Simpan master barang
+                  </Button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          <div className="grid gap-3 sm:grid-cols-3">
+            <div className="golog-panel-soft rounded-2xl p-4">
+              <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[#8b7b67]">SKU aktif</p>
+              <p className="mt-2 text-3xl font-semibold tracking-tight">{formatNumber(rows.length)}</p>
+              <p className="mt-1 text-xs text-[#7e6b57]">barang yang sedang terpantau</p>
+            </div>
+            <button type="button" onClick={() => setStatusFilter(statusFilter === "safe" ? "all" : "safe")} className="golog-panel-soft rounded-2xl p-4 text-left transition hover:-translate-y-0.5">
+              <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[#8b7b67]">Aman</p>
+              <p className="mt-2 text-3xl font-semibold tracking-tight">{formatNumber(safeCount)}</p>
+              <p className="mt-1 text-xs text-[#5d7033]">di atas minimum</p>
             </button>
-            {open && <div className="border-t border-slate-100 bg-slate-50/70 px-4 pb-4 pt-3">
-              <div className="grid gap-2 sm:grid-cols-3">
-                <div className="rounded-xl bg-white p-3"><p className="text-[11px] uppercase tracking-wider text-slate-400">SKU</p><p className="mt-1 text-sm font-semibold">{row.sku}</p></div>
-                <div className="rounded-xl bg-white p-3"><p className="text-[11px] uppercase tracking-wider text-slate-400">Minimum</p><p className="mt-1 text-sm font-semibold">{formatNumber(row.minStock)} {row.unit}</p></div>
-                <div className="rounded-xl bg-white p-3"><p className="text-[11px] uppercase tracking-wider text-slate-400">Status stok</p><p className="mt-1 text-sm font-semibold">{low ? "Perlu pemeriksaan" : "Masih di atas minimum"}</p></div>
-              </div>
-              <div className="mt-3 flex items-center justify-between text-xs text-slate-400"><span>{isAdmin ? "Lokasi: Gudang Pusat" : "Lokasi: Ruangan Anda"}</span><span>Saldo saat ini</span></div>
-            </div>}
-          </div>;
-        })}
-        {!filtered.length && <EmptyState title={rows.length ? "Barang tidak ditemukan" : "Master barang masih kosong"} text={rows.length ? "Coba ubah kata pencarian atau filter status." : isAdmin ? "Tambahkan master barang terlebih dahulu." : "Belum ada data stok."} />}
-      </div>
-      {rows.length > 0 && <p className="mt-4 text-xs text-slate-400">Tip: klik satu barang untuk melihat detail minimum dan statusnya. Tampilan ini hanya memantau saldo; perpindahan stok tetap dilakukan melalui Permintaan.</p>}
-    </CardContent>
-  </Card>;
+            <button type="button" onClick={() => setStatusFilter(statusFilter === "low" ? "all" : "low")} className="rounded-2xl border-2 border-[#d7aa71] bg-[#fbefd1] p-4 text-left shadow-[inset_0_0_0_2px_rgba(255,250,240,0.55)] transition hover:-translate-y-0.5">
+              <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[#9b7040]">Perlu cek</p>
+              <p className="mt-2 text-3xl font-semibold tracking-tight text-[#6d4c2f]">{formatNumber(lowCount)}</p>
+              <p className="mt-1 text-xs text-[#9b7040]">stok ≤ minimum</p>
+            </button>
+          </div>
+
+          <div className="mt-5 flex flex-col gap-3 md:flex-row">
+            <div className="relative flex-1">
+              <Search size={18} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[#8b7b67]" />
+              <Input
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Cari nama barang, SKU, atau kategori…"
+                className="h-11 pl-10"
+                aria-label="Cari stok"
+              />
+            </div>
+            <div className="flex w-full overflow-x-auto rounded-xl border-2 border-[#b8a27a] bg-[#e5d8ab]/55 p-1 md:w-auto">
+              {([["all", "Semua"], ["safe", "Aman"], ["low", "Perlu cek"]] as const).map(([value, label]) => (
+                <button
+                  key={value}
+                  type="button"
+                  onClick={() => setStatusFilter(value)}
+                  className={`whitespace-nowrap rounded-lg px-3 py-2 text-xs font-semibold transition ${statusFilter === value ? "bg-[#5a4738] text-[#fff9ea] shadow-sm" : "text-[#6f5e4e] hover:bg-[#f7efd7]"}`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="mt-4 space-y-2">
+            {filtered.map((row: any) => {
+              const low = Number(row.movementQty) <= Number(row.minStock);
+              const open = expanded === Number(row.itemId);
+              const stockQty = Number(row.movementQty);
+              const minQty = Number(row.minStock);
+              const coverage = minQty > 0 ? Math.min(100, Math.max(0, (stockQty / minQty) * 100)) : stockQty > 0 ? 100 : 0;
+
+              return (
+                <div key={row.itemId} className="overflow-hidden rounded-2xl border-2 border-[#b8a27a] bg-[#f7efd7] shadow-[inset_0_0_0_2px_rgba(255,250,240,0.45)]">
+                  <button
+                    type="button"
+                    onClick={() => setExpanded(open ? null : Number(row.itemId))}
+                    className="flex w-full items-center gap-4 p-4 text-left transition hover:bg-[#eee2bd]/55 sm:p-5"
+                  >
+                    <div className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-[#e5d8ab] text-[#6b573f]">
+                      <Boxes size={20} />
+                    </div>
+
+                    <div className="min-w-0 flex-1">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <p className="truncate font-semibold text-[#4e3f32]">{row.name}</p>
+                        <Badge className={low ? "border-[#d7aa71] bg-[#fbefd1] text-[#9b7040]" : "border-[#b8c68a] bg-[#eef0d5] text-[#5d7033]"}>
+                          {low ? "Perlu cek" : "Aman"}
+                        </Badge>
+                      </div>
+                      <p className="mt-1 truncate text-xs text-[#8b7b67]">{row.sku} · {row.category || "Umum"} · {row.unit}</p>
+                      <div className="mt-3 h-1.5 w-full max-w-md overflow-hidden rounded-full bg-[#dfd1a7]">
+                        <div className={`h-full rounded-full ${low ? "bg-[#c87969]" : "bg-[#7f9146]"}`} style={{ width: `${coverage}%` }} />
+                      </div>
+                    </div>
+
+                    <div className="shrink-0 text-right">
+                      <p className={`text-xl font-semibold tracking-tight ${low ? "text-[#9b7040]" : "text-[#5a4738]"}`}>{formatNumber(stockQty)}</p>
+                      <p className="text-[11px] text-[#8b7b67]">{row.unit}</p>
+                      <p className="mt-1 text-[10px] font-semibold uppercase tracking-[0.1em] text-[#9b8974]">min {formatNumber(minQty)}</p>
+                    </div>
+
+                    <ChevronRight size={18} className={`shrink-0 text-[#9a896f] transition-transform ${open ? "rotate-90" : ""}`} />
+                  </button>
+
+                  {open && (
+                    <div className="border-t-2 border-[#b8a27a]/55 bg-[#eee2bd]/45 px-4 pb-4 pt-3 sm:px-5">
+                      <div className="grid gap-3 sm:grid-cols-3">
+                        <div className="golog-panel-soft rounded-xl p-3">
+                          <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-[#8b7b67]">SKU</p>
+                          <p className="mt-1 text-sm font-semibold text-[#5a4738]">{row.sku}</p>
+                        </div>
+                        <div className="golog-panel-soft rounded-xl p-3">
+                          <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-[#8b7b67]">Minimum</p>
+                          <p className="mt-1 text-sm font-semibold text-[#5a4738]">{formatNumber(minQty)} {row.unit}</p>
+                        </div>
+                        <div className="golog-panel-soft rounded-xl p-3">
+                          <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-[#8b7b67]">Status</p>
+                          <p className="mt-1 text-sm font-semibold text-[#5a4738]">{low ? "Sudah menyentuh batas minimum." : "Masih di atas batas minimum."}</p>
+                        </div>
+                      </div>
+                      <div className="mt-3 flex flex-col gap-2 text-xs text-[#7e6b57] sm:flex-row sm:items-center sm:justify-between">
+                        <span>{isAdmin ? "Lokasi: Gudang Pusat" : "Lokasi: Ruangan aktif"}</span>
+                        <span>Saldo diperbarui dari pergerakan stok.</span>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+
+            {!filtered.length && (
+              <Card className="border-2 border-[#b8a27a] shadow-sm">
+                <CardContent>
+                  <EmptyState title={rows.length ? "Barang tidak ditemukan" : "Master barang masih kosong"} text={rows.length ? "Coba ubah kata pencarian atau filter status." : isAdmin ? "Tambahkan master barang terlebih dahulu." : "Belum ada data stok."} />
+                </CardContent>
+              </Card>
+            )}
+          </div>
+
+          {rows.length > 0 && (
+            <p className="mt-4 rounded-xl border border-[#b8a27a]/70 bg-[#eee2bd]/40 px-3 py-2 text-xs leading-5 text-[#7e6b57]">
+              Saldo stok adalah informasi pemantauan. Perubahan stok tetap dilakukan melalui <strong>Barang Masuk</strong>, <strong>Permintaan</strong>, atau <strong>Stock Opname</strong> sesuai wewenang.
+            </p>
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  );
 }
 function InboundView({ items, warehouses, onSubmit, busy }: any) { const [form, setForm] = useState({ itemId: "", quantity: "", sourceWarehouseId: "", notes: "", occurredAt: new Date().toISOString().slice(0, 10) }); return <Card className="max-w-3xl border-slate-200/80 shadow-sm"><CardHeader><CardTitle>Catat barang masuk</CardTitle><p className="mt-1 text-sm text-slate-500">Penerimaan dari Gudang Farmasi, Gudang RT, CSSD, atau Laboratorium.</p></CardHeader><CardContent><div className="grid gap-4 md:grid-cols-2"><Field label="Barang"><select className="h-10 w-full rounded-lg border-2 border-[#b8a27a] bg-[#f7efd7] px-3 text-sm text-[#5a4738] shadow-[inset_0_0_0_2px_rgba(255,250,240,0.52)]" value={form.itemId} onChange={(e) => setForm({ ...form, itemId: e.target.value })}><option value="">Pilih barang</option>{items.map((item: any) => <option key={item.id} value={item.id}>{item.name} · {item.sku}</option>)}</select></Field><Field label="Sumber gudang"><select className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm" value={form.sourceWarehouseId} onChange={(e) => setForm({ ...form, sourceWarehouseId: e.target.value })}><option value="">Pilih gudang sumber</option>{warehouses.filter((w: any) => w.kind === "source").map((w: any) => <option key={w.id} value={w.id}>{w.name}</option>)}</select></Field><Field label="Jumlah"><Input type="number" min="1" value={form.quantity} onChange={(e) => setForm({ ...form, quantity: e.target.value })} placeholder="0" /></Field><Field label="Tanggal kejadian"><Input type="date" value={form.occurredAt} onChange={(e) => setForm({ ...form, occurredAt: e.target.value })} /></Field><div className="md:col-span-2"><Field label="Catatan"><Textarea value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} placeholder="Nomor dokumen, nota, atau keterangan penerimaan" /></Field></div></div><Button className="mt-6" disabled={busy || !form.itemId || !form.quantity || !form.sourceWarehouseId} onClick={() => onSubmit({ itemId: Number(form.itemId), quantity: Number(form.quantity), sourceWarehouseId: Number(form.sourceWarehouseId), occurredAt: new Date(form.occurredAt) })}><ArrowDownToLine size={16} className="mr-2" />Simpan barang masuk</Button></CardContent></Card> }
 
