@@ -339,7 +339,7 @@ export default function Home() {
   function go(key: NavKey) { setActive(key); setMobileOpen(false); }
 
   return (
-    <div className="golog-app min-h-screen text-[#5a4738]">
+    <div className={`golog-app golog-theme-${active} min-h-screen text-[#5a4738]`}>
       <div className="flex min-h-screen">
         <aside className={`${mobileOpen ? "translate-y-0 opacity-100" : "-translate-y-3 opacity-0 pointer-events-none"} fixed left-3 right-3 top-[76px] z-40 max-h-[calc(100vh-92px)] overflow-y-auto rounded-2xl border border-white/10 golog-sidebar text-white shadow-2xl transition-all duration-200 md:pointer-events-auto md:inset-y-0 md:left-0 md:right-auto md:top-0 md:z-30 md:max-h-none md:w-72 md:translate-y-0 md:overflow-y-auto md:rounded-none md:border-0 md:opacity-100 md:shadow-none`}>
           <div className="flex min-h-full flex-col px-5 py-5 md:h-full md:py-6">
