@@ -132,6 +132,7 @@ export default function Home() {
   const [notificationTarget, setNotificationTarget] = useState<{ nav: NavKey; requestId?: number; itemId?: number } | null>(null);
   const utils = trpc.useUtils();
   const catalog = trpc.catalog.all.useQuery(undefined, { enabled: isAuthenticated });
+  const currentUser = trpc.auth.me.useQuery(undefined, { enabled: isAuthenticated });
   const roomAccess = trpc.system.users.myRooms.useQuery(undefined, { enabled: isAuthenticated && user?.role !== "admin" });
   const dashboard = trpc.dashboard.summary.useQuery({ roomId: selectedRoom }, { enabled: isAuthenticated });
   const requests = trpc.requests.list.useQuery({}, { enabled: isAuthenticated });
@@ -385,7 +386,7 @@ export default function Home() {
             {active === "overview" && <Overview dashboard={dashboard.data} isAdmin={isAdmin} onGo={go} report={isAdmin ? monthlyReport.data : null} requests={requests.data ?? []} userName={user?.name || user?.username || "Kepala Gudang"} unreadNotificationCount={unreadNotificationCount} onOpenNotifications={() => setNotificationOpen(true)} />}
             {active === "stock" && <StockView stock={stock} isAdmin={isAdmin} items={items} warehouses={warehouses} onCreateItem={(input: any) => createItem.mutate(input)} busy={createItem.isPending} onImport={(rows: any[]) => importItems.mutate({ rows })} importBusy={importItems.isPending} focusItemId={notificationTarget?.nav === "stock" ? notificationTarget.itemId : undefined} />}
             {active === "inbound" && <InboundView items={items} warehouses={warehouses} onSubmit={(input: any) => createInbound.mutate(input)} busy={createInbound.isPending} />}
-            {active === "requests" && <RequestsView requests={requests.data ?? []} rooms={rooms} items={items} isAdmin={isAdmin} todayRoomLocks={todayRoomLocks.data ?? []} selectedRoom={selectedRoom} selectedRoomName={selectedRoomName} setSelectedRoom={setSelectedRoom} accessibleRooms={accessibleRooms} lines={requestLines} setLines={setRequestLines} total={requestTotal} onCreate={(input: any) => createRequest.mutate(input)} onVerify={(input: any) => verifyRequest.mutate(input)} busy={createRequest.isPending || verifyRequest.isPending} focusRequestId={notificationTarget?.nav === "requests" ? notificationTarget.requestId : undefined} />}
+            {active === "requests" && <RequestsView requests={requests.data ?? []} rooms={rooms} items={items} isAdmin={isAdmin} currentUserId={currentUser.data?.id} todayRoomLocks={todayRoomLocks.data ?? []} selectedRoom={selectedRoom} selectedRoomName={selectedRoomName} setSelectedRoom={setSelectedRoom} accessibleRooms={accessibleRooms} lines={requestLines} setLines={setRequestLines} total={requestTotal} onCreate={(input: any) => createRequest.mutate(input)} onVerify={(input: any) => verifyRequest.mutate(input)} busy={createRequest.isPending || verifyRequest.isPending} focusRequestId={notificationTarget?.nav === "requests" ? notificationTarget.requestId : undefined} />}
             {active === "adjustments" && <AdjustmentsView adjustments={adjustments.data ?? []} items={items} rooms={rooms} onSubmit={(input: any) => createAdjustment.mutate(input)} busy={createAdjustment.isPending} />}
             {active === "stocktake" && <StockOpnameView stock={stock} items={items} onSubmit={(input: any) => createBulkStocktake.mutate(input)} busy={createBulkStocktake.isPending} />}
             {active === "reports" && <ReportsView report={monthlyReport.data} month={reportMonth} onMonthChange={setReportMonth} />}
@@ -1844,7 +1845,7 @@ function StockView({ stock, isAdmin, items, warehouses, onCreateItem, busy, onIm
 }
 function InboundView({ items, warehouses, onSubmit, busy }: any) { const [form, setForm] = useState({ itemId: "", quantity: "", sourceWarehouseId: "", notes: "", occurredAt: new Date().toISOString().slice(0, 10) }); return <Card className="max-w-3xl border-slate-200/80 shadow-sm"><CardHeader><CardTitle>Catat barang masuk</CardTitle><p className="mt-1 text-sm text-slate-500">Penerimaan dari Gudang Farmasi, Gudang RT, CSSD, atau Laboratorium.</p></CardHeader><CardContent><div className="grid gap-4 md:grid-cols-2"><Field label="Barang"><select className="h-10 w-full rounded-lg border-2 border-[#9CCED8] bg-[#FFFFFF] px-3 text-sm text-[#07304A] shadow-[inset_0_0_0_2px_rgba(255,250,240,0.52)]" value={form.itemId} onChange={(e) => setForm({ ...form, itemId: e.target.value })}><option value="">Pilih barang</option>{items.map((item: any) => <option key={item.id} value={item.id}>{item.name} · {item.sku}</option>)}</select></Field><Field label="Sumber gudang"><select className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm" value={form.sourceWarehouseId} onChange={(e) => setForm({ ...form, sourceWarehouseId: e.target.value })}><option value="">Pilih gudang sumber</option>{warehouses.filter((w: any) => w.kind === "source").map((w: any) => <option key={w.id} value={w.id}>{w.name}</option>)}</select></Field><Field label="Jumlah"><Input type="number" min="1" value={form.quantity} onChange={(e) => setForm({ ...form, quantity: e.target.value })} placeholder="0" /></Field><Field label="Tanggal kejadian"><Input type="date" value={form.occurredAt} onChange={(e) => setForm({ ...form, occurredAt: e.target.value })} /></Field><div className="md:col-span-2"><Field label="Catatan"><Textarea value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} placeholder="Nomor dokumen, nota, atau keterangan penerimaan" /></Field></div></div><Button className="mt-6" disabled={busy || !form.itemId || !form.quantity || !form.sourceWarehouseId} onClick={() => onSubmit({ itemId: Number(form.itemId), quantity: Number(form.quantity), sourceWarehouseId: Number(form.sourceWarehouseId), occurredAt: new Date(form.occurredAt) })}><ArrowDownToLine size={16} className="mr-2" />Simpan barang masuk</Button></CardContent></Card> }
 
-function RequestsView({ requests, rooms, items, isAdmin, todayRoomLocks, selectedRoom, selectedRoomName, setSelectedRoom, lines, setLines, total, onCreate, onVerify, busy, focusRequestId }: any) {
+function RequestsView({ requests, rooms, items, isAdmin, currentUserId, todayRoomLocks, selectedRoom, selectedRoomName, setSelectedRoom, lines, setLines, total, onCreate, onVerify, busy, focusRequestId }: any) {
   const [priority, setPriority] = useState("normal");
   const [notes, setNotes] = useState("");
   const [filter, setFilter] = useState("all");
@@ -1891,7 +1892,8 @@ function RequestsView({ requests, rooms, items, isAdmin, todayRoomLocks, selecte
   );
   const getRoomLock = (roomId: number | null) => roomId === null ? null : roomLockById.get(Number(roomId)) ?? null;
   const selectedLock = getRoomLock(selectedRoom);
-  const selectedLockedByOther = Boolean(selectedLock && !selectedLock.isMine);
+  const selectedIsMine = Boolean(selectedLock && (selectedLock.isMine || Number(selectedLock.requesterId) === Number(currentUserId)));
+  const selectedLockedByOther = Boolean(selectedLock && !selectedIsMine);
 
   function getApprovalQty(requestId: number, line: any) {
     const key = `${requestId}:${line.line.id}`;
@@ -2124,7 +2126,7 @@ function RequestsView({ requests, rooms, items, isAdmin, todayRoomLocks, selecte
           >
             {accessibleRooms.map((room: any) => {
               const lock = roomLockById.get(Number(room.id));
-              const isMine = Boolean(lock?.isMine);
+              const isMine = Boolean(lock && (lock.isMine || Number(lock.requesterId) === Number(currentUserId)));
               const label = lock
                 ? isMine
                   ? `${room.name} — PIC Anda`
@@ -2136,7 +2138,7 @@ function RequestsView({ requests, rooms, items, isAdmin, todayRoomLocks, selecte
         </Field>
         <div className={`mt-4 rounded-xl p-3 text-sm ${selectedLockedByOther ? "border-[#FFD1C2] bg-[#f8e3de] text-[#D94A1A]" : selectedLock ? "bg-emerald-50 text-emerald-800" : "border-[#FFD500] bg-[#E6F4F7] text-[#004E9B]"}`}>
           {selectedLock
-            ? selectedLock.isMine
+            ? selectedIsMine
               ? <>Anda adalah PIC request <strong>{selectedRoomName}</strong> hari ini. Anda dapat membuat request susulan.</>
               : <>Ruangan <strong>{selectedRoomName}</strong> sudah memiliki PIC request hari ini: <strong>{selectedLock.requesterName || "petugas lain"}</strong>.</>
             : <>Permintaan akan menjadi request pertama untuk <strong>{selectedRoomName || "ruangan yang dipilih"}</strong> hari ini.</>}
