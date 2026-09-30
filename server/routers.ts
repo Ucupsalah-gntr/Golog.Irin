@@ -25,6 +25,7 @@ import {
   rooms,
   stockAdjustments,
   stockMovements,
+  userRoomAccess,
   users,
   warehouses,
 } from "./db.ts";
@@ -288,7 +289,7 @@ export const appRouter = router({
           throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "PIC request ruangan tidak dapat ditentukan." });
         }
 
-        if (!canReuseRequestDayLock(lock.requesterId, ctx.user.id)) {
+        if (!canReuseRequestDayLock(Number(lock.requesterId), Number(ctx.user.id))) {
           throw new TRPCError({
             code: "FORBIDDEN",
             message: "Ruangan ini sudah memiliki petugas request hari ini. Petugas tersebut yang dapat membuat request susulan.",
