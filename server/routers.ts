@@ -205,7 +205,7 @@ export const appRouter = router({
     }),
   }),
   requests: router({
-    todayLocks: protectedProcedure.query(async () => {
+    todayLocks: protectedProcedure.query(async ({ ctx }) => {
       const db = await getDb(); if (!db) return [];
       const requestDate = getJakartaDateKey();
       return db
