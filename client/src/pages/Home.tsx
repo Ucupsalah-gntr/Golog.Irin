@@ -325,7 +325,7 @@ export default function Home() {
     if (isAdmin || !roomAccess.data) return;
     const accessIds = accessibleRooms.map((room: any) => Number(room.id));
     if (!accessIds.length) {
-      setSelectedRoom(null);
+      if (selectedRoom !== null) setSelectedRoom(null);
       return;
     }
     const stored = window.sessionStorage.getItem(`gologirin-active-room:${user?.id ?? "unknown"}`);
@@ -371,7 +371,7 @@ export default function Home() {
         </aside>
 
         <main className="min-w-0 flex-1 md:ml-72">
-          <header className={`sticky top-0 z-20 flex h-20 items-center justify-between border-b border-slate-200/80 golog-topbar px-5 backdrop-blur md:px-8 ${active === "overview" ? "hidden md:flex" : ""}`}><div className="flex items-center gap-3"><button className="rounded-xl p-2 hover:bg-white md:hidden" onClick={() => setMobileOpen(true)}><Menu size={20} /></button><div><p className="text-xs font-semibold uppercase tracking-[0.18em] text-teal-700">Instalasi Rawat Intensif</p><h1 className="text-xl font-semibold tracking-tight">{visibleNav.find((x) => x.key === active)?.label}</h1></div></div><div className="flex items-center gap-2">{!isAdmin && accessibleRooms.length > 0 && <select aria-label="Ruangan aktif" value={selectedRoom ?? ""} onChange={(event) => setSelectedRoom(Number(event.target.value) || null)} className="hidden h-10 max-w-[180px] rounded-xl border border-[#9CCED8] bg-[#FFFFFF] px-3 text-sm font-semibold text-[#07304A] outline-none sm:block">{accessibleRooms.map((room: any) => <option key={room.id} value={room.id}>{room.name}</option>)}</select>}<button
+          <header className={`sticky top-0 z-20 flex h-20 items-center justify-between border-b border-slate-200/80 golog-topbar px-5 backdrop-blur md:px-8 ${active === "overview" ? "hidden md:flex" : ""}`}><div className="flex items-center gap-3"><button className="rounded-xl p-2 hover:bg-white md:hidden" onClick={() => setMobileOpen(true)}><Menu size={20} /></button><div><p className="text-xs font-semibold uppercase tracking-[0.18em] text-teal-700">Instalasi Rawat Intensif</p><h1 className="text-xl font-semibold tracking-tight">{visibleNav.find((x) => x.key === active)?.label}</h1></div></div><div className="flex items-center gap-2">{!isAdmin && accessibleRooms.length > 0 && <select aria-label="Ruangan aktif" value={selectedRoom ?? ""} onChange={(event) => { const nextRoomId = Number(event.target.value); if (accessibleRooms.some((room: any) => Number(room.id) === nextRoomId)) setSelectedRoom(nextRoomId); }} className="hidden h-10 max-w-[180px] rounded-xl border border-[#9CCED8] bg-[#FFFFFF] px-3 text-sm font-semibold text-[#07304A] outline-none sm:block">{accessibleRooms.map((room: any) => <option key={room.id} value={room.id}>{room.name}</option>)}</select>}<button
               type="button"
               title="Notifikasi"
               aria-label="Notifikasi"
@@ -1885,9 +1885,15 @@ function RequestsView({ requests, rooms, items, isAdmin, currentUserId, todayRoo
     rejected: requests.filter((row: any) => row.request.status === "rejected").length,
   };
 
-  const getRoomLock = (roomId: number) => todayRoomLocks.find((lock: any) => lock.roomId === roomId);
-  const selectedLock = selectedRoom ? getRoomLock(selectedRoom) : null;
-  const selectedLockedByOther = Boolean(selectedLock && Number(selectedLock.requesterId) !== Number(currentUserId));
+  const roomLockById = useMemo(
+    () => new Map<number, any>(todayRoomLocks.map((lock: any) => [Number(lock.roomId), lock])),
+    [todayRoomLocks],
+  );
+  const getRoomLock = (roomId: number | null) => roomId === null ? null : roomLockById.get(Number(roomId)) ?? null;
+  const selectedLock = getRoomLock(selectedRoom);
+  const selectedLockedByOther = Boolean(
+    selectedLock && Number(selectedLock.requesterId) !== Number(currentUserId),
+  );
 
   function getApprovalQty(requestId: number, line: any) {
     const key = `${requestId}:${line.line.id}`;
@@ -2105,8 +2111,38 @@ function RequestsView({ requests, rooms, items, isAdmin, currentUserId, todayRoo
     <Card className="border-slate-200/80 shadow-sm">
       <CardHeader><CardTitle>Buat permintaan</CardTitle><p className="mt-1 text-sm text-slate-500">Permintaan menggunakan ruangan aktif Anda. Jika memiliki akses ke lebih dari satu ruangan, ganti konteks di header sebelum mengajukan.</p></CardHeader>
       <CardContent>
-        <Field label="Ruangan aktif"><div className="flex h-10 items-center rounded-md border border-input bg-slate-50 px-3 text-sm font-semibold text-[#07304A]">{selectedRoomName || "Belum ada ruangan yang ditugaskan"}</div></Field>
-        <div className={`mt-4 rounded-xl p-3 text-sm ${selectedLockedByOther ? "border-[#FFD1C2] bg-[#f8e3de] text-[#D94A1A]" : selectedLock ? "bg-emerald-50 text-emerald-800" : "border-[#FFD500] bg-[#E6F4F7] text-[#004E9B]"}`}>{selectedLock ? Number(selectedLock.requesterId) === Number(currentUserId) ? <>Anda adalah PIC request <strong>{selectedRoomName}</strong> hari ini. Anda dapat membuat request susulan.</> : <>Ruangan <strong>{selectedRoomName}</strong> sudah memiliki PIC request hari ini: <strong>{selectedLock.requesterName || "petugas lain"}</strong>.</> : <>Permintaan akan menjadi request pertama untuk <strong>{selectedRoomName || "ruangan yang dipilih"}</strong> hari ini.</>}</div>
+        <Field label="Ruangan aktif">
+          <select
+            aria-label="Pilih ruangan aktif"
+            value={selectedRoom ?? ""}
+            onChange={(event) => {
+              const nextRoomId = Number(event.target.value);
+              if (accessibleRooms.some((room: any) => Number(room.id) === nextRoomId)) {
+                setSelectedRoom(nextRoomId);
+              }
+            }}
+            className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm font-semibold text-[#07304A]"
+            disabled={!accessibleRooms.length}
+          >
+            {accessibleRooms.map((room: any) => {
+              const lock = roomLockById.get(Number(room.id));
+              const isMine = lock && Number(lock.requesterId) === Number(currentUserId);
+              const label = lock
+                ? isMine
+                  ? `${room.name} — PIC Anda`
+                  : `${room.name} — PIC ${lock.requesterName || "petugas lain"}`
+                : `${room.name} — belum ada PIC`;
+              return <option key={room.id} value={room.id}>{label}</option>;
+            })}
+          </select>
+        </Field>
+        <div className={`mt-4 rounded-xl p-3 text-sm ${selectedLockedByOther ? "border-[#FFD1C2] bg-[#f8e3de] text-[#D94A1A]" : selectedLock ? "bg-emerald-50 text-emerald-800" : "border-[#FFD500] bg-[#E6F4F7] text-[#004E9B]"}`}>
+          {selectedLock
+            ? Number(selectedLock.requesterId) === Number(currentUserId)
+              ? <>Anda adalah PIC request <strong>{selectedRoomName}</strong> hari ini. Anda dapat membuat request susulan.</>
+              : <>Ruangan <strong>{selectedRoomName}</strong> sudah memiliki PIC request hari ini: <strong>{selectedLock.requesterName || "petugas lain"}</strong>.</>
+            : <>Permintaan akan menjadi request pertama untuk <strong>{selectedRoomName || "ruangan yang dipilih"}</strong> hari ini.</>}
+        </div>
         <div className="mt-5"><Field label="Prioritas"><select className="h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm" value={priority} onChange={(e) => setPriority(e.target.value)}><option value="normal">Normal</option><option value="mendesak">Mendesak</option><option value="darurat">Darurat</option></select></Field></div>
         <div className="mt-5 space-y-3">
           {lines.map((line: Line, index: number) => {
