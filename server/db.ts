@@ -628,4 +628,4 @@ export async function getRoomDemandPatterns(days = 30) {
     }),
   };
 }
-export { auditLogs, items, requestDayLocks, requestItems, requests, rooms, stockAdjustments, stockMovements, users, warehouses };
+export { auditLogs, items, requestDayLocks, requestItems, requests, rooms, stockAdjustments, stockMovements, userRoomAccess, users, warehouses };
