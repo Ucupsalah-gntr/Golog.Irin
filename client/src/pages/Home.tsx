@@ -132,6 +132,7 @@ export default function Home() {
   const [notificationTarget, setNotificationTarget] = useState<{ nav: NavKey; requestId?: number; itemId?: number } | null>(null);
   const utils = trpc.useUtils();
   const catalog = trpc.catalog.all.useQuery(undefined, { enabled: isAuthenticated });
+  const roomAccess = trpc.system.users.myRooms.useQuery(undefined, { enabled: isAuthenticated && user?.role !== "admin" });
   const dashboard = trpc.dashboard.summary.useQuery({ roomId: selectedRoom }, { enabled: isAuthenticated });
   const requests = trpc.requests.list.useQuery({}, { enabled: isAuthenticated });
   const todayRoomLocks = trpc.requests.todayLocks.useQuery(undefined, { enabled: isAuthenticated });
@@ -181,7 +182,9 @@ export default function Home() {
   const stock = dashboard.data?.stock ?? [];
   const isAdmin = user?.role === "admin";
   const visibleNav = nav.filter((item) => !item.adminOnly || isAdmin);
-  const selectedRoomName = rooms.find((room) => room.id === selectedRoom)?.name;
+  const accessibleRooms = roomAccess.data?.map((row: any) => row.room) ?? [];
+  const effectiveRooms = isAdmin ? rooms : accessibleRooms;
+  const selectedRoomName = effectiveRooms.find((room: any) => room.id === selectedRoom)?.name;
 
   const notificationStorageKey = user?.id ? `gologirin-notifications-read:${user.id}` : null;
 
@@ -319,10 +322,27 @@ export default function Home() {
   }, [active, isAdmin]);
 
   useEffect(() => {
-    if (!isAdmin && selectedRoom === null && dashboard.data?.roomId) {
-      setSelectedRoom(dashboard.data.roomId);
+    if (isAdmin || !roomAccess.data) return;
+    const accessIds = accessibleRooms.map((room: any) => Number(room.id));
+    if (!accessIds.length) {
+      setSelectedRoom(null);
+      return;
     }
-  }, [dashboard.data?.roomId, isAdmin, selectedRoom]);
+    const stored = window.sessionStorage.getItem(`gologirin-active-room:${user?.id ?? "unknown"}`);
+    const storedId = stored ? Number(stored) : null;
+    const nextRoomId = storedId && accessIds.includes(storedId)
+      ? storedId
+      : dashboard.data?.roomId && accessIds.includes(Number(dashboard.data.roomId))
+        ? Number(dashboard.data.roomId)
+        : accessIds[0];
+    if (nextRoomId !== selectedRoom) setSelectedRoom(nextRoomId);
+  }, [dashboard.data?.roomId, isAdmin, roomAccess.data, user?.id, selectedRoom, accessibleRooms.map((room: any) => room.id).join(",")]);
+
+  useEffect(() => {
+    if (!isAdmin && user?.id && selectedRoom !== null) {
+      window.sessionStorage.setItem(`gologirin-active-room:${user.id}`, String(selectedRoom));
+    }
+  }, [isAdmin, selectedRoom, user?.id]);
 
   if (loading) return <div className="min-h-screen grid place-items-center bg-[#f4f7f6]"><div className="text-center"><Activity className="mx-auto mb-3 animate-pulse text-teal-600" /><p className="text-sm text-slate-500">Menyiapkan ruang kerja…</p></div></div>;
   if (!isAuthenticated) return <LoginScreen />;
@@ -351,7 +371,7 @@ export default function Home() {
         </aside>
 
         <main className="min-w-0 flex-1 md:ml-72">
-          <header className={`sticky top-0 z-20 flex h-20 items-center justify-between border-b border-slate-200/80 golog-topbar px-5 backdrop-blur md:px-8 ${active === "overview" ? "hidden md:flex" : ""}`}><div className="flex items-center gap-3"><button className="rounded-xl p-2 hover:bg-white md:hidden" onClick={() => setMobileOpen(true)}><Menu size={20} /></button><div><p className="text-xs font-semibold uppercase tracking-[0.18em] text-teal-700">Instalasi Rawat Intensif</p><h1 className="text-xl font-semibold tracking-tight">{visibleNav.find((x) => x.key === active)?.label}</h1></div></div><div className="flex items-center gap-2"><button
+          <header className={`sticky top-0 z-20 flex h-20 items-center justify-between border-b border-slate-200/80 golog-topbar px-5 backdrop-blur md:px-8 ${active === "overview" ? "hidden md:flex" : ""}`}><div className="flex items-center gap-3"><button className="rounded-xl p-2 hover:bg-white md:hidden" onClick={() => setMobileOpen(true)}><Menu size={20} /></button><div><p className="text-xs font-semibold uppercase tracking-[0.18em] text-teal-700">Instalasi Rawat Intensif</p><h1 className="text-xl font-semibold tracking-tight">{visibleNav.find((x) => x.key === active)?.label}</h1></div></div><div className="flex items-center gap-2">{!isAdmin && accessibleRooms.length > 0 && <select aria-label="Ruangan aktif" value={selectedRoom ?? ""} onChange={(event) => setSelectedRoom(Number(event.target.value) || null)} className="hidden h-10 max-w-[180px] rounded-xl border border-[#9CCED8] bg-[#FFFFFF] px-3 text-sm font-semibold text-[#07304A] outline-none sm:block">{accessibleRooms.map((room: any) => <option key={room.id} value={room.id}>{room.name}</option>)}</select>}<button
               type="button"
               title="Notifikasi"
               aria-label="Notifikasi"
@@ -365,7 +385,7 @@ export default function Home() {
             {active === "overview" && <Overview dashboard={dashboard.data} isAdmin={isAdmin} onGo={go} report={isAdmin ? monthlyReport.data : null} requests={requests.data ?? []} userName={user?.name || user?.username || "Kepala Gudang"} unreadNotificationCount={unreadNotificationCount} onOpenNotifications={() => setNotificationOpen(true)} />}
             {active === "stock" && <StockView stock={stock} isAdmin={isAdmin} items={items} warehouses={warehouses} onCreateItem={(input: any) => createItem.mutate(input)} busy={createItem.isPending} onImport={(rows: any[]) => importItems.mutate({ rows })} importBusy={importItems.isPending} focusItemId={notificationTarget?.nav === "stock" ? notificationTarget.itemId : undefined} />}
             {active === "inbound" && <InboundView items={items} warehouses={warehouses} onSubmit={(input: any) => createInbound.mutate(input)} busy={createInbound.isPending} />}
-            {active === "requests" && <RequestsView requests={requests.data ?? []} rooms={rooms} items={items} isAdmin={isAdmin} currentUserId={user?.id} todayRoomLocks={todayRoomLocks.data ?? []} selectedRoom={selectedRoom} selectedRoomName={selectedRoomName} setSelectedRoom={setSelectedRoom} lines={requestLines} setLines={setRequestLines} total={requestTotal} onCreate={(input: any) => createRequest.mutate(input)} onVerify={(input: any) => verifyRequest.mutate(input)} busy={createRequest.isPending || verifyRequest.isPending} focusRequestId={notificationTarget?.nav === "requests" ? notificationTarget.requestId : undefined} />}
+            {active === "requests" && <RequestsView requests={requests.data ?? []} rooms={rooms} items={items} isAdmin={isAdmin} currentUserId={user?.id} todayRoomLocks={todayRoomLocks.data ?? []} selectedRoom={selectedRoom} selectedRoomName={selectedRoomName} setSelectedRoom={setSelectedRoom} accessibleRooms={accessibleRooms} lines={requestLines} setLines={setRequestLines} total={requestTotal} onCreate={(input: any) => createRequest.mutate(input)} onVerify={(input: any) => verifyRequest.mutate(input)} busy={createRequest.isPending || verifyRequest.isPending} focusRequestId={notificationTarget?.nav === "requests" ? notificationTarget.requestId : undefined} />}
             {active === "adjustments" && <AdjustmentsView adjustments={adjustments.data ?? []} items={items} rooms={rooms} onSubmit={(input: any) => createAdjustment.mutate(input)} busy={createAdjustment.isPending} />}
             {active === "stocktake" && <StockOpnameView stock={stock} items={items} onSubmit={(input: any) => createBulkStocktake.mutate(input)} busy={createBulkStocktake.isPending} />}
             {active === "reports" && <ReportsView report={monthlyReport.data} month={reportMonth} onMonthChange={setReportMonth} />}
@@ -2083,9 +2103,9 @@ function RequestsView({ requests, rooms, items, isAdmin, currentUserId, todayRoo
 
   return <div className="grid gap-6 xl:grid-cols-[.85fr_1.5fr]">
     <Card className="border-slate-200/80 shadow-sm">
-      <CardHeader><CardTitle>Buat permintaan</CardTitle><p className="mt-1 text-sm text-slate-500">Pilih ruangan yang sedang Anda layani hari ini. Stok Gudang Pusat ditampilkan sebelum mengajukan.</p></CardHeader>
+      <CardHeader><CardTitle>Buat permintaan</CardTitle><p className="mt-1 text-sm text-slate-500">Permintaan menggunakan ruangan aktif Anda. Jika memiliki akses ke lebih dari satu ruangan, ganti konteks di header sebelum mengajukan.</p></CardHeader>
       <CardContent>
-        <Field label="Ruangan yang dilayani *"><select className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm" value={selectedRoom ?? ""} onChange={(e) => setSelectedRoom(Number(e.target.value) || null)}><option value="">Pilih ruangan sebelum lanjut</option>{rooms.map((room: any) => { const lock = getRoomLock(room.id); const lockedByOther = Boolean(lock && lock.requesterId !== currentUserId); return <option key={room.id} value={room.id} disabled={lockedByOther}>{room.name}{lock ? lock.requesterId === currentUserId ? " — Anda" : ` — ${lock.requesterName || "petugas lain"}` : " — belum ada PIC"} </option>; })}</select></Field>
+        <Field label="Ruangan aktif"><div className="flex h-10 items-center rounded-md border border-input bg-slate-50 px-3 text-sm font-semibold text-[#07304A]">{selectedRoomName || "Belum ada ruangan yang ditugaskan"}</div></Field>
         <div className={`mt-4 rounded-xl p-3 text-sm ${selectedLockedByOther ? "border-[#FFD1C2] bg-[#f8e3de] text-[#D94A1A]" : selectedLock ? "bg-emerald-50 text-emerald-800" : "border-[#FFD500] bg-[#E6F4F7] text-[#004E9B]"}`}>{selectedLock ? selectedLock.requesterId === currentUserId ? <>Anda adalah PIC request <strong>{selectedRoomName}</strong> hari ini. Anda dapat membuat request susulan.</> : <>Ruangan <strong>{selectedRoomName}</strong> sudah memiliki PIC request hari ini: <strong>{selectedLock.requesterName || "petugas lain"}</strong>.</> : <>Permintaan akan menjadi request pertama untuk <strong>{selectedRoomName || "ruangan yang dipilih"}</strong> hari ini.</>}</div>
         <div className="mt-5"><Field label="Prioritas"><select className="h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm" value={priority} onChange={(e) => setPriority(e.target.value)}><option value="normal">Normal</option><option value="mendesak">Mendesak</option><option value="darurat">Darurat</option></select></Field></div>
         <div className="mt-5 space-y-3">
