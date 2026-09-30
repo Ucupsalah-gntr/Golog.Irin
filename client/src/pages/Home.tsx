@@ -189,9 +189,9 @@ export default function Home() {
       <div className="flex min-h-screen">
         <aside className={`${mobileOpen ? "translate-y-0 opacity-100" : "-translate-y-3 opacity-0 pointer-events-none"} fixed left-3 right-3 top-[76px] z-40 max-h-[calc(100vh-92px)] overflow-y-auto rounded-2xl border border-white/10 golog-sidebar text-white shadow-2xl transition-all duration-200 lg:pointer-events-auto lg:static lg:inset-auto lg:top-auto lg:right-auto lg:left-auto lg:max-h-none lg:w-72 lg:translate-y-0 lg:overflow-visible lg:rounded-none lg:border-0 lg:opacity-100 lg:shadow-none`}>
           <div className="flex min-h-full flex-col px-5 py-5 lg:h-full lg:py-6">
-            <div className="flex items-center justify-between border-b border-white/10 pb-6"><div className="flex items-center gap-3"><div className="grid h-11 w-11 place-items-center rounded-2xl golog-nav-active"><Hospital size={22} /></div><div><p className="font-semibold tracking-tight">Gudang IR</p><p className="text-xs text-teal-100/70">Rawat Intensif</p></div></div><button className="lg:hidden" onClick={() => setMobileOpen(false)}><X size={18} /></button></div>
-            <div className="mt-7 rounded-2xl bg-white/10 p-4"><p className="text-[11px] uppercase tracking-[0.18em] text-teal-100/60">Sesi aktif</p><p className="mt-1 truncate font-medium">{user?.name || user?.email || "Pengguna"}</p><div className="mt-2 flex items-center gap-2 text-xs text-teal-100/70"><ShieldCheck size={14} />{isAdmin ? "Kepala gudang" : "Petugas ruangan"}</div></div>
-            <nav className="mt-8 space-y-1">{visibleNav.map((item) => { const Icon = item.icon; return <button key={item.key} onClick={() => go(item.key)} className={`flex w-full items-center gap-3 rounded-xl px-4 py-3 text-left text-sm transition ${active === item.key ? "bg-[#c9f3d7] font-semibold text-[#102a2b]" : "text-teal-50/70 hover:bg-white/10 hover:text-white"}`}><Icon size={18} />{item.label}</button>; })}</nav>
+            <div className="flex items-center justify-between border-b border-white/10 pb-6"><div className="flex items-center gap-3"><div className="golog-brand-mark grid h-11 w-11 place-items-center rounded-2xl"><Hospital size={22} /></div><div><p className="golog-display text-lg not-italic text-[#f7efd7]">Golog.Irin</p><p className="text-xs text-[#e5d8ab]/75">Rawat Intensif</p></div></div><button className="lg:hidden" onClick={() => setMobileOpen(false)}><X size={18} /></button></div>
+            <div className="mt-7 rounded-xl border border-[#e5d8ab]/15 bg-black/10 p-4"><p className="text-[11px] uppercase tracking-[0.18em] text-[#e5d8ab]/60">Sesi aktif</p><p className="mt-1 truncate font-medium">{user?.name || user?.email || "Pengguna"}</p><div className="mt-2 flex items-center gap-2 text-xs text-[#e5d8ab]/70"><ShieldCheck size={14} />{isAdmin ? "Kepala gudang" : "Petugas ruangan"}</div></div>
+            <nav className="mt-8 space-y-1">{visibleNav.map((item) => { const Icon = item.icon; return <button key={item.key} onClick={() => go(item.key)} className={`flex w-full items-center gap-3 rounded-xl px-4 py-3 text-left text-sm transition ${active === item.key ? "golog-nav-active font-semibold" : "text-[#f5ecd5]/70 hover:bg-white/10 hover:text-white"}`}><Icon size={18} />{item.label}</button>; })}</nav>
             <div className="mt-auto border-t border-white/10 pt-5"><button onClick={() => logout()} className="flex w-full items-center gap-3 rounded-xl px-4 py-3 text-sm text-teal-50/70 hover:bg-white/10 hover:text-white"><LogOut size={18} />Keluar</button></div>
           </div>
         </aside>
@@ -547,7 +547,7 @@ function MobileAdminOverview({
     .toUpperCase() || "GI";
 
   return (
-    <div className="min-h-[100vh] bg-[#f3f7fb] px-4 pt-7 sm:px-6">
+    <div className="min-h-[100vh] golog-mobile-surface px-4 pt-7 sm:px-6">
       <div className="mx-auto max-w-xl space-y-5">
         <div className="flex items-center justify-between px-1">
           <div className="flex min-w-0 items-center gap-3">
@@ -594,7 +594,7 @@ function MobileAdminOverview({
           <span className="rounded-full bg-amber-100 px-3 py-1 text-[11px] font-bold text-amber-800">Review</span>
         </button>
 
-        <div className="rounded-[1.8rem] bg-[#0db889] p-5 text-white shadow-[0_18px_45px_rgba(13,184,137,0.24)]">
+        <div className="rounded-[1.8rem] bg-[#7f9146] p-5 text-white shadow-[0_18px_45px_rgba(13,184,137,0.24)]">
           <div className="flex items-center justify-between gap-4">
             <div>
               <p className="text-[20px] font-semibold tracking-tight">Quick Actions</p>
@@ -744,9 +744,9 @@ function MobileAdminOverview({
         </div>
       </div>
 
-      <nav className="fixed bottom-0 left-0 right-0 z-40 mx-auto max-w-xl bg-[#18263a] px-4 pb-[calc(env(safe-area-inset-bottom)+10px)] pt-3 shadow-[0_-14px_30px_rgba(20,39,61,0.12)]">
+      <nav className="fixed bottom-0 left-0 right-0 z-40 mx-auto max-w-xl golog-bottom-nav px-4 pb-[calc(env(safe-area-inset-bottom)+10px)] pt-3 shadow-[0_-14px_30px_rgba(20,39,61,0.12)]">
         <div className="relative grid grid-cols-5 items-end">
-          <button type="button" onClick={() => onGo("overview")} className="flex flex-col items-center gap-1 text-[10px] font-semibold text-emerald-400">
+          <button type="button" onClick={() => onGo("overview")} className="flex flex-col items-center gap-1 text-[10px] font-semibold golog-bottom-active">
             <BarChart3 size={19} />
             Home
           </button>
@@ -758,7 +758,7 @@ function MobileAdminOverview({
             <button
               type="button"
               onClick={() => onGo("stocktake")}
-              className="relative -mt-9 grid h-16 w-16 place-items-center rounded-full border-4 border-[#f3f7fb] bg-[#0db889] text-white shadow-[0_12px_28px_rgba(13,184,137,0.35)]"
+              className="relative -mt-9 grid h-16 w-16 place-items-center rounded-full border-4 border-[#f7efd7] bg-[#7f9146] text-white shadow-[0_12px_28px_rgba(13,184,137,0.35)]"
               aria-label="Stock Opname"
             >
               <ScanLine size={25} />
@@ -797,7 +797,7 @@ function MobileUserOverview({
   const initials = userName.split(/\\s+/).filter(Boolean).map((part) => part[0]).slice(0, 2).join("").toUpperCase() || "GI";
 
   return (
-    <div className="min-h-[100vh] bg-[#f3f7fb] px-4 pt-7 sm:px-6">
+    <div className="min-h-[100vh] golog-mobile-surface px-4 pt-7 sm:px-6">
       <div className="mx-auto max-w-xl space-y-5">
         <div className="flex items-center justify-between px-1">
           <div className="flex min-w-0 items-center gap-3">
@@ -830,7 +830,7 @@ function MobileUserOverview({
           <span className="rounded-full bg-amber-100 px-3 py-1 text-[11px] font-bold text-amber-800">Lihat</span>
         </button>
 
-        <div className="rounded-[1.8rem] bg-[#0db889] p-5 text-white shadow-[0_18px_45px_rgba(13,184,137,0.24)]">
+        <div className="rounded-[1.8rem] bg-[#7f9146] p-5 text-white shadow-[0_18px_45px_rgba(13,184,137,0.24)]">
           <div className="flex items-center justify-between gap-4">
             <div>
               <p className="text-[20px] font-semibold tracking-tight">Ajukan Kebutuhan</p>
@@ -937,12 +937,12 @@ function MobileUserOverview({
         </div>
       </div>
 
-      <nav className="fixed bottom-0 left-0 right-0 z-40 mx-auto max-w-xl bg-[#18263a] px-4 pb-[calc(env(safe-area-inset-bottom)+10px)] pt-3 shadow-[0_-14px_30px_rgba(20,39,61,0.12)]">
+      <nav className="fixed bottom-0 left-0 right-0 z-40 mx-auto max-w-xl golog-bottom-nav px-4 pb-[calc(env(safe-area-inset-bottom)+10px)] pt-3 shadow-[0_-14px_30px_rgba(20,39,61,0.12)]">
         <div className="relative grid grid-cols-5 items-end">
-          <button type="button" onClick={() => onGo("overview")} className="flex flex-col items-center gap-1 text-[10px] font-semibold text-emerald-400"><BarChart3 size={19} />Home</button>
+          <button type="button" onClick={() => onGo("overview")} className="flex flex-col items-center gap-1 text-[10px] font-semibold golog-bottom-active"><BarChart3 size={19} />Home</button>
           <button type="button" onClick={() => onGo("stock")} className="flex flex-col items-center gap-1 text-[10px] font-semibold text-slate-400"><Boxes size={19} />Stok</button>
           <div className="flex justify-center">
-            <button type="button" onClick={() => onGo("requests")} className="relative -mt-9 grid h-16 w-16 place-items-center rounded-full border-4 border-[#f3f7fb] bg-[#0db889] text-white shadow-[0_12px_28px_rgba(13,184,137,0.35)]" aria-label="Ajukan Permintaan"><Truck size={25} /></button>
+            <button type="button" onClick={() => onGo("requests")} className="relative -mt-9 grid h-16 w-16 place-items-center rounded-full border-4 border-[#f7efd7] bg-[#7f9146] text-white shadow-[0_12px_28px_rgba(13,184,137,0.35)]" aria-label="Ajukan Permintaan"><Truck size={25} /></button>
           </div>
           <button type="button" onClick={() => onGo("requests")} className="flex flex-col items-center gap-1 text-[10px] font-semibold text-slate-400"><ClipboardList size={19} />Riwayat</button>
           <button type="button" onClick={() => onGo("requests")} className="flex flex-col items-center gap-1 text-[10px] font-semibold text-slate-400"><Bell size={19} />Status</button>
