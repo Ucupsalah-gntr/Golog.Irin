@@ -55,6 +55,21 @@ async function dbSafeFindTodayRoomLock(userId: number) {
     .limit(1);
   return rows[0] ?? null;
 }
+async function getAuthorizedRoomIds(userId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  const rows = await db
+    .select({ roomId: userRoomAccess.roomId })
+    .from(userRoomAccess)
+    .innerJoin(rooms, eq(userRoomAccess.roomId, rooms.id))
+    .where(and(
+      eq(userRoomAccess.userId, userId),
+      eq(userRoomAccess.active, true),
+      eq(rooms.active, true),
+    ));
+  return rows.map((row) => row.roomId);
+}
+
 export const appRouter = router({
   system: systemRouter,
   auth: router({
@@ -153,10 +168,15 @@ export const appRouter = router({
         return getDashboardData("admin", null, ctx.user.id);
       }
 
+      const authorizedRoomIds = await getAuthorizedRoomIds(ctx.user.id);
       let roomId = input?.roomId ?? ctx.user.roomId ?? null;
+      if (roomId === null && authorizedRoomIds.length === 1) roomId = authorizedRoomIds[0];
       if (roomId === null) {
         const todayLock = await dbSafeFindTodayRoomLock(ctx.user.id);
-        roomId = todayLock?.roomId ?? null;
+        if (todayLock?.roomId && authorizedRoomIds.includes(todayLock.roomId)) roomId = todayLock.roomId;
+      }
+      if (roomId !== null && !authorizedRoomIds.includes(roomId)) {
+        throw new TRPCError({ code: "FORBIDDEN", message: "Ruangan aktif tidak termasuk akses akun Anda." });
       }
 
       return getDashboardData("user", roomId, ctx.user.id);
@@ -227,6 +247,12 @@ export const appRouter = router({
 
       const roomRows = await db.select({ id: rooms.id }).from(rooms).where(and(eq(rooms.id, input.roomId), eq(rooms.active, true))).limit(1);
       if (!roomRows[0]) throw new TRPCError({ code: "BAD_REQUEST", message: "Ruangan tidak ditemukan atau sedang tidak aktif." });
+      if (ctx.user.role !== "admin") {
+        const authorizedRoomIds = await getAuthorizedRoomIds(ctx.user.id);
+        if (!authorizedRoomIds.includes(input.roomId)) {
+          throw new TRPCError({ code: "FORBIDDEN", message: "Anda tidak memiliki akses ke ruangan ini." });
+        }
+      }
 
       const itemIds = input.lines.map((line) => line.itemId);
       if (new Set(itemIds).size !== itemIds.length) {
