@@ -656,7 +656,7 @@ function NotificationCenter({
                     key={item.key}
                     type="button"
                     onClick={() => onOpen(item)}
-                    className={"flex w-full items-start gap-3 rounded-xl border p-3 text-left transition " + (unread ? "border-[#a9b567] bg-[#E6F4F7]" : "border-[#B8D5DE] bg-[#FFFFFF] hover:bg-[#F4FAFC]")}
+                    className={"flex w-full items-start gap-3 rounded-xl border p-3 text-left transition " + (unread ? "border-[#FFD500] bg-[#E6F4F7]" : "border-[#B8D5DE] bg-[#FFFFFF] hover:bg-[#F4FAFC]")}
                   >
                     <div className={"mt-0.5 grid h-9 w-9 shrink-0 place-items-center rounded-xl " + (item.kind === "low-stock" ? "bg-[#f0d3ca] text-[#b56557]" : item.kind === "status" ? "bg-[#e3d6b1] text-[#6f5d48]" : "bg-[#BAE4F0] text-[#004E9B]")}>
                       {notificationKindIcon(item.kind)}
@@ -1745,7 +1745,7 @@ function StockView({ stock, isAdmin, items, warehouses, onCreateItem, busy, onIm
               const coverage = minQty > 0 ? Math.min(100, Math.max(0, (stockQty / minQty) * 100)) : stockQty > 0 ? 100 : 0;
 
               return (
-                <div id={`stock-item-${row.itemId}`} key={row.itemId} className={`overflow-hidden rounded-2xl border-2 bg-[#FFFFFF] shadow-[inset_0_0_0_2px_rgba(255,250,240,0.45)] ${Number(focusItemId) === Number(row.itemId) ? "border-[#0091B9] ring-2 ring-[#a9b567] ring-offset-2" : "border-[#9CCED8]"}`}>
+                <div id={`stock-item-${row.itemId}`} key={row.itemId} className={`overflow-hidden rounded-2xl border-2 bg-[#FFFFFF] shadow-[inset_0_0_0_2px_rgba(255,250,240,0.45)] ${Number(focusItemId) === Number(row.itemId) ? "border-[#0091B9] ring-2 ring-[#FFD500] ring-offset-2" : "border-[#9CCED8]"}`}>
                   <button
                     type="button"
                     onClick={() => setExpanded(open ? null : Number(row.itemId))}
