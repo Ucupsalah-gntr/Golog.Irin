@@ -39,7 +39,6 @@ import {
   Bell,
   ChevronRight,
   History,
-  ScanLine,
   Search,
   Settings2,
 } from "lucide-react";
@@ -82,6 +81,21 @@ function statusTone(status: string) {
   return "bg-sky-100 text-sky-700 border-sky-200";
 }
 
+type AppNotification = {
+  key: string;
+  title: string;
+  message: string;
+  meta: string;
+  kind: "approval" | "low-stock" | "status";
+  nav: NavKey;
+};
+
+function notificationKindIcon(kind: AppNotification["kind"]) {
+  if (kind === "low-stock") return <Activity size={18} />;
+  if (kind === "status") return <ClipboardCheck size={18} />;
+  return <ClipboardList size={18} />;
+}
+
 type ExcelCell = string | number;
 function downloadWorkbook(filename: string, sheets: Array<{ name: string; rows: ExcelCell[][] }>) {
   const workbook = XLSX.utils.book_new();
@@ -108,6 +122,8 @@ export default function Home() {
   const [selectedRoom, setSelectedRoom] = useState<number | null>(null);
   const [requestLines, setRequestLines] = useState<Line[]>([{ itemId: 0, requestedQty: 1 }]);
   const [reportMonth, setReportMonth] = useState(getJakartaMonthKeyClient());
+  const [notificationOpen, setNotificationOpen] = useState(false);
+  const [readNotificationKeys, setReadNotificationKeys] = useState<string[]>([]);
   const utils = trpc.useUtils();
   const catalog = trpc.catalog.all.useQuery(undefined, { enabled: isAuthenticated });
   const dashboard = trpc.dashboard.summary.useQuery({ roomId: selectedRoom }, { enabled: isAuthenticated });
@@ -157,6 +173,123 @@ export default function Home() {
   const visibleNav = nav.filter((item) => !item.adminOnly || isAdmin);
   const selectedRoomName = rooms.find((room) => room.id === selectedRoom)?.name;
 
+  const notificationStorageKey = user?.id ? `gologirin-notifications-read:${user.id}` : null;
+
+  useEffect(() => {
+    if (!notificationStorageKey) {
+      setReadNotificationKeys([]);
+      return;
+    }
+    try {
+      const saved = window.localStorage.getItem(notificationStorageKey);
+      setReadNotificationKeys(saved ? JSON.parse(saved) : []);
+    } catch {
+      setReadNotificationKeys([]);
+    }
+  }, [notificationStorageKey]);
+
+  const notifications = useMemo<AppNotification[]>(() => {
+    const rows: AppNotification[] = [];
+
+    if (isAdmin) {
+      for (const row of requests.data ?? []) {
+        if (row?.request?.status !== "submitted") continue;
+        rows.push({
+          key: `admin:approval:${row.request.id}:submitted`,
+          title: "Permintaan menunggu approval",
+          message: `${row.room?.name || "Ruangan"} · ${row.request.requestNo}`,
+          meta: `${row.lines?.length || 0} item · ${row.request.priority}`,
+          kind: "approval",
+          nav: "requests",
+        });
+      }
+
+      for (const row of stock) {
+        const qty = Number(row?.movementQty ?? 0);
+        const minimum = Number(row?.minStock ?? row?.item?.minStock ?? 0);
+        if (qty > minimum) continue;
+        const itemId = Number(row?.itemId ?? row?.item?.id ?? 0);
+        const name = row?.item?.name ?? row?.name ?? "Barang";
+        rows.push({
+          key: `admin:low-stock:${itemId}`,
+          title: "Stok perlu dicek",
+          message: name,
+          meta: `Stok ${formatNumber(qty)} · minimum ${formatNumber(minimum)}`,
+          kind: "low-stock",
+          nav: "stock",
+        });
+      }
+    } else {
+      for (const row of requests.data ?? []) {
+        const status = row?.request?.status;
+        if (!status || status === "draft") continue;
+        const title =
+          status === "submitted"
+            ? "Permintaan sedang diproses"
+            : status === "approved"
+              ? "Permintaan disetujui"
+              : status === "partial"
+                ? "Permintaan disetujui sebagian"
+                : status === "rejected"
+                  ? "Permintaan ditolak"
+                  : `Status permintaan: ${statusLabel(status)}`;
+        rows.push({
+          key: `user:request:${row.request.id}:${status}:${row.request.updatedAt || row.request.createdAt}`,
+          title,
+          message: `${row.request.requestNo} · ${row.room?.name || selectedRoomName || "Ruangan"}`,
+          meta: `${row.lines?.length || 0} item · ${formatDate(row.request.updatedAt || row.request.createdAt)}`,
+          kind: status === "rejected" ? "status" : "approval",
+          nav: "requests",
+        });
+      }
+
+      for (const row of stock) {
+        const qty = Number(row?.movementQty ?? 0);
+        const minimum = Number(row?.minStock ?? row?.item?.minStock ?? 0);
+        if (qty > minimum) continue;
+        const itemId = Number(row?.itemId ?? row?.item?.id ?? 0);
+        rows.push({
+          key: `user:low-stock:${itemId}`,
+          title: "Stok ruangan perlu dicek",
+          message: row?.item?.name ?? row?.name ?? "Barang",
+          meta: `Stok ${formatNumber(qty)} · minimum ${formatNumber(minimum)}`,
+          kind: "low-stock",
+          nav: "stock",
+        });
+      }
+    }
+
+    return rows.slice(0, 20);
+  }, [isAdmin, requests.data, stock, selectedRoomName]);
+
+  const unreadNotificationCount = notifications.filter((item) => !readNotificationKeys.includes(item.key)).length;
+
+  function persistReadNotificationKeys(next: string[]) {
+    setReadNotificationKeys(next);
+    if (notificationStorageKey) {
+      try {
+        window.localStorage.setItem(notificationStorageKey, JSON.stringify(next.slice(-200)));
+      } catch {
+        // Notification read state is a convenience; ignore storage failures.
+      }
+    }
+  }
+
+  function markNotificationRead(key: string) {
+    if (readNotificationKeys.includes(key)) return;
+    persistReadNotificationKeys([...readNotificationKeys, key]);
+  }
+
+  function markAllNotificationsRead() {
+    persistReadNotificationKeys([...new Set([...readNotificationKeys, ...notifications.map((item) => item.key)])]);
+  }
+
+  function openNotification(item: AppNotification) {
+    markNotificationRead(item.key);
+    setNotificationOpen(false);
+    go(item.nav);
+  }
+
   const requestTotal = useMemo(() => requestLines.reduce((sum, line) => sum + Number(line.requestedQty || 0), 0), [requestLines]);
 
   useEffect(() => {
@@ -197,9 +330,18 @@ export default function Home() {
         </aside>
 
         <main className="min-w-0 flex-1 md:ml-72">
-          <header className={`sticky top-0 z-20 flex h-20 items-center justify-between border-b border-slate-200/80 golog-topbar px-5 backdrop-blur md:px-8 ${active === "overview" ? "hidden md:flex" : ""}`}><div className="flex items-center gap-3"><button className="rounded-xl p-2 hover:bg-white md:hidden" onClick={() => setMobileOpen(true)}><Menu size={20} /></button><div><p className="text-xs font-semibold uppercase tracking-[0.18em] text-teal-700">Instalasi Rawat Intensif</p><h1 className="text-xl font-semibold tracking-tight">{visibleNav.find((x) => x.key === active)?.label}</h1></div></div><div className="flex items-center gap-2"><button title="Refresh" onClick={refreshAll} className="rounded-xl border border-[#b8a27a] bg-[#f7efd7] p-2.5 text-slate-500 hover:text-teal-700"><RefreshCw size={17} /></button><div className="hidden rounded-xl border border-[#b8a27a] bg-[#f7efd7] px-3 py-2 text-right sm:block"><p className="text-xs font-semibold">{user?.name || "Akun aktif"}</p><p className="text-[11px] text-slate-500">{isAdmin ? "Kepala gudang" : "Petugas"}</p></div></div></header>
+          <header className={`sticky top-0 z-20 flex h-20 items-center justify-between border-b border-slate-200/80 golog-topbar px-5 backdrop-blur md:px-8 ${active === "overview" ? "hidden md:flex" : ""}`}><div className="flex items-center gap-3"><button className="rounded-xl p-2 hover:bg-white md:hidden" onClick={() => setMobileOpen(true)}><Menu size={20} /></button><div><p className="text-xs font-semibold uppercase tracking-[0.18em] text-teal-700">Instalasi Rawat Intensif</p><h1 className="text-xl font-semibold tracking-tight">{visibleNav.find((x) => x.key === active)?.label}</h1></div></div><div className="flex items-center gap-2"><button
+              type="button"
+              title="Notifikasi"
+              aria-label="Notifikasi"
+              onClick={() => setNotificationOpen(true)}
+              className="relative rounded-xl border border-[#b8a27a] bg-[#f7efd7] p-2.5 text-[#5a4738] hover:bg-[#e8dcba]"
+            >
+              <Bell size={17} />
+              {unreadNotificationCount > 0 && <span className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-[#c87969] ring-2 ring-[#f7efd7]" />}
+            </button><button title="Refresh" onClick={refreshAll} className="rounded-xl border border-[#b8a27a] bg-[#f7efd7] p-2.5 text-slate-500 hover:text-teal-700"><RefreshCw size={17} /></button><div className="hidden rounded-xl border border-[#b8a27a] bg-[#f7efd7] px-3 py-2 text-right sm:block"><p className="text-xs font-semibold">{user?.name || "Akun aktif"}</p><p className="text-[11px] text-slate-500">{isAdmin ? "Kepala gudang" : "Petugas"}</p></div></div></header>
           <div className={`golog-page mx-auto max-w-[1500px] space-y-6 ${active === "overview" ? "p-0 pb-28 md:p-8 md:pb-8" : "p-5 md:p-8"}`}>
-            {active === "overview" && <Overview dashboard={dashboard.data} isAdmin={isAdmin} onGo={go} report={isAdmin ? monthlyReport.data : null} requests={requests.data ?? []} userName={user?.name || user?.username || "Kepala Gudang"} />}
+            {active === "overview" && <Overview dashboard={dashboard.data} isAdmin={isAdmin} onGo={go} report={isAdmin ? monthlyReport.data : null} requests={requests.data ?? []} userName={user?.name || user?.username || "Kepala Gudang"} unreadNotificationCount={unreadNotificationCount} onOpenNotifications={() => setNotificationOpen(true)} />}
             {active === "stock" && <StockView stock={stock} isAdmin={isAdmin} items={items} warehouses={warehouses} onCreateItem={(input: any) => createItem.mutate(input)} busy={createItem.isPending} onImport={(rows: any[]) => importItems.mutate({ rows })} importBusy={importItems.isPending} />}
             {active === "inbound" && <InboundView items={items} warehouses={warehouses} onSubmit={(input: any) => createInbound.mutate(input)} busy={createInbound.isPending} />}
             {active === "requests" && <RequestsView requests={requests.data ?? []} rooms={rooms} items={items} isAdmin={isAdmin} currentUserId={user?.id} todayRoomLocks={todayRoomLocks.data ?? []} selectedRoom={selectedRoom} selectedRoomName={selectedRoomName} setSelectedRoom={setSelectedRoom} lines={requestLines} setLines={setRequestLines} total={requestTotal} onCreate={(input: any) => createRequest.mutate(input)} onVerify={(input: any) => verifyRequest.mutate(input)} busy={createRequest.isPending || verifyRequest.isPending} />}
@@ -209,6 +351,14 @@ export default function Home() {
           </div>
         </main>
       </div>
+      <NotificationCenter
+        open={notificationOpen}
+        notifications={notifications}
+        unreadCount={unreadNotificationCount}
+        onClose={() => setNotificationOpen(false)}
+        onMarkAllRead={markAllNotificationsRead}
+        onOpen={openNotification}
+      />
     </div>
   );
 }
@@ -427,6 +577,91 @@ function LoginScreen({ initialError = "" }: { initialError?: string }) {
   );
 }
 
+function NotificationCenter({
+  open,
+  notifications,
+  unreadCount,
+  onClose,
+  onMarkAllRead,
+  onOpen,
+}: {
+  open: boolean;
+  notifications: AppNotification[];
+  unreadCount: number;
+  onClose: () => void;
+  onMarkAllRead: () => void;
+  onOpen: (item: AppNotification) => void;
+}) {
+  if (!open) return null;
+
+  return (
+    <div className="fixed inset-0 z-[80]" role="dialog" aria-modal="true" aria-label="Notifikasi">
+      <button
+        type="button"
+        aria-label="Tutup notifikasi"
+        onClick={onClose}
+        className="absolute inset-0 bg-[#5a4738]/25 backdrop-blur-[2px]"
+      />
+      <section className="absolute right-3 top-3 w-[min(420px,calc(100vw-1.5rem))] overflow-hidden rounded-2xl border-2 border-[#b8a27a] bg-[#f7efd7] shadow-[0_20px_50px_rgba(90,71,56,0.25)] md:right-6 md:top-6">
+        <div className="flex items-start justify-between border-b border-[#b8a27a]/60 px-5 py-4">
+          <div>
+            <p className="golog-kicker">Pusat Notifikasi</p>
+            <h2 className="mt-1 text-xl font-semibold text-[#5a4738]">Notifikasi</h2>
+            <p className="mt-1 text-xs text-[#7e6b57]">{unreadCount} belum dibaca</p>
+          </div>
+          <div className="flex items-center gap-2">
+            {unreadCount > 0 && (
+              <button type="button" onClick={onMarkAllRead} className="rounded-lg border border-[#b8a27a] px-2.5 py-1.5 text-[11px] font-semibold text-[#5a4738] hover:bg-[#e8dcba]">
+                Tandai semua
+              </button>
+            )}
+            <button type="button" onClick={onClose} className="grid h-9 w-9 place-items-center rounded-lg text-[#5a4738] hover:bg-[#e8dcba]" aria-label="Tutup">
+              <X size={18} />
+            </button>
+          </div>
+        </div>
+
+        <div className="max-h-[calc(100vh-9rem)] overflow-y-auto p-3">
+          {notifications.length ? (
+            <div className="space-y-2">
+              {notifications.map((item) => {
+                const unread = !readNotificationKeys.includes(item.key);
+                return (
+                  <button
+                    key={item.key}
+                    type="button"
+                    onClick={() => onOpen(item)}
+                    className={"flex w-full items-start gap-3 rounded-xl border p-3 text-left transition " + (unread ? "border-[#a9b567] bg-[#eef0d5]" : "border-[#d0be97] bg-[#f7efd7] hover:bg-[#eee2bd]")}
+                  >
+                    <div className={"mt-0.5 grid h-9 w-9 shrink-0 place-items-center rounded-xl " + (item.kind === "low-stock" ? "bg-[#f0d3ca] text-[#b56557]" : item.kind === "status" ? "bg-[#e3d6b1] text-[#6f5d48]" : "bg-[#dce4a7] text-[#64753a]")}>
+                      {notificationKindIcon(item.kind)}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-start justify-between gap-2">
+                        <p className="text-sm font-semibold text-[#5a4738]">{item.title}</p>
+                        {unread && <span className="mt-1 h-2 w-2 shrink-0 rounded-full bg-[#c87969]" />}
+                      </div>
+                      <p className="mt-1 truncate text-xs font-medium text-[#6f5e4e]">{item.message}</p>
+                      <p className="mt-1 text-[11px] text-[#8b7b67]">{item.meta}</p>
+                    </div>
+                    <ChevronRight size={16} className="mt-2 shrink-0 text-[#9a896f]" />
+                  </button>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="px-4 py-12 text-center">
+              <Bell className="mx-auto text-[#7f9146]" size={26} />
+              <p className="mt-3 text-sm font-semibold text-[#5a4738]">Tidak ada notifikasi</p>
+              <p className="mt-1 text-xs text-[#8b7b67]">Semua aktivitas penting sedang tertangani.</p>
+            </div>
+          )}
+        </div>
+      </section>
+    </div>
+  );
+}
+
 function Overview({
   dashboard,
   isAdmin,
@@ -434,6 +669,8 @@ function Overview({
   report,
   requests = [],
   userName = "Pengguna",
+  unreadNotificationCount = 0,
+  onOpenNotifications,
 }: {
   dashboard: any;
   isAdmin: boolean;
@@ -441,6 +678,8 @@ function Overview({
   report?: any;
   requests?: any[];
   userName?: string;
+  unreadNotificationCount?: number;
+  onOpenNotifications?: () => void;
 }) {
   const stats = dashboard?.stats ?? { items: 0, lowStock: 0, pending: 0, todayIn: 0 };
   const roomName = dashboard?.roomName;
@@ -466,7 +705,7 @@ function Overview({
 
     return <>
       <div className="md:hidden">
-        <MobileAdminOverview dashboard={dashboard} requests={requests} userName={userName} onGo={onGo} />
+        <MobileAdminOverview dashboard={dashboard} requests={requests} userName={userName} onGo={onGo} unreadNotificationCount={unreadNotificationCount} onOpenNotifications={onOpenNotifications} />
       </div>
       <div className="hidden md:block space-y-6">
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
@@ -489,7 +728,7 @@ function Overview({
 
   return <>
     <div className="md:hidden">
-      <MobileUserOverview dashboard={dashboard} requests={requests} userName={userName} roomName={roomName} onGo={onGo} />
+      <MobileUserOverview dashboard={dashboard} requests={requests} userName={userName} roomName={roomName} onGo={onGo} unreadNotificationCount={unreadNotificationCount} onOpenNotifications={onOpenNotifications} />
     </div>
     <div className="hidden md:block space-y-6">
       <Card className="border-slate-200/80 shadow-sm">
@@ -530,11 +769,15 @@ function MobileAdminOverview({
   requests,
   userName,
   onGo,
+  unreadNotificationCount = 0,
+  onOpenNotifications,
 }: {
   dashboard: any;
   requests: any[];
   userName: string;
   onGo: (key: NavKey) => void;
+  unreadNotificationCount?: number;
+  onOpenNotifications?: () => void;
 }) {
   const stats = dashboard?.stats ?? { items: 0, lowStock: 0, pending: 0, todayIn: 0 };
   const pendingRequests = requests.filter((row) => row?.request?.status === "submitted");
@@ -566,7 +809,7 @@ function MobileAdminOverview({
             aria-label="Permintaan"
           >
             <Bell size={20} />
-            {pendingRequests.length > 0 && <span className="absolute right-2 top-2 h-2 w-2 rounded-full bg-rose-500 ring-2 ring-white" />}
+            {unreadNotificationCount > 0 && <span className="absolute right-2 top-2 h-2 w-2 rounded-full bg-[#c87969] ring-2 ring-[#f7efd7]" />}
           </button>
         </div>
 
@@ -606,7 +849,7 @@ function MobileAdminOverview({
               className="grid h-14 w-14 shrink-0 place-items-center rounded-2xl bg-white/15 ring-1 ring-white/20 transition hover:bg-white/20"
               aria-label="Buka stock opname"
             >
-              <ScanLine size={25} />
+              <ClipboardType size={25} />
             </button>
           </div>
         </div>
@@ -785,12 +1028,16 @@ function MobileUserOverview({
   userName,
   roomName,
   onGo,
+  unreadNotificationCount = 0,
+  onOpenNotifications,
 }: {
   dashboard: any;
   requests: any[];
   userName: string;
   roomName?: string | null;
   onGo: (key: NavKey) => void;
+  unreadNotificationCount?: number;
+  onOpenNotifications?: () => void;
 }) {
   const stats = dashboard?.stats ?? { items: 0, lowStock: 0, pending: 0, todayIn: 0 };
   const pendingRequests = requests.filter((row) => row?.request?.status === "submitted");
