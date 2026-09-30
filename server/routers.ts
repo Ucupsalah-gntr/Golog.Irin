@@ -13,6 +13,7 @@ import {
   getDb,
   getReportMovements,
   getMonthlyReportData,
+  getRoomDemandPatterns,
   getRoomStockRows,
   getStockQty,
   getStockRows,
@@ -160,6 +161,11 @@ export const appRouter = router({
 
       return getDashboardData("user", roomId, ctx.user.id);
     }),
+  }),
+  analytics: router({
+    roomDemand: adminProcedure.input(
+      z.object({ days: z.union([z.literal(30), z.literal(90)]).default(30) }),
+    ).query(({ input }) => getRoomDemandPatterns(input.days)),
   }),
   inbound: router({
     create: adminProcedure.input(z.object({ itemId: z.number().int(), quantity: z.number().int().positive(), sourceWarehouseId: z.number().int(), occurredAt: z.coerce.date().optional(), notes: z.string().max(500).optional() })).mutation(async ({ input, ctx }) => {
