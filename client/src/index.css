@@ -43,39 +43,39 @@
 }
 
 :root {
-  --primary: #7f9146;
-  --primary-foreground: #fffaf0;
-  --sidebar-primary: #7f9146;
-  --sidebar-primary-foreground: #fffaf0;
-  --chart-1: #b2bb7a;
-  --chart-2: #7f9146;
-  --chart-3: #64753a;
-  --chart-4: #5a4737;
-  --chart-5: #c58a74;
+  --primary: #0091B9;
+  --primary-foreground: #FFFFFF;
+  --sidebar-primary: #0091B9;
+  --sidebar-primary-foreground: #FFFFFF;
+  --chart-1: #BAE4F0;
+  --chart-2: #0091B9;
+  --chart-3: #004E9B;
+  --chart-4: #07304A;
+  --chart-5: #FF9A6A;
   --radius: 0.9rem;
-  --background: #eee2bd;
-  --foreground: #5a4a3b;
-  --card: #f7efd7;
-  --card-foreground: #5a4a3b;
-  --popover: #f7efd7;
-  --popover-foreground: #5a4a3b;
-  --secondary: #e5d8ab;
-  --secondary-foreground: #5a4a3b;
-  --muted: #e9ddbb;
-  --muted-foreground: #8b7b67;
-  --accent: #ddd09f;
-  --accent-foreground: #5a4a3b;
-  --destructive: #c87969;
-  --destructive-foreground: #fffaf0;
-  --border: #b8a27a;
-  --input: #b8a27a;
-  --ring: #7f9146;
-  --sidebar: #5a4738;
-  --sidebar-foreground: #f7efd7;
-  --sidebar-accent: #6d5a45;
-  --sidebar-accent-foreground: #fffaf0;
-  --sidebar-border: #8d765c;
-  --sidebar-ring: #7f9146;
+  --background: #F4FAFC;
+  --foreground: #07304A;
+  --card: #FFFFFF;
+  --card-foreground: #07304A;
+  --popover: #FFFFFF;
+  --popover-foreground: #07304A;
+  --secondary: #BAE4F0;
+  --secondary-foreground: #07304A;
+  --muted: #DCEEF2;
+  --muted-foreground: #55727C;
+  --accent: #BAE4F0;
+  --accent-foreground: #07304A;
+  --destructive: #FF6500;
+  --destructive-foreground: #FFFFFF;
+  --border: #9CCED8;
+  --input: #9CCED8;
+  --ring: #0091B9;
+  --sidebar: #07304A;
+  --sidebar-foreground: #FFFFFF;
+  --sidebar-accent: #0B3D5C;
+  --sidebar-accent-foreground: #FFFFFF;
+  --sidebar-border: #6D98A6;
+  --sidebar-ring: #0091B9;
 }
 
 .dark {
@@ -180,15 +180,15 @@
 
 
 :root {
-  --golog-cream: #eee2bd;
-  --golog-paper: #f7efd7;
-  --golog-paper-strong: #e7d9ad;
-  --golog-olive: #7f9146;
-  --golog-olive-dark: #64753a;
-  --golog-brown: #5a4738;
-  --golog-brown-soft: #7e6b57;
-  --golog-line: #b8a27a;
-  --golog-alert: #c87969;
+  --golog-cream: #F4FAFC;
+  --golog-paper: #FFFFFF;
+  --golog-paper-strong: #BAE4F0;
+  --golog-olive: #0091B9;
+  --golog-olive-dark: #004E9B;
+  --golog-brown: #07304A;
+  --golog-brown-soft: #315563;
+  --golog-line: #9CCED8;
+  --golog-alert: #FF6500;
   --golog-shadow: rgba(90, 71, 56, 0.16);
 }
 
@@ -214,7 +214,7 @@
 
   .golog-sidebar {
     background:
-      linear-gradient(180deg, #5c4939 0%, #514032 100%);
+      linear-gradient(180deg, #5c4939 0%, #07304A 100%);
     color: #f8f0db;
     border-right: 1px solid rgba(255, 248, 231, 0.16);
     box-shadow: 10px 0 28px rgba(78, 58, 42, 0.12);
@@ -222,7 +222,7 @@
 
   .golog-brand-mark {
     border: 2px solid rgba(255, 248, 231, 0.5);
-    background: #dce4a7;
+    background: #BAE4F0;
     color: var(--golog-brown);
     box-shadow: inset 0 0 0 3px rgba(90, 71, 56, 0.12);
   }
@@ -239,7 +239,7 @@
 
   .golog-mobile-surface {
     background:
-      linear-gradient(180deg, #eee2bd 0%, #eadcad 100%);
+      linear-gradient(180deg, #F4FAFC 0%, #eadcad 100%);
   }
 
   .golog-panel {
@@ -280,7 +280,7 @@
   .golog-primary-button {
     border: 2px solid #5f6d32;
     background: var(--golog-olive);
-    color: #fff9ea;
+    color: #FFFFFF;
     box-shadow: inset 0 0 0 2px rgba(255, 250, 240, 0.12), 0 6px 14px rgba(100, 117, 58, 0.24);
   }
 
@@ -289,7 +289,7 @@
   }
 
   .golog-nav-active {
-    background: #dce4a7 !important;
+    background: #BAE4F0 !important;
     color: var(--golog-brown) !important;
     border: 1px solid rgba(255, 248, 231, 0.2);
     box-shadow: inset 0 0 0 2px rgba(90, 71, 56, 0.08);
@@ -303,13 +303,13 @@
   }
 
   .golog-bottom-nav {
-    background: #544333;
-    border-top: 2px solid #8e7659;
+    background: #07304A;
+    border-top: 2px solid #6D98A6;
     box-shadow: 0 -10px 24px rgba(78, 58, 42, 0.16);
   }
 
   .golog-bottom-active {
-    color: #dbe6a0 !important;
+    color: #FFD500 !important;
   }
 
   .golog-bottom-fab {
@@ -351,7 +351,7 @@
 
   .golog-mobile-surface .text-slate-500,
   .golog-mobile-surface .text-slate-600 {
-    color: #6f5e4e !important;
+    color: #315563 !important;
   }
 
   .golog-mobile-surface .border-slate-200,
@@ -425,11 +425,11 @@
   }
 
   .golog-app main .text-slate-500 {
-    color: #6f5e4e;
+    color: #315563;
   }
 
   .golog-app main .text-slate-600 {
-    color: #645343;
+    color: #07304A;
   }
 
   .golog-app main .text-slate-700 {
@@ -438,7 +438,7 @@
 
   .golog-app main .text-slate-800,
   .golog-app main .text-slate-900 {
-    color: #4e3f32;
+    color: #07304A;
   }
 
   .golog-app main .hover\:bg-slate-50:hover,
@@ -478,7 +478,7 @@
   }
 
   .golog-bottom-nav button.golog-bottom-active {
-    color: #dce4a7 !important;
+    color: #BAE4F0 !important;
   }
 }
 
@@ -488,17 +488,17 @@
    Pages share structure, but each workspace gets a deliberate color composition. */
 :root {
   --golog-stone: #d0d3c5;
-  --golog-cerulean: #56b1bf;
-  --golog-teal: #08708a;
-  --golog-tomato: #d73a31;
-  --golog-hunter: #032b2f;
+  --golog-cerulean: #0091B9;
+  --golog-teal: #004E9B;
+  --golog-tomato: #FF6500;
+  --golog-hunter: #07304A;
   --golog-cream: #eef0ea;
   --golog-paper: #fbfcf8;
-  --golog-paper-strong: #dfe4dc;
-  --golog-brown: #173b40;
-  --golog-brown-soft: #567178;
-  --golog-line: #aec1c4;
-  --golog-alert: #b52f28;
+  --golog-paper-strong: #E6F4F7;
+  --golog-brown: #0B3D5C;
+  --golog-brown-soft: #55727C;
+  --golog-line: #9CCED8;
+  --golog-alert: #D94A1A;
   --golog-shadow: rgba(3, 43, 47, 0.14);
 }
 
@@ -506,7 +506,7 @@
   /* Shared identity: deeper navigation, stronger contrast, softer content surfaces. */
   .golog-app .golog-sidebar {
     background: linear-gradient(180deg, var(--golog-hunter) 0%, color-mix(in srgb, var(--golog-hunter) 82%, var(--golog-teal)) 100%);
-    color: #f5fbfa;
+    color: #FFFFFF;
     border-right-color: rgba(255,255,255,0.12);
   }
 
@@ -538,199 +538,199 @@
   /* Login — calm and crisp: cerulean field, hunter copy, tiny tomato accent. */
   .golog-theme-login {
     --golog-cream: #eaf2f1;
-    --golog-paper: #fbfdfc;
-    --golog-paper-strong: #d4e4e3;
-    --golog-line: #8fbcc4;
-    --golog-brown: #173b40;
-    --golog-brown-soft: #5c7277;
+    --golog-paper: #FFFFFF;
+    --golog-paper-strong: #E6F4F7;
+    --golog-line: #9CCED8;
+    --golog-brown: #0B3D5C;
+    --golog-brown-soft: #55727C;
     --golog-shadow: rgba(8,112,138,0.15);
-    --primary: #08708a;
-    --primary-foreground: #f8ffff;
-    --ring: #56b1bf;
+    --primary: #004E9B;
+    --primary-foreground: #FFFFFF;
+    --ring: #0091B9;
     --background: #eaf2f1;
-    --card: #fbfdfc;
-    --popover: #fbfdfc;
-    --secondary: #d4e4e3;
-    --muted: #dfeceb;
-    --accent: #d73a31;
+    --card: #FFFFFF;
+    --popover: #FFFFFF;
+    --secondary: #E6F4F7;
+    --muted: #E6F4F7;
+    --accent: #FF6500;
     --accent-foreground: #ffffff;
-    --golog-nav-active: #56b1bf;
+    --golog-nav-active: #0091B9;
   }
 
   /* Overview — cerulean leads; tomato appears only as a signal. */
   .golog-theme-overview {
     --golog-cream: #e4f1f3;
-    --golog-paper: #fbfdfd;
-    --golog-paper-strong: #cfe4e8;
-    --golog-line: #85bac4;
-    --golog-brown: #123d45;
-    --golog-brown-soft: #4f6f77;
+    --golog-paper: #FFFFFF;
+    --golog-paper-strong: #BAE4F0;
+    --golog-line: #9CCED8;
+    --golog-brown: #0B3D5C;
+    --golog-brown-soft: #55727C;
     --golog-shadow: rgba(8,112,138,0.14);
-    --primary: #08708a;
-    --primary-foreground: #f8ffff;
-    --ring: #56b1bf;
+    --primary: #004E9B;
+    --primary-foreground: #FFFFFF;
+    --ring: #0091B9;
     --background: #e4f1f3;
-    --card: #fbfdfd;
-    --popover: #fbfdfd;
-    --secondary: #cfe4e8;
-    --muted: #d9ebee;
-    --accent: #d73a31;
+    --card: #FFFFFF;
+    --popover: #FFFFFF;
+    --secondary: #BAE4F0;
+    --muted: #E6F4F7;
+    --accent: #FF6500;
     --accent-foreground: #ffffff;
-    --golog-nav-active: #56b1bf;
+    --golog-nav-active: #0091B9;
   }
 
   /* Requests — hunter frame + tomato action strip + cerulean support. */
   .golog-theme-requests {
-    --golog-cream: #e7ecea;
-    --golog-paper: #fbfcf9;
-    --golog-paper-strong: #cfd9d5;
+    --golog-cream: #F4FAFC;
+    --golog-paper: #FFFFFF;
+    --golog-paper-strong: #D5E8ED;
     --golog-line: #9eb4b5;
-    --golog-brown: #0a3639;
-    --golog-brown-soft: #557074;
+    --golog-brown: #0B3D5C;
+    --golog-brown-soft: #55727C;
     --golog-shadow: rgba(3,43,47,0.16);
-    --primary: #d73a31;
+    --primary: #FF6500;
     --primary-foreground: #ffffff;
-    --ring: #08708a;
-    --background: #e7ecea;
-    --card: #fbfcf9;
-    --popover: #fbfcf9;
-    --secondary: #cfd9d5;
-    --muted: #dde5e1;
-    --accent: #56b1bf;
-    --accent-foreground: #032b2f;
-    --golog-nav-active: #d3e6e7;
+    --ring: #004E9B;
+    --background: #F4FAFC;
+    --card: #FFFFFF;
+    --popover: #FFFFFF;
+    --secondary: #D5E8ED;
+    --muted: #E6F4F7;
+    --accent: #0091B9;
+    --accent-foreground: #07304A;
+    --golog-nav-active: #BAE4F0;
   }
 
   /* Stock — stone wash is dominant, teal creates clear data hierarchy. */
   .golog-theme-stock {
-    --golog-cream: #e5e7df;
-    --golog-paper: #fcfcf8;
+    --golog-cream: #F4FAFC;
+    --golog-paper: #FFFFFF;
     --golog-paper-strong: #d0d3c5;
     --golog-line: #aab4aa;
     --golog-brown: #294247;
-    --golog-brown-soft: #607275;
+    --golog-brown-soft: #55727C;
     --golog-shadow: rgba(3,43,47,0.11);
-    --primary: #08708a;
-    --primary-foreground: #f8ffff;
-    --ring: #56b1bf;
-    --background: #e5e7df;
-    --card: #fcfcf8;
-    --popover: #fcfcf8;
+    --primary: #004E9B;
+    --primary-foreground: #FFFFFF;
+    --ring: #0091B9;
+    --background: #F4FAFC;
+    --card: #FFFFFF;
+    --popover: #FFFFFF;
     --secondary: #d0d3c5;
-    --muted: #dfe2d8;
-    --accent: #56b1bf;
-    --accent-foreground: #032b2f;
-    --golog-nav-active: #c8dfe2;
+    --muted: #E6F4F7;
+    --accent: #0091B9;
+    --accent-foreground: #07304A;
+    --golog-nav-active: #BAE4F0;
   }
 
   /* Inbound — cerulean surface with deep-teal controls. */
   .golog-theme-inbound {
-    --golog-cream: #dceff2;
-    --golog-paper: #fbfdfc;
-    --golog-paper-strong: #bddfe5;
-    --golog-line: #7db6c0;
-    --golog-brown: #123b43;
-    --golog-brown-soft: #4f7078;
+    --golog-cream: #E6F4F7;
+    --golog-paper: #FFFFFF;
+    --golog-paper-strong: #BAE4F0;
+    --golog-line: #9CCED8;
+    --golog-brown: #0B3D5C;
+    --golog-brown-soft: #55727C;
     --golog-shadow: rgba(8,112,138,0.15);
-    --primary: #08708a;
-    --primary-foreground: #f8ffff;
-    --ring: #d73a31;
-    --background: #dceff2;
-    --card: #fbfdfc;
-    --popover: #fbfdfc;
-    --secondary: #bddfe5;
-    --muted: #d2e8eb;
-    --accent: #d73a31;
+    --primary: #004E9B;
+    --primary-foreground: #FFFFFF;
+    --ring: #FF6500;
+    --background: #E6F4F7;
+    --card: #FFFFFF;
+    --popover: #FFFFFF;
+    --secondary: #BAE4F0;
+    --muted: #E6F4F7;
+    --accent: #FF6500;
     --accent-foreground: #ffffff;
-    --golog-nav-active: #8ccbd3;
+    --golog-nav-active: #0091B9;
   }
 
   /* Adjustments — deep, editorial, with tomato used for change state. */
   .golog-theme-adjustments {
-    --golog-cream: #dfe8e5;
-    --golog-paper: #f9fcfa;
-    --golog-paper-strong: #c3d4d0;
-    --golog-line: #8fabaa;
-    --golog-brown: #082f31;
-    --golog-brown-soft: #557071;
+    --golog-cream: #E6F4F7;
+    --golog-paper: #FFFFFF;
+    --golog-paper-strong: #D5E8ED;
+    --golog-line: #9CCED8;
+    --golog-brown: #0B3D5C;
+    --golog-brown-soft: #55727C;
     --golog-shadow: rgba(3,43,47,0.18);
-    --primary: #032b2f;
-    --primary-foreground: #f6ffff;
-    --ring: #d73a31;
-    --background: #dfe8e5;
-    --card: #f9fcfa;
-    --popover: #f9fcfa;
-    --secondary: #c3d4d0;
-    --muted: #d6e2de;
-    --accent: #d73a31;
+    --primary: #07304A;
+    --primary-foreground: #FFFFFF;
+    --ring: #FF6500;
+    --background: #E6F4F7;
+    --card: #FFFFFF;
+    --popover: #FFFFFF;
+    --secondary: #D5E8ED;
+    --muted: #E6F4F7;
+    --accent: #FF6500;
     --accent-foreground: #ffffff;
-    --golog-nav-active: #9bc2c4;
+    --golog-nav-active: #0091B9;
   }
 
   /* Stock Opname — neutral stone + high-contrast teal checkpoints. */
   .golog-theme-stocktake {
-    --golog-cream: #e8eae3;
-    --golog-paper: #fdfdf9;
+    --golog-cream: #F4FAFC;
+    --golog-paper: #FFFFFF;
     --golog-paper-strong: #d0d3c5;
     --golog-line: #aeb9af;
     --golog-brown: #294247;
-    --golog-brown-soft: #637276;
+    --golog-brown-soft: #55727C;
     --golog-shadow: rgba(3,43,47,0.12);
-    --primary: #08708a;
-    --primary-foreground: #f8ffff;
-    --ring: #d73a31;
-    --background: #e8eae3;
-    --card: #fdfdf9;
-    --popover: #fdfdf9;
+    --primary: #004E9B;
+    --primary-foreground: #FFFFFF;
+    --ring: #FF6500;
+    --background: #F4FAFC;
+    --card: #FFFFFF;
+    --popover: #FFFFFF;
     --secondary: #d0d3c5;
     --muted: #e0e3db;
-    --accent: #d73a31;
+    --accent: #FF6500;
     --accent-foreground: #ffffff;
-    --golog-nav-active: #b9dadd;
+    --golog-nav-active: #0091B9;
   }
 
   /* Room Demand — most visual: cerulean body, deep-teal matrix, tomato only for alerts. */
   .golog-theme-room-demand {
-    --golog-cream: #dff1f3;
-    --golog-paper: #fbfdfc;
-    --golog-paper-strong: #bddfe5;
-    --golog-line: #7eb6c1;
-    --golog-brown: #0a3942;
+    --golog-cream: #E6F4F7;
+    --golog-paper: #FFFFFF;
+    --golog-paper-strong: #BAE4F0;
+    --golog-line: #9CCED8;
+    --golog-brown: #0B3D5C;
     --golog-brown-soft: #50727a;
     --golog-shadow: rgba(8,112,138,0.16);
-    --primary: #08708a;
-    --primary-foreground: #f8ffff;
-    --ring: #d73a31;
-    --background: #dff1f3;
-    --card: #fbfdfc;
-    --popover: #fbfdfc;
-    --secondary: #bddfe5;
-    --muted: #d3e8eb;
-    --accent: #d73a31;
+    --primary: #004E9B;
+    --primary-foreground: #FFFFFF;
+    --ring: #FF6500;
+    --background: #E6F4F7;
+    --card: #FFFFFF;
+    --popover: #FFFFFF;
+    --secondary: #BAE4F0;
+    --muted: #E6F4F7;
+    --accent: #FF6500;
     --accent-foreground: #ffffff;
-    --golog-nav-active: #7fc6d0;
+    --golog-nav-active: #0091B9;
   }
 
   /* Reports — hunter is dominant for a denser, more serious reading mode. */
   .golog-theme-reports {
-    --golog-cream: #dfe8e5;
-    --golog-paper: #f8fcfa;
-    --golog-paper-strong: #c4d5d1;
-    --golog-line: #8ea9a6;
-    --golog-brown: #082f31;
-    --golog-brown-soft: #5a7271;
+    --golog-cream: #E6F4F7;
+    --golog-paper: #FFFFFF;
+    --golog-paper-strong: #D5E8ED;
+    --golog-line: #9CCED8;
+    --golog-brown: #0B3D5C;
+    --golog-brown-soft: #55727C;
     --golog-shadow: rgba(3,43,47,0.18);
-    --primary: #032b2f;
-    --primary-foreground: #f7ffff;
-    --ring: #56b1bf;
-    --background: #dfe8e5;
-    --card: #f8fcfa;
-    --popover: #f8fcfa;
-    --secondary: #c4d5d1;
-    --muted: #d5e1de;
-    --accent: #56b1bf;
-    --accent-foreground: #032b2f;
-    --golog-nav-active: #8bc5cb;
+    --primary: #07304A;
+    --primary-foreground: #FFFFFF;
+    --ring: #0091B9;
+    --background: #E6F4F7;
+    --card: #FFFFFF;
+    --popover: #FFFFFF;
+    --secondary: #D5E8ED;
+    --muted: #E6F4F7;
+    --accent: #0091B9;
+    --accent-foreground: #07304A;
+    --golog-nav-active: #0091B9;
   }
 
   /* Theme application: strengthen contrast without turning every page into a rainbow. */
@@ -831,24 +831,24 @@
 
 @layer components {
   /* Strong page-level contrast so the visual mood is immediately visible, not only through component variables. */
-  .golog-theme-login { background: linear-gradient(135deg, #e9f1f1 0%, #dcecef 52%, #eef0ea 100%) !important; }
-  .golog-theme-overview { background: linear-gradient(135deg, #e0f0f2 0%, #cfe4e8 50%, #eef3ef 100%) !important; }
-  .golog-theme-requests { background: linear-gradient(135deg, #eef0ec 0%, #dfe8e5 52%, #e8e2d7 100%) !important; }
-  .golog-theme-stock { background: linear-gradient(135deg, #e8e9e1 0%, #d0d3c5 52%, #edf1ed 100%) !important; }
-  .golog-theme-inbound { background: linear-gradient(135deg, #d9edf0 0%, #bddfe5 52%, #e8f2ef 100%) !important; }
-  .golog-theme-adjustments { background: linear-gradient(135deg, #dfe9e5 0%, #c3d4d0 52%, #e5ece8 100%) !important; }
-  .golog-theme-stocktake { background: linear-gradient(135deg, #e9ebe5 0%, #d0d3c5 52%, #eef0ea 100%) !important; }
-  .golog-theme-room-demand { background: linear-gradient(135deg, #d9edf0 0%, #56b1bf 42%, #e4f1f2 100%) !important; }
-  .golog-theme-reports { background: linear-gradient(135deg, #dce7e3 0%, #b9cfca 48%, #e8efec 100%) !important; }
+  .golog-theme-login { background: linear-gradient(135deg, #E6F4F7 0%, #DCEEF2 52%, #eef0ea 100%) !important; }
+  .golog-theme-overview { background: linear-gradient(135deg, #E6F4F7 0%, #BAE4F0 50%, #F4FAFC 100%) !important; }
+  .golog-theme-requests { background: linear-gradient(135deg, #F4FAFC 0%, #E6F4F7 52%, #F4FAFC 100%) !important; }
+  .golog-theme-stock { background: linear-gradient(135deg, #F4FAFC 0%, #d0d3c5 52%, #F4FAFC 100%) !important; }
+  .golog-theme-inbound { background: linear-gradient(135deg, #E6F4F7 0%, #BAE4F0 52%, #F4FAFC 100%) !important; }
+  .golog-theme-adjustments { background: linear-gradient(135deg, #E6F4F7 0%, #D5E8ED 52%, #F4FAFC 100%) !important; }
+  .golog-theme-stocktake { background: linear-gradient(135deg, #F4FAFC 0%, #d0d3c5 52%, #eef0ea 100%) !important; }
+  .golog-theme-room-demand { background: linear-gradient(135deg, #E6F4F7 0%, #0091B9 42%, #E6F4F7 100%) !important; }
+  .golog-theme-reports { background: linear-gradient(135deg, #E6F4F7 0%, #BAE4F0 48%, #F4FAFC 100%) !important; }
 
-  .golog-theme-room-demand .golog-topbar { border-bottom: 3px solid #08708a !important; }
-  .golog-theme-requests .golog-topbar { border-bottom: 3px solid #d73a31 !important; }
+  .golog-theme-room-demand .golog-topbar { border-bottom: 3px solid #004E9B !important; }
+  .golog-theme-requests .golog-topbar { border-bottom: 3px solid #FF6500 !important; }
   .golog-theme-stock .golog-topbar,
-  .golog-theme-stocktake .golog-topbar { border-bottom: 3px solid #7b895b !important; }
+  .golog-theme-stocktake .golog-topbar { border-bottom: 3px solid #004E9B !important; }
   .golog-theme-inbound .golog-topbar,
-  .golog-theme-overview .golog-topbar { border-bottom: 3px solid #56b1bf !important; }
+  .golog-theme-overview .golog-topbar { border-bottom: 3px solid #0091B9 !important; }
   .golog-theme-adjustments .golog-topbar,
-  .golog-theme-reports .golog-topbar { border-bottom: 3px solid #032b2f !important; }
+  .golog-theme-reports .golog-topbar { border-bottom: 3px solid #07304A !important; }
 }
 
 
@@ -856,105 +856,107 @@
   /* Legacy inline utility bridge.
      Home.tsx still contains a few hard-coded cream/olive utility classes from the previous visual system.
      Re-map those surfaces into the active page theme so no old palette leaks through. */
-  .golog-app [class*="bg-[#f7efd7]"] {
+  .golog-app [class*="bg-[#FFFFFF]"] {
     background: var(--card) !important;
   }
-  .golog-app [class*="bg-[#fffaf0]"] {
+  .golog-app [class*="bg-[#FFFFFF]"] {
     background: var(--card) !important;
   }
-  .golog-app [class*="bg-[#eee2bd]"] {
+  .golog-app [class*="bg-[#F4FAFC]"] {
     background: var(--golog-cream) !important;
   }
-  .golog-app [class*="bg-[#e5d8ab]"] {
+  .golog-app [class*="bg-[#BAE4F0]"] {
     background: var(--golog-paper-strong) !important;
   }
-  .golog-app [class*="bg-[#dce4a7]"] {
+  .golog-app [class*="bg-[#BAE4F0]"] {
     background: var(--golog-nav-active) !important;
   }
-  .golog-app [class*="bg-[#eef0d5]"] {
+  .golog-app [class*="bg-[#E6F4F7]"] {
     background: color-mix(in srgb, var(--golog-cerulean) 16%, var(--card)) !important;
   }
 
-  .golog-app [class*="border-[#b8a27a]"] {
+  .golog-app [class*="border-[#9CCED8]"] {
     border-color: var(--golog-line) !important;
   }
-  .golog-app [class*="border-[#d0be97]"],
-  .golog-app [class*="border-[#d8c9a8]"],
-  .golog-app [class*="border-[#e0d4b8]"],
-  .golog-app [class*="border-[#e4d9be]"] {
+  .golog-app [class*="border-[#B8D5DE]"],
+  .golog-app [class*="border-[#C7E0E6]"],
+  .golog-app [class*="border-[#D5E8ED]"],
+  .golog-app [class*="border-[#D5E8ED]"] {
     border-color: color-mix(in srgb, var(--golog-line) 86%, var(--golog-stone)) !important;
   }
 
-  .golog-app [class*="text-[#5a4738]"],
-  .golog-app [class*="text-[#4e3f32]"] {
+  .golog-app [class*="text-[#07304A]"],
+  .golog-app [class*="text-[#07304A]"] {
     color: var(--golog-brown) !important;
   }
-  .golog-app [class*="text-[#8b7b67]"],
-  .golog-app [class*="text-[#7e6b57]"],
-  .golog-app [class*="text-[#9a896f]"],
-  .golog-app [class*="text-[#6f5e4e]"] {
+  .golog-app [class*="text-[#55727C]"],
+  .golog-app [class*="text-[#315563]"],
+  .golog-app [class*="text-[#55727C]"],
+  .golog-app [class*="text-[#315563]"] {
     color: var(--golog-brown-soft) !important;
   }
-  .golog-app [class*="text-[#5d7033]"],
-  .golog-app [class*="text-[#64753a]"],
-  .golog-app [class*="text-[#7f9146]"] {
+  .golog-app [class*="text-[#004E9B]"],
+  .golog-app [class*="text-[#004E9B]"],
+  .golog-app [class*="text-[#0091B9]"] {
     color: var(--primary) !important;
   }
 
   /* Page-specific accents: the same old component can now look intentionally different per workspace. */
-  .golog-theme-overview [class*="bg-[#dce4a7]"] { background: #56b1bf !important; }
-  .golog-theme-overview [class*="text-[#5d7033]"],
-  .golog-theme-overview [class*="text-[#64753a]"] { color: #08708a !important; }
+  .golog-theme-overview [class*="bg-[#BAE4F0]"] { background: #0091B9 !important; }
+  .golog-theme-overview [class*="text-[#004E9B]"],
+  .golog-theme-overview [class*="text-[#004E9B]"] { color: #004E9B !important; }
 
-  .golog-theme-requests [class*="bg-[#dce4a7]"] { background: #d3e6e7 !important; }
-  .golog-theme-requests [class*="text-[#5d7033]"],
-  .golog-theme-requests [class*="text-[#64753a]"] { color: #08708a !important; }
+  .golog-theme-requests [class*="bg-[#BAE4F0]"] { background: #BAE4F0 !important; }
+  .golog-theme-requests [class*="text-[#004E9B]"],
+  .golog-theme-requests [class*="text-[#004E9B]"] { color: #004E9B !important; }
 
-  .golog-theme-stock [class*="bg-[#dce4a7]"] { background: #c8dfe2 !important; }
-  .golog-theme-stock [class*="text-[#5d7033]"],
-  .golog-theme-stock [class*="text-[#64753a]"] { color: #08708a !important; }
+  .golog-theme-stock [class*="bg-[#BAE4F0]"] { background: #BAE4F0 !important; }
+  .golog-theme-stock [class*="text-[#004E9B]"],
+  .golog-theme-stock [class*="text-[#004E9B]"] { color: #004E9B !important; }
 
-  .golog-theme-inbound [class*="bg-[#dce4a7]"] { background: #8ccbd3 !important; }
-  .golog-theme-inbound [class*="text-[#5d7033]"],
-  .golog-theme-inbound [class*="text-[#64753a]"] { color: #08708a !important; }
+  .golog-theme-inbound [class*="bg-[#BAE4F0]"] { background: #0091B9 !important; }
+  .golog-theme-inbound [class*="text-[#004E9B]"],
+  .golog-theme-inbound [class*="text-[#004E9B]"] { color: #004E9B !important; }
 
-  .golog-theme-adjustments [class*="bg-[#dce4a7]"] { background: #9bc2c4 !important; }
-  .golog-theme-adjustments [class*="text-[#5d7033]"],
-  .golog-theme-adjustments [class*="text-[#64753a]"] { color: #032b2f !important; }
+  .golog-theme-adjustments [class*="bg-[#BAE4F0]"] { background: #0091B9 !important; }
+  .golog-theme-adjustments [class*="text-[#004E9B]"],
+  .golog-theme-adjustments [class*="text-[#004E9B]"] { color: #07304A !important; }
 
-  .golog-theme-stocktake [class*="bg-[#dce4a7]"] { background: #b9dadd !important; }
-  .golog-theme-stocktake [class*="text-[#5d7033]"],
-  .golog-theme-stocktake [class*="text-[#64753a]"] { color: #08708a !important; }
+  .golog-theme-stocktake [class*="bg-[#BAE4F0]"] { background: #0091B9 !important; }
+  .golog-theme-stocktake [class*="text-[#004E9B]"],
+  .golog-theme-stocktake [class*="text-[#004E9B]"] { color: #004E9B !important; }
 
-  .golog-theme-room-demand [class*="bg-[#dce4a7]"] { background: #7fc6d0 !important; }
-  .golog-theme-room-demand [class*="text-[#5d7033]"],
-  .golog-theme-room-demand [class*="text-[#64753a]"] { color: #08708a !important; }
+  .golog-theme-room-demand [class*="bg-[#BAE4F0]"] { background: #0091B9 !important; }
+  .golog-theme-room-demand [class*="text-[#004E9B]"],
+  .golog-theme-room-demand [class*="text-[#004E9B]"] { color: #004E9B !important; }
 
-  .golog-theme-reports [class*="bg-[#dce4a7]"] { background: #8bc5cb !important; }
-  .golog-theme-reports [class*="text-[#5d7033]"],
-  .golog-theme-reports [class*="text-[#64753a]"] { color: #032b2f !important; }
+  .golog-theme-reports [class*="bg-[#BAE4F0]"] { background: #0091B9 !important; }
+  .golog-theme-reports [class*="text-[#004E9B]"],
+  .golog-theme-reports [class*="text-[#004E9B]"] { color: #07304A !important; }
 
-  .golog-theme-login [class*="bg-[#dce4a7]"] { background: #56b1bf !important; }
-  .golog-theme-login [class*="text-[#5d7033]"],
-  .golog-theme-login [class*="text-[#64753a]"] { color: #08708a !important; }
+  .golog-theme-login [class*="bg-[#BAE4F0]"] { background: #0091B9 !important; }
+  .golog-theme-login [class*="text-[#004E9B]"],
+  .golog-theme-login [class*="text-[#004E9B]"] { color: #004E9B !important; }
 
   /* Hard-coded page background classes are explicitly neutralized to stop old cream from winning. */
-  .golog-app.golog-theme-overview [class*="bg-[#eee2bd]"] { background: #e4f1f3 !important; }
-  .golog-app.golog-theme-requests [class*="bg-[#eee2bd]"] { background: #e7ecea !important; }
-  .golog-app.golog-theme-stock [class*="bg-[#eee2bd]"] { background: #e5e7df !important; }
-  .golog-app.golog-theme-inbound [class*="bg-[#eee2bd]"] { background: #dceff2 !important; }
-  .golog-app.golog-theme-adjustments [class*="bg-[#eee2bd]"] { background: #dfe8e5 !important; }
-  .golog-app.golog-theme-stocktake [class*="bg-[#eee2bd]"] { background: #e8eae3 !important; }
-  .golog-app.golog-theme-room-demand [class*="bg-[#eee2bd]"] { background: #dff1f3 !important; }
-  .golog-app.golog-theme-reports [class*="bg-[#eee2bd]"] { background: #dfe8e5 !important; }
+  .golog-app.golog-theme-overview [class*="bg-[#F4FAFC]"] { background: #e4f1f3 !important; }
+  .golog-app.golog-theme-requests [class*="bg-[#F4FAFC]"] { background: #F4FAFC !important; }
+  .golog-app.golog-theme-stock [class*="bg-[#F4FAFC]"] { background: #F4FAFC !important; }
+  .golog-app.golog-theme-inbound [class*="bg-[#F4FAFC]"] { background: #E6F4F7 !important; }
+  .golog-app.golog-theme-adjustments [class*="bg-[#F4FAFC]"] { background: #E6F4F7 !important; }
+  .golog-app.golog-theme-stocktake [class*="bg-[#F4FAFC]"] { background: #F4FAFC !important; }
+  .golog-app.golog-theme-room-demand [class*="bg-[#F4FAFC]"] { background: #E6F4F7 !important; }
+  .golog-app.golog-theme-reports [class*="bg-[#F4FAFC]"] { background: #E6F4F7 !important; }
 }
 
 
+
+
 /* =========================================================
-   Golog.Irin — FINAL VISUAL DIRECTION
-   Reference 01 as the core:
-   #0091B9 teal · #BAE4F0 light blue · #004E9B deep blue
-   #FF6500 orange · #FFD500 yellow
+   GOLOG.IRIN — AUTHORITATIVE VISUAL SYSTEM
+   Core palette:
+   Teal #0091B9 · Light Blue #BAE4F0 · Deep Blue #004E9B
+   Orange #FF6500 · Yellow #FFD500 · Navy #07304A
    ========================================================= */
 
 :root {
@@ -964,312 +966,187 @@
   --golog-orange: #FF6500;
   --golog-yellow: #FFD500;
   --golog-dark: #07304A;
-  --golog-white: #FFFFFF;
-  --golog-surface: #F7FBFC;
-  --golog-line: #B8D5DE;
-  --golog-shadow: rgba(0, 78, 155, 0.12);
+  --golog-surface: #FFFFFF;
+  --golog-background: #F4FAFC;
+  --golog-line: #9CCED8;
+  --golog-shadow: rgba(0, 78, 155, .12);
+
+  --primary: #0091B9;
+  --primary-foreground: #FFFFFF;
+  --background: #F4FAFC;
+  --foreground: #07304A;
+  --card: #FFFFFF;
+  --card-foreground: #07304A;
+  --popover: #FFFFFF;
+  --popover-foreground: #07304A;
+  --secondary: #BAE4F0;
+  --secondary-foreground: #004E9B;
+  --muted-foreground: #55727C;
+  --accent: #BAE4F0;
+  --accent-foreground: #004E9B;
+  --destructive: #FF6500;
+  --destructive-foreground: #FFFFFF;
+  --border: #9CCED8;
+  --input: #9CCED8;
+  --ring: #0091B9;
+  --sidebar: #07304A;
+  --sidebar-foreground: #FFFFFF;
+  --sidebar-accent: #004E9B;
+  --sidebar-accent-foreground: #FFFFFF;
+  --sidebar-border: #0B3D5C;
+  --sidebar-ring: #0091B9;
 }
 
-/* Shared shell: one strong identity, page content gets the changing composition. */
-.golog-app {
-  color: var(--golog-dark) !important;
-}
+.golog-app { color: var(--golog-dark) !important; }
 
 .golog-app .golog-sidebar {
   background: linear-gradient(180deg, #07304A 0%, #004E9B 100%) !important;
-  color: #fff !important;
+  color: #FFFFFF !important;
   border-right: 0 !important;
-  box-shadow: 10px 0 28px rgba(0, 50, 90, 0.16) !important;
+  box-shadow: 10px 0 28px rgba(0,50,90,.16) !important;
 }
-
 .golog-app .golog-brand-mark {
-  background: var(--golog-yellow) !important;
-  color: var(--golog-deep-blue) !important;
+  background: #FFD500 !important;
+  color: #004E9B !important;
   border-color: rgba(255,255,255,.8) !important;
 }
-
 .golog-app .golog-topbar {
-  background: rgba(255,255,255,.94) !important;
-  border-bottom: 3px solid var(--golog-teal) !important;
+  background: rgba(255,255,255,.96) !important;
+  border-bottom: 3px solid #0091B9 !important;
 }
-
-.golog-app .golog-sidebar .text-\[\#f7efd7\],
-.golog-app .golog-sidebar .text-\[\#e5d8ab\] {
+.golog-app .golog-sidebar button:not(.golog-nav-active) {
   color: rgba(255,255,255,.78) !important;
 }
-
-.golog-app .golog-sidebar button:not(.golog-nav-active) {
-  color: rgba(255,255,255,.76) !important;
-}
-
 .golog-app .golog-sidebar button:not(.golog-nav-active):hover {
   background: rgba(186,228,240,.12) !important;
-  color: #fff !important;
+  color: #FFFFFF !important;
 }
-
 .golog-app .golog-nav-active {
-  background: var(--golog-light-blue) !important;
-  color: var(--golog-deep-blue) !important;
+  background: #BAE4F0 !important;
+  color: #004E9B !important;
   border: 0 !important;
-  box-shadow: inset 4px 0 0 var(--golog-orange) !important;
+  box-shadow: inset 4px 0 0 #FF6500 !important;
 }
-
 .golog-app .golog-bottom-nav {
   background: #07304A !important;
-  border-top: 2px solid var(--golog-teal) !important;
+  border-top: 2px solid #0091B9 !important;
 }
-
-.golog-app .golog-bottom-active {
-  color: var(--golog-yellow) !important;
-}
-
+.golog-app .golog-bottom-active { color: #FFD500 !important; }
 .golog-app .golog-bottom-fab {
-  background: var(--golog-orange) !important;
-  border-color: #fff !important;
+  background: #FF6500 !important;
+  border-color: #FFFFFF !important;
 }
 
-/* Page personalities — deliberately different, but still one application. */
-.golog-theme-login {
-  --page-bg: #EAF7FA;
-  --page-accent: #0091B9;
-  --page-accent-strong: #004E9B;
-  --page-soft: #BAE4F0;
-  --page-signal: #FF6500;
-  --page-secondary: #FFD500;
-}
-
+/* Page personalities: same family, different emphasis. */
+.golog-theme-login,
 .golog-theme-overview {
-  --page-bg: #E7F5F8;
-  --page-accent: #0091B9;
-  --page-accent-strong: #004E9B;
-  --page-soft: #BAE4F0;
-  --page-signal: #FFD500;
-  --page-secondary: #FF6500;
+  --page-bg: #E6F4F7; --page-accent: #0091B9; --page-strong: #004E9B;
+  --page-soft: #BAE4F0; --page-signal: #FFD500;
 }
-
 .golog-theme-requests {
-  --page-bg: #F0F7FB;
-  --page-accent: #004E9B;
-  --page-accent-strong: #07304A;
-  --page-soft: #BAE4F0;
-  --page-signal: #FF6500;
-  --page-secondary: #0091B9;
+  --page-bg: #F4FAFC; --page-accent: #004E9B; --page-strong: #07304A;
+  --page-soft: #BAE4F0; --page-signal: #FF6500;
 }
-
 .golog-theme-stock {
-  --page-bg: #F4FAFB;
-  --page-accent: #0091B9;
-  --page-accent-strong: #004E9B;
-  --page-soft: #BAE4F0;
-  --page-signal: #FFD500;
-  --page-secondary: #FF6500;
+  --page-bg: #F4FAFC; --page-accent: #0091B9; --page-strong: #004E9B;
+  --page-soft: #BAE4F0; --page-signal: #FFD500;
 }
-
 .golog-theme-inbound {
-  --page-bg: #E8F8FB;
-  --page-accent: #0091B9;
-  --page-accent-strong: #004E9B;
-  --page-soft: #BAE4F0;
-  --page-signal: #FF6500;
-  --page-secondary: #FFD500;
+  --page-bg: #E6F4F7; --page-accent: #0091B9; --page-strong: #004E9B;
+  --page-soft: #BAE4F0; --page-signal: #FF6500;
 }
-
-.golog-theme-adjustments {
-  --page-bg: #EDF3FA;
-  --page-accent: #004E9B;
-  --page-accent-strong: #07304A;
-  --page-soft: #BAE4F0;
-  --page-signal: #FF6500;
-  --page-secondary: #FFD500;
-}
-
-.golog-theme-stocktake {
-  --page-bg: #F5FAF9;
-  --page-accent: #0091B9;
-  --page-accent-strong: #004E9B;
-  --page-soft: #BAE4F0;
-  --page-signal: #FFD500;
-  --page-secondary: #FF6500;
-}
-
-.golog-theme-room-demand {
-  --page-bg: #DDF3F8;
-  --page-accent: #0091B9;
-  --page-accent-strong: #004E9B;
-  --page-soft: #BAE4F0;
-  --page-signal: #FF6500;
-  --page-secondary: #FFD500;
-}
-
+.golog-theme-adjustments,
 .golog-theme-reports {
-  --page-bg: #EAF1F9;
-  --page-accent: #004E9B;
-  --page-accent-strong: #07304A;
-  --page-soft: #BAE4F0;
-  --page-signal: #FF6500;
-  --page-secondary: #FFD500;
+  --page-bg: #EEF5FA; --page-accent: #004E9B; --page-strong: #07304A;
+  --page-soft: #BAE4F0; --page-signal: #FF6500;
+}
+.golog-theme-stocktake {
+  --page-bg: #F4FAFC; --page-accent: #0091B9; --page-strong: #004E9B;
+  --page-soft: #BAE4F0; --page-signal: #FFD500;
+}
+.golog-theme-room-demand {
+  --page-bg: #DCEFF2; --page-accent: #0091B9; --page-strong: #004E9B;
+  --page-soft: #BAE4F0; --page-signal: #FFD500;
 }
 
-.golog-app[class*="golog-theme-"] {
-  background: var(--page-bg) !important;
-}
-
+.golog-app[class*="golog-theme-"],
 .golog-app[class*="golog-theme-"] main {
   background: var(--page-bg) !important;
 }
 
-/* Cards, forms and tables: white working surfaces, sharper blue hierarchy. */
 .golog-app[class*="golog-theme-"] main [data-slot="card"],
 .golog-app[class*="golog-theme-"] main .golog-panel,
-.golog-app[class*="golog-theme-"] main .golog-panel-soft,
-.golog-app[class*="golog-theme-"] main .golog-search,
-.golog-app[class*="golog-theme-"] main .golog-outline-button {
-  background: rgba(255,255,255,.96) !important;
-  border-color: color-mix(in srgb, var(--page-accent) 30%, white) !important;
+.golog-app[class*="golog-theme-"] main .golog-panel-soft {
+  background: rgba(255,255,255,.97) !important;
+  border-color: color-mix(in srgb, var(--page-accent) 26%, #FFFFFF) !important;
   box-shadow: 0 8px 24px var(--golog-shadow) !important;
 }
-
-.golog-app[class*="golog-theme-"] main [data-slot="card-header"] {
-  border-bottom-color: color-mix(in srgb, var(--page-accent) 18%, white) !important;
-}
-
-.golog-app[class*="golog-theme-"] main [data-slot="card-title"],
 .golog-app[class*="golog-theme-"] main h1,
 .golog-app[class*="golog-theme-"] main h2,
 .golog-app[class*="golog-theme-"] main h3,
 .golog-app[class*="golog-theme-"] main h4,
-.golog-app[class*="golog-theme-"] main .golog-display {
-  color: var(--page-accent-strong) !important;
+.golog-app[class*="golog-theme-"] main [data-slot="card-title"] {
+  color: var(--page-strong) !important;
 }
-
-.golog-app[class*="golog-theme-"] main [data-slot="input"],
 .golog-app[class*="golog-theme-"] main input,
 .golog-app[class*="golog-theme-"] main textarea,
 .golog-app[class*="golog-theme-"] main select {
-  background: #fff !important;
-  border-color: color-mix(in srgb, var(--page-accent) 38%, #cbdde3) !important;
-  color: var(--golog-dark) !important;
+  background: #FFFFFF !important;
+  border-color: color-mix(in srgb, var(--page-accent) 38%, #9CCED8) !important;
+  color: #07304A !important;
 }
-
-.golog-app[class*="golog-theme-"] main [data-slot="input"]:focus,
 .golog-app[class*="golog-theme-"] main input:focus,
 .golog-app[class*="golog-theme-"] main textarea:focus,
 .golog-app[class*="golog-theme-"] main select:focus {
   border-color: var(--page-accent) !important;
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--page-accent) 18%, transparent) !important;
 }
-
 .golog-app[class*="golog-theme-"] main table thead {
   background: var(--page-soft) !important;
-  color: var(--page-accent-strong) !important;
+  color: var(--page-strong) !important;
 }
-
 .golog-app[class*="golog-theme-"] main table tbody tr:hover {
-  background: color-mix(in srgb, var(--page-soft) 38%, white) !important;
+  background: color-mix(in srgb, var(--page-soft) 38%, #FFFFFF) !important;
 }
-
-.golog-app[class*="golog-theme-"] main .bg-slate-50,
-.golog-app[class*="golog-theme-"] main .bg-slate-50\/30,
-.golog-app[class*="golog-theme-"] main .bg-slate-50\/60,
-.golog-app[class*="golog-theme-"] main .bg-slate-50\/70,
-.golog-app[class*="golog-theme-"] main .bg-white {
-  background: #fff !important;
-}
-
-.golog-app[class*="golog-theme-"] main .text-slate-400 {
-  color: #55727C !important;
-}
-
+.golog-app[class*="golog-theme-"] main .text-slate-400 { color: #55727C !important; }
 .golog-app[class*="golog-theme-"] main .text-slate-500,
-.golog-app[class*="golog-theme-"] main .text-slate-600 {
-  color: #315563 !important;
-}
-
+.golog-app[class*="golog-theme-"] main .text-slate-600 { color: #315563 !important; }
 .golog-app[class*="golog-theme-"] main .text-slate-700,
 .golog-app[class*="golog-theme-"] main .text-slate-800,
-.golog-app[class*="golog-theme-"] main .text-slate-900 {
-  color: var(--golog-dark) !important;
-}
-
+.golog-app[class*="golog-theme-"] main .text-slate-900 { color: #07304A !important; }
 .golog-app[class*="golog-theme-"] main .border-slate-100,
 .golog-app[class*="golog-theme-"] main .border-slate-200 {
-  border-color: color-mix(in srgb, var(--page-accent) 22%, #d8e5e9) !important;
+  border-color: color-mix(in srgb, var(--page-accent) 22%, #D5E8ED) !important;
 }
 
-/* Primary controls vary by page: blue, teal or orange rather than one global olive button. */
+/* Page-specific primary actions. */
+.golog-app.golog-theme-requests .golog-primary-button,
+.golog-app.golog-theme-adjustments .golog-primary-button,
+.golog-app.golog-theme-reports .golog-primary-button {
+  background: #004E9B !important; border-color: #004E9B !important; color: #FFFFFF !important;
+}
 .golog-app.golog-theme-overview .golog-primary-button,
 .golog-app.golog-theme-stock .golog-primary-button,
 .golog-app.golog-theme-inbound .golog-primary-button,
 .golog-app.golog-theme-stocktake .golog-primary-button,
-.golog-app.golog-theme-room-demand .golog-primary-button {
-  background: var(--golog-teal) !important;
-  border-color: var(--golog-teal) !important;
-  color: #fff !important;
-}
-
-.golog-app.golog-theme-requests .golog-primary-button,
+.golog-app.golog-theme-room-demand .golog-primary-button,
 .golog-app.golog-theme-login .golog-primary-button {
-  background: var(--golog-deep-blue) !important;
-  border-color: var(--golog-deep-blue) !important;
-  color: #fff !important;
+  background: #0091B9 !important; border-color: #0091B9 !important; color: #FFFFFF !important;
 }
+.golog-app.golog-theme-requests .golog-topbar,
+.golog-app.golog-theme-adjustments .golog-topbar { border-bottom-color: #FF6500 !important; }
+.golog-app.golog-theme-room-demand .golog-topbar { border-bottom-color: #0091B9 !important; }
 
-.golog-app.golog-theme-adjustments .golog-primary-button,
-.golog-app.golog-theme-reports .golog-primary-button {
-  background: var(--golog-deep-blue) !important;
-  border-color: var(--golog-deep-blue) !important;
-  color: #fff !important;
-}
+/* Remaining inline legacy utility classes are deliberately remapped to the new system. */
+.golog-app [class*="bg-[#F4FAFC]"],
+.golog-app [class*="bg-[#FFFFFF]"] { background: #FFFFFF !important; }
+.golog-app [class*="bg-[#BAE4F0]"] { background: var(--page-soft, #BAE4F0) !important; }
+.golog-app [class*="border-[#9CCED8]"] { border-color: #9CCED8 !important; }
+.golog-app [class*="text-[#07304A]"] { color: #07304A !important; }
+.golog-app [class*="text-[#004E9B]"] { color: #004E9B !important; }
+.golog-app [class*="text-[#0091B9]"] { color: #0091B9 !important; }
+.golog-app [class*="text-[#FF6500]"] { color: #D94A1A !important; }
+.golog-app [class*="text-[#FFD500]"] { color: #8A6800 !important; }
 
-/* Orange is an action/signal, never a full-page background. */
-.golog-app.golog-theme-requests .golog-topbar {
-  border-bottom-color: var(--golog-orange) !important;
-}
-.golog-app.golog-theme-adjustments .golog-topbar {
-  border-bottom-color: var(--golog-orange) !important;
-}
-.golog-app.golog-theme-room-demand .golog-topbar {
-  border-bottom-color: var(--golog-teal) !important;
-}
-.golog-app.golog-theme-reports .golog-topbar {
-  border-bottom-color: var(--golog-deep-blue) !important;
-}
+.golog-app .golog-mobile-surface { background: var(--page-bg, #F4FAFC) !important; }
 
-/* Remove the previous cream/olive visual language from legacy inline utilities. */
-.golog-app[class*="golog-theme-"] [class*="bg-[#f7efd7]"],
-.golog-app[class*="golog-theme-"] [class*="bg-[#fffaf0]"],
-.golog-app[class*="golog-theme-"] [class*="bg-[#eee2bd]"],
-.golog-app[class*="golog-theme-"] [class*="bg-[#e5d8ab]"] {
-  background: #fff !important;
-}
-
-.golog-app[class*="golog-theme-"] [class*="bg-[#dce4a7]"] {
-  background: var(--page-soft) !important;
-}
-
-.golog-app[class*="golog-theme-"] [class*="border-[#b8a27a]"] {
-  border-color: color-mix(in srgb, var(--page-accent) 30%, #d5e3e7) !important;
-}
-
-.golog-app[class*="golog-theme-"] [class*="text-[#5a4738]"],
-.golog-app[class*="golog-theme-"] [class*="text-[#4e3f32]"],
-.golog-app[class*="golog-theme-"] [class*="text-[#7e6b57]"],
-.golog-app[class*="golog-theme-"] [class*="text-[#8b7b67]"] {
-  color: var(--golog-dark) !important;
-}
-
-/* Header controls are now part of the active palette instead of the old cream buttons. */
-.golog-app[class*="golog-theme-"] .golog-topbar button {
-  border-color: color-mix(in srgb, var(--page-accent) 30%, #d5e3e7) !important;
-  background: #fff !important;
-  color: var(--page-accent-strong) !important;
-}
-
-.golog-app[class*="golog-theme-"] .golog-topbar button:hover {
-  background: var(--page-soft) !important;
-}
-
-/* Mobile keeps the same identity without becoming a separate design. */
-.golog-app[class*="golog-theme-"] .golog-mobile-surface {
-  background: var(--page-bg) !important;
-}
