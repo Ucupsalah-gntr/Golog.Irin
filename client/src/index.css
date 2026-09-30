@@ -827,3 +827,26 @@
     background: linear-gradient(180deg, var(--golog-cream) 0%, var(--golog-paper-strong) 100%);
   }
 }
+
+
+@layer components {
+  /* Strong page-level contrast so the visual mood is immediately visible, not only through component variables. */
+  .golog-theme-login { background: linear-gradient(135deg, #e9f1f1 0%, #dcecef 52%, #eef0ea 100%) !important; }
+  .golog-theme-overview { background: linear-gradient(135deg, #e0f0f2 0%, #cfe4e8 50%, #eef3ef 100%) !important; }
+  .golog-theme-requests { background: linear-gradient(135deg, #eef0ec 0%, #dfe8e5 52%, #e8e2d7 100%) !important; }
+  .golog-theme-stock { background: linear-gradient(135deg, #e8e9e1 0%, #d0d3c5 52%, #edf1ed 100%) !important; }
+  .golog-theme-inbound { background: linear-gradient(135deg, #d9edf0 0%, #bddfe5 52%, #e8f2ef 100%) !important; }
+  .golog-theme-adjustments { background: linear-gradient(135deg, #dfe9e5 0%, #c3d4d0 52%, #e5ece8 100%) !important; }
+  .golog-theme-stocktake { background: linear-gradient(135deg, #e9ebe5 0%, #d0d3c5 52%, #eef0ea 100%) !important; }
+  .golog-theme-room-demand { background: linear-gradient(135deg, #d9edf0 0%, #56b1bf 42%, #e4f1f2 100%) !important; }
+  .golog-theme-reports { background: linear-gradient(135deg, #dce7e3 0%, #b9cfca 48%, #e8efec 100%) !important; }
+
+  .golog-theme-room-demand .golog-topbar { border-bottom: 3px solid #08708a !important; }
+  .golog-theme-requests .golog-topbar { border-bottom: 3px solid #d73a31 !important; }
+  .golog-theme-stock .golog-topbar,
+  .golog-theme-stocktake .golog-topbar { border-bottom: 3px solid #7b895b !important; }
+  .golog-theme-inbound .golog-topbar,
+  .golog-theme-overview .golog-topbar { border-bottom: 3px solid #56b1bf !important; }
+  .golog-theme-adjustments .golog-topbar,
+  .golog-theme-reports .golog-topbar { border-bottom: 3px solid #032b2f !important; }
+}
