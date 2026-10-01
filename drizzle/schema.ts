@@ -79,6 +79,7 @@ export const requests = pgTable("requests", {
   requestNo: varchar("requestNo", { length: 40 }).notNull().unique(),
   roomId: integer("roomId").notNull(),
   createdBy: integer("createdBy").notNull(),
+  requestDate: varchar("requestDate", { length: 10 }).notNull(),
   priority: text("priority").$type<"normal" | "mendesak" | "darurat">().default("normal").notNull(),
   status: text("status").$type<"submitted" | "approved" | "partial" | "rejected">().default("submitted").notNull(),
   notes: text("notes"),
