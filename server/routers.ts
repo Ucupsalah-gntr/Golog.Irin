@@ -4,7 +4,7 @@ import { z } from "zod";
 import { systemRouter } from "./_core/systemRouter.ts";
 import { adminProcedure, protectedProcedure, publicProcedure, router } from "./_core/trpc.ts";
 import { canTransitionRequestStatus, validateApprovedQuantity, validateApprovalStatus } from "../shared/request-rules.ts";
-import { canReuseRequestDayLock, getJakartaDateKey } from "../shared/request-day-lock.ts";
+import { canReuseRequestDayLock, getJakartaDateKey, isRequestDateWithinWindow } from "../shared/request-day-lock.ts";
 import { calculateStockDifference } from "../shared/stock-reconciliation.ts";
 import type { ImportItemRow } from "../shared/item-import.ts";
 import {
@@ -205,9 +205,9 @@ export const appRouter = router({
     }),
   }),
   requests: router({
-    todayLocks: protectedProcedure.query(async ({ ctx }) => {
+    locks: protectedProcedure.input(z.object({ requestDate: z.string().regex(/^\\d{4}-\\d{2}-\\d{2}$/) })).query(async ({ input, ctx }) => {
       const db = await getDb(); if (!db) return [];
-      const requestDate = getJakartaDateKey();
+      const requestDate = input.requestDate;
       return db
         .select({
           roomId: requestDayLocks.roomId,
@@ -221,6 +221,13 @@ export const appRouter = router({
         .leftJoin(users, eq(requestDayLocks.requesterId, users.id))
         .where(and(eq(requestDayLocks.requestDate, requestDate), eq(rooms.active, true)))
         .orderBy(requestDayLocks.roomId);
+    }),
+    todayLocks: protectedProcedure.query(async ({ ctx }) => {
+      const requestDate = getJakartaDateKey();
+      const db = await getDb(); if (!db) return [];
+      return db.select({ roomId: requestDayLocks.roomId, requestDate: requestDayLocks.requestDate, requesterId: requestDayLocks.requesterId, requesterName: users.name, isMine: sql<boolean>`(${requestDayLocks.requesterId} = ${ctx.user.id})` })
+        .from(requestDayLocks).leftJoin(rooms, eq(requestDayLocks.roomId, rooms.id)).leftJoin(users, eq(requestDayLocks.requesterId, users.id))
+        .where(and(eq(requestDayLocks.requestDate, requestDate), eq(rooms.active, true))).orderBy(requestDayLocks.roomId);
     }),
     list: protectedProcedure.input(z.object({ status: z.string().optional(), roomId: z.number().optional() }).optional()).query(async ({ input, ctx }) => {
       const db = await getDb(); if (!db) return [];
@@ -244,7 +251,7 @@ export const appRouter = router({
       }
       return result;
     }),
-    create: operatorProcedure.input(z.object({ roomId: z.number().int().positive(), priority: z.enum(["normal", "mendesak", "darurat"]), notes: z.string().max(1000).optional(), lines: z.array(z.object({ itemId: z.number().int(), requestedQty: z.number().int().positive() })).min(1) })).mutation(async ({ input, ctx }) => {
+    create: operatorProcedure.input(z.object({ roomId: z.number().int().positive(), requestDate: z.string().regex(/^\\d{4}-\\d{2}-\\d{2}$/), priority: z.enum(["normal", "mendesak", "darurat"]), notes: z.string().max(1000).optional(), lines: z.array(z.object({ itemId: z.number().int(), requestedQty: z.number().int().positive() })).min(1) })).mutation(async ({ input, ctx }) => {
       const db = await getDb(); if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database belum tersedia." });
 
       const roomRows = await db.select({ id: rooms.id }).from(rooms).where(and(eq(rooms.id, input.roomId), eq(rooms.active, true))).limit(1);
@@ -266,7 +273,10 @@ export const appRouter = router({
         throw new TRPCError({ code: "BAD_REQUEST", message: "Salah satu barang tidak ditemukan atau sudah tidak aktif." });
       }
 
-      const requestDate = getJakartaDateKey();
+      const requestDate = input.requestDate;
+      if (!isRequestDateWithinWindow(requestDate)) {
+        throw new TRPCError({ code: "BAD_REQUEST", message: "Tanggal kebutuhan harus hari ini sampai maksimal 7 hari ke depan." });
+      }
       const now = new Date();
       const roomId = input.roomId;
       const requestAuditInput = { ...input, roomId, requestDate };
