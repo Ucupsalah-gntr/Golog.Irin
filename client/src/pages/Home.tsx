@@ -151,6 +151,7 @@ export default function Home() {
       toast.success("Permintaan berhasil diajukan");
       requests.refetch();
       todayRoomLocks.refetch();
+      utils.requests.locks.invalidate();
       setRequestLines([{ itemId: 0, requestedQty: 1 }]);
     },
   });
@@ -1887,9 +1888,10 @@ function RequestsView({ requests, rooms, items, isAdmin, currentUserId, todayRoo
     rejected: requests.filter((row: any) => row.request.status === "rejected").length,
   };
 
+  const requestLocks = trpc.requests.locks.useQuery({ requestDate }, { enabled: Boolean(requestDate) });
   const roomLockById = useMemo(
-    () => new Map<number, any>(todayRoomLocks.map((lock: any) => [Number(lock.roomId), lock])),
-    [todayRoomLocks],
+    () => new Map<number, any>((requestLocks.data ?? []).map((lock: any) => [Number(lock.roomId), lock])),
+    [requestLocks.data],
   );
   const getRoomLock = (roomId: number | null) => roomId === null ? null : roomLockById.get(Number(roomId)) ?? null;
   const selectedLock = getRoomLock(selectedRoom);
