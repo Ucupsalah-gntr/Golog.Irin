@@ -2114,7 +2114,8 @@ function RequestsView({ requests, rooms, items, isAdmin, currentUserId, todayRoo
     <Card className="border-slate-200/80 shadow-sm">
       <CardHeader><CardTitle>Buat permintaan</CardTitle><p className="mt-1 text-sm text-slate-500">Ajukan kebutuhan untuk hari ini sampai maksimal 7 hari ke depan. Kepala gudang memproses pemenuhan sesuai hari operasional dan ketersediaan stok.</p></CardHeader>
       <CardContent>
-        <Field label="Tanggal kebutuhan"><Input type="date" value={requestDate} min={getJakartaDateKeyClient()} max={new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Jakarta" }).format(new Date(Date.now() + 7 * 86400000))} onChange={(e) => setRequestDate(e.target.value)} /></Field>\n        <div className="mt-5"><Field label="Ruangan aktif">
+        <Field label="Tanggal kebutuhan"><Input type="date" value={requestDate} min={getJakartaDateKeyClient()} max={new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Jakarta" }).format(new Date(Date.now() + 7 * 86400000))} onChange={(e) => setRequestDate(e.target.value)} /></Field>
+        <div className="mt-5"><Field label="Ruangan aktif">
           <select
             aria-label="Pilih ruangan aktif"
             value={selectedRoom ?? ""}
