@@ -13,7 +13,7 @@ export function canReuseRequestDayLock(requesterId: number, currentUserId: numbe
 
 
 export function addJakartaDays(dateKey: string, days: number): string {
-  if (!/^\\d{4}-\\d{2}-\\d{2}$/.test(dateKey) || !Number.isInteger(days)) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(dateKey) || !Number.isInteger(days)) {
     throw new Error("Invalid Jakarta date");
   }
   const [year, month, day] = dateKey.split("-").map(Number);
