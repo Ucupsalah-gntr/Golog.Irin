@@ -2012,7 +2012,7 @@ function RequestsView({ requests, rooms, items, isAdmin, currentUserId, todayRoo
                     <span className="font-semibold text-slate-800">{row.request.requestNo}</span>
                     <Badge className={statusTone(row.request.status)}>{statusLabel(row.request.status)}</Badge>
                   </div>
-                  <p className="mt-1 text-sm text-slate-500">{row.room?.name || "Ruangan"} · {formatDate(row.request.createdAt)}</p>
+                  <p className="mt-1 text-sm text-slate-500">{row.room?.name || "Ruangan"} · Kebutuhan {row.request.requestDate} · Diajukan {formatDate(row.request.createdAt)}</p>
                   {row.request.notes && <p className="mt-2 text-xs leading-5 text-slate-500">{row.request.notes}</p>}
                   {isSubmitted && (
                     <div className="mt-3 flex flex-wrap gap-2 text-[11px] font-semibold text-[#315563]">
