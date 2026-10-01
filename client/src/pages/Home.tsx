@@ -2167,7 +2167,7 @@ function RequestsView({ requests, rooms, items, isAdmin, currentUserId, todayRoo
           <Button variant="outline" size="sm" onClick={() => setLines([...lines, { itemId: 0, requestedQty: 1 }])}>+ Tambah item</Button>
         </div>
         <div className="mt-5"><Field label="Catatan"><Textarea value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Keperluan atau keterangan permintaan" /></Field></div>
-        <Button className="mt-5 w-full" disabled={busy || !selectedRoom || selectedLockedByOther || lines.some((x: Line) => !x.itemId || x.requestedQty < 1)} onClick={() => onCreate({ roomId: selectedRoom, requestDate, priority, notes, lines })}><Truck size={16} className="mr-2" />Ajukan {total} unit</Button>
+        <Button className="mt-5 w-full" disabled={busy || !selectedRoom || selectedLockedByOther || lines.some((x: Line) => !x.itemId || x.requestedQty < 1)} onClick={() => setReviewOpen(true)}><ClipboardCheck size={16} className="mr-2" />Review & cek {total} unit</Button>
       </CardContent>
     </Card>
 
