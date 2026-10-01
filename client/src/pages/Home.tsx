@@ -1847,6 +1847,7 @@ function InboundView({ items, warehouses, onSubmit, busy }: any) { const [form, 
 
 function RequestsView({ requests, rooms, items, isAdmin, currentUserId, todayRoomLocks, selectedRoom, selectedRoomName, setSelectedRoom, accessibleRooms, lines, setLines, total, onCreate, onVerify, busy, focusRequestId }: any) {
   const [priority, setPriority] = useState("normal");
+  const [requestDate, setRequestDate] = useState(getJakartaDateKeyClient());
   const [notes, setNotes] = useState("");
   const [filter, setFilter] = useState("all");
   const [approvalQty, setApprovalQty] = useState<Record<string, number>>({});
@@ -2109,9 +2110,9 @@ function RequestsView({ requests, rooms, items, isAdmin, currentUserId, todayRoo
 
   return <div className="grid gap-6 xl:grid-cols-[.85fr_1.5fr]">
     <Card className="border-slate-200/80 shadow-sm">
-      <CardHeader><CardTitle>Buat permintaan</CardTitle><p className="mt-1 text-sm text-slate-500">Permintaan menggunakan ruangan aktif Anda. Jika memiliki akses ke lebih dari satu ruangan, ganti konteks di header sebelum mengajukan.</p></CardHeader>
+      <CardHeader><CardTitle>Buat permintaan</CardTitle><p className="mt-1 text-sm text-slate-500">Ajukan kebutuhan untuk hari ini sampai maksimal 7 hari ke depan. Kepala gudang memproses pemenuhan sesuai hari operasional dan ketersediaan stok.</p></CardHeader>
       <CardContent>
-        <Field label="Ruangan aktif">
+        <Field label="Tanggal kebutuhan"><Input type="date" value={requestDate} min={getJakartaDateKeyClient()} max={new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Jakarta" }).format(new Date(Date.now() + 7 * 86400000))} onChange={(e) => setRequestDate(e.target.value)} /></Field>\n        <div className="mt-5"><Field label="Ruangan aktif">
           <select
             aria-label="Pilih ruangan aktif"
             value={selectedRoom ?? ""}
@@ -2139,9 +2140,9 @@ function RequestsView({ requests, rooms, items, isAdmin, currentUserId, todayRoo
         <div className={`mt-4 rounded-xl p-3 text-sm ${selectedLockedByOther ? "border-[#FFD1C2] bg-[#f8e3de] text-[#D94A1A]" : selectedLock ? "bg-emerald-50 text-emerald-800" : "border-[#FFD500] bg-[#E6F4F7] text-[#004E9B]"}`}>
           {selectedLock
             ? selectedIsMine
-              ? <>Anda adalah PIC request <strong>{selectedRoomName}</strong> hari ini. Anda dapat membuat request susulan.</>
-              : <>Ruangan <strong>{selectedRoomName}</strong> sudah memiliki PIC request hari ini: <strong>{selectedLock.requesterName || "petugas lain"}</strong>.</>
-            : <>Permintaan akan menjadi request pertama untuk <strong>{selectedRoomName || "ruangan yang dipilih"}</strong> hari ini.</>}
+              ? <>Anda adalah PIC request <strong>{selectedRoomName}</strong> pada tanggal kebutuhan ini. Anda dapat membuat request susulan.</>
+              : <>Ruangan <strong>{selectedRoomName}</strong> sudah memiliki PIC request pada tanggal kebutuhan ini: <strong>{selectedLock.requesterName || "petugas lain"}</strong>.</>
+            : <>Permintaan akan menjadi request pertama untuk <strong>{selectedRoomName || "ruangan yang dipilih"}</strong> pada <strong>{requestDate}</strong>.</>}
         </div>
         <div className="mt-5"><Field label="Prioritas"><select className="h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm" value={priority} onChange={(e) => setPriority(e.target.value)}><option value="normal">Normal</option><option value="mendesak">Mendesak</option><option value="darurat">Darurat</option></select></Field></div>
         <div className="mt-5 space-y-3">
@@ -2161,7 +2162,7 @@ function RequestsView({ requests, rooms, items, isAdmin, currentUserId, todayRoo
           <Button variant="outline" size="sm" onClick={() => setLines([...lines, { itemId: 0, requestedQty: 1 }])}>+ Tambah item</Button>
         </div>
         <div className="mt-5"><Field label="Catatan"><Textarea value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Keperluan atau keterangan permintaan" /></Field></div>
-        <Button className="mt-5 w-full" disabled={busy || !selectedRoom || selectedLockedByOther || lines.some((x: Line) => !x.itemId || x.requestedQty < 1)} onClick={() => onCreate({ roomId: selectedRoom, priority, notes, lines })}><Truck size={16} className="mr-2" />Ajukan {total} unit</Button>
+        <Button className="mt-5 w-full" disabled={busy || !selectedRoom || selectedLockedByOther || lines.some((x: Line) => !x.itemId || x.requestedQty < 1)} onClick={() => onCreate({ roomId: selectedRoom, requestDate, priority, notes, lines })}><Truck size={16} className="mr-2" />Ajukan {total} unit</Button>
       </CardContent>
     </Card>
 
