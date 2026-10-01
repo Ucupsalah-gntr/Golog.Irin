@@ -305,7 +305,7 @@ export const appRouter = router({
         if (!canReuseRequestDayLock(Number(lock.requesterId), Number(ctx.user.id))) {
           throw new TRPCError({
             code: "FORBIDDEN",
-            message: "Ruangan ini sudah memiliki petugas request hari ini. Petugas tersebut yang dapat membuat request susulan.",
+            message: "Ruangan ini sudah memiliki PIC pada tanggal kebutuhan tersebut. PIC tersebut yang dapat membuat request susulan.",
           });
         }
 
@@ -314,6 +314,7 @@ export const appRouter = router({
           requestNo,
           roomId,
           createdBy: ctx.user.id,
+          requestDate,
           priority: input.priority,
           notes: input.notes,
           status: "submitted",
