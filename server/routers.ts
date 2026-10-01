@@ -205,7 +205,7 @@ export const appRouter = router({
     }),
   }),
   requests: router({
-    locks: protectedProcedure.input(z.object({ requestDate: z.string().regex(/^\\d{4}-\\d{2}-\\d{2}$/) })).query(async ({ input, ctx }) => {
+    locks: protectedProcedure.input(z.object({ requestDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/) })).query(async ({ input, ctx }) => {
       const db = await getDb(); if (!db) return [];
       const requestDate = input.requestDate;
       return db
@@ -251,7 +251,7 @@ export const appRouter = router({
       }
       return result;
     }),
-    create: operatorProcedure.input(z.object({ roomId: z.number().int().positive(), requestDate: z.string().regex(/^\\d{4}-\\d{2}-\\d{2}$/), priority: z.enum(["normal", "mendesak", "darurat"]), notes: z.string().max(1000).optional(), lines: z.array(z.object({ itemId: z.number().int(), requestedQty: z.number().int().positive() })).min(1) })).mutation(async ({ input, ctx }) => {
+    create: operatorProcedure.input(z.object({ roomId: z.number().int().positive(), requestDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/), priority: z.enum(["normal", "mendesak", "darurat"]), notes: z.string().max(1000).optional(), lines: z.array(z.object({ itemId: z.number().int(), requestedQty: z.number().int().positive() })).min(1) })).mutation(async ({ input, ctx }) => {
       const db = await getDb(); if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database belum tersedia." });
 
       const roomRows = await db.select({ id: rooms.id }).from(rooms).where(and(eq(rooms.id, input.roomId), eq(rooms.active, true))).limit(1);
