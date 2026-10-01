@@ -1852,6 +1852,7 @@ function RequestsView({ requests, rooms, items, isAdmin, currentUserId, todayRoo
   const [notes, setNotes] = useState("");
   const [filter, setFilter] = useState("all");
   const [approvalQty, setApprovalQty] = useState<Record<string, number>>({});
+  const [reviewOpen, setReviewOpen] = useState(false);
 
   useEffect(() => {
     if (!focusRequestId) return;
