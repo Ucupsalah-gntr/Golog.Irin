@@ -2140,6 +2140,7 @@ function RequestsView({ requests, rooms, items, isAdmin, currentUserId, todayRoo
             })}
           </select>
         </Field>
+        </div>
         <div className={`mt-4 rounded-xl p-3 text-sm ${selectedLockedByOther ? "border-[#FFD1C2] bg-[#f8e3de] text-[#D94A1A]" : selectedLock ? "bg-emerald-50 text-emerald-800" : "border-[#FFD500] bg-[#E6F4F7] text-[#004E9B]"}`}>
           {selectedLock
             ? selectedIsMine
