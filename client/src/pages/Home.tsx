@@ -2128,12 +2128,10 @@ function RequestsView({ requests, rooms, items, warehouses, isAdmin, currentUser
               }
             }}
             className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm font-semibold text-[#07304A]"
-            disabled={roomAccessLoading || Boolean(roomAccessError) || !accessibleRooms.length}
+            disabled={!accessibleRooms.length}
           >
-            {roomAccessLoading ? (
+            {roomAccessLoading && !accessibleRooms.length ? (
               <option value="">Memuat daftar ruangan…</option>
-            ) : roomAccessError ? (
-              <option value="">Gagal memuat akses ruangan</option>
             ) : accessibleRooms.length ? (
               accessibleRooms.map((room: any) => {
                 const lock = roomLockById.get(Number(room.id));
@@ -2149,8 +2147,9 @@ function RequestsView({ requests, rooms, items, warehouses, isAdmin, currentUser
               <option value="">Tidak ada ruangan yang ditetapkan</option>
             )}
           </select>
-          {roomAccessLoading && <p className="mt-2 text-xs text-slate-500">Sedang mengambil daftar ruangan yang ditetapkan untuk akun ini…</p>}
-          {!roomAccessLoading && roomAccessError && (
+          {roomAccessLoading && !accessibleRooms.length && <p className="mt-2 text-xs text-slate-500">Sedang mengambil daftar ruangan yang ditetapkan untuk akun ini…</p>}
+          {roomAccessError && accessibleRooms.length > 0 && <p className="mt-2 text-xs text-slate-400">Akses ruangan terakhir berhasil dimuat. Permintaan ulang data akan dicoba lagi otomatis.</p>}
+          {!roomAccessLoading && roomAccessError && !accessibleRooms.length && (
             <div className="mt-2 flex items-center justify-between gap-3 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-xs leading-5 text-rose-700">
               <span>Gagal memuat akses ruangan: {String(roomAccessError)}</span>
               <button type="button" onClick={onRetryRoomAccess} className="shrink-0 rounded-md border border-rose-300 bg-white px-2.5 py-1.5 font-semibold text-rose-700 hover:bg-rose-100">Coba lagi</button>
