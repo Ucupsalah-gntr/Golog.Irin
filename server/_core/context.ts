@@ -16,6 +16,34 @@ function getBearerToken(authorization: string | undefined) {
   return token || null;
 }
 
+function getDatabaseErrorMessage(error: unknown) {
+  const value = error as {
+    message?: unknown;
+    code?: unknown;
+    detail?: unknown;
+    hint?: unknown;
+    cause?: {
+      message?: unknown;
+      code?: unknown;
+      detail?: unknown;
+      hint?: unknown;
+    };
+  };
+  const cause = value?.cause;
+  const message = typeof value?.message === "string" ? value.message : "Database query gagal.";
+  const code = typeof value?.code === "string" ? value.code : typeof cause?.code === "string" ? cause.code : "";
+  const detail = typeof value?.detail === "string" ? value.detail : typeof cause?.detail === "string" ? cause.detail : "";
+  const hint = typeof value?.hint === "string" ? value.hint : typeof cause?.hint === "string" ? cause.hint : "";
+
+  return [
+    code ? `[${code}]` : "",
+    message,
+    detail ? `Detail: ${detail}` : "",
+    hint ? `Hint: ${hint}` : "",
+  ].filter(Boolean).join(" ");
+}
+
+
 type SupabaseAuthUser = {
   id: string;
   email?: string | null;
@@ -150,7 +178,7 @@ export async function createContext(
       req: opts.req,
       res: opts.res,
       user: null,
-      authError: error instanceof Error ? `Autentikasi backend gagal: ${error.message}` : "Autentikasi backend gagal.",
+      authError: `Autentikasi backend gagal: ${getDatabaseErrorMessage(error)}`,
     };
   }
 
