@@ -43,6 +43,16 @@ function getDatabaseErrorMessage(error: unknown) {
   ].filter(Boolean).join(" ");
 }
 
+function getDatabaseTarget() {
+  if (!ENV.databaseUrl) return "DATABASE_URL kosong";
+  try {
+    const url = new URL(ENV.databaseUrl);
+    return `${url.protocol}//${url.hostname}:${url.port || "(default)"}/${url.pathname.replace(/^\\//, "") || "(default)"}`;
+  } catch {
+    return "DATABASE_URL tidak valid sebagai URL PostgreSQL";
+  }
+}
+
 
 type SupabaseAuthUser = {
   id: string;
@@ -178,7 +188,7 @@ export async function createContext(
       req: opts.req,
       res: opts.res,
       user: null,
-      authError: `Autentikasi backend gagal: ${getDatabaseErrorMessage(error)}`,
+      authError: `Autentikasi backend gagal: ${getDatabaseErrorMessage(error)} · Target DB Preview: ${getDatabaseTarget()}`,
     };
   }
 
