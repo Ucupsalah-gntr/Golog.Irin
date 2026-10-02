@@ -63,11 +63,11 @@ export async function createContext(
 
     const requestSupabaseUrl = opts.req.get("x-supabase-url")?.trim() || "";
     const requestSupabaseKey = opts.req.get("x-supabase-apikey")?.trim() || "";
-    // Prefer trusted server-side configuration. The request headers are only a
-    // Preview fallback when the corresponding server environment variable is
-    // missing, so normal production authentication remains server-configured.
-    const supabaseUrl = ENV.supabaseUrl || requestSupabaseUrl;
-    const supabaseKey = ENV.supabasePublishableKey || requestSupabaseKey;
+    // Browser auth and the tRPC API must validate against the same Supabase
+    // project. The URL/key sent by the browser are public Supabase config
+    // values, so prefer them when present; server env remains the fallback.
+    const supabaseUrl = requestSupabaseUrl || ENV.supabaseUrl;
+    const supabaseKey = requestSupabaseKey || ENV.supabasePublishableKey;
 
     if (!supabaseUrl || !supabaseKey) {
       console.warn("[Auth] Supabase server environment is not configured.", {
