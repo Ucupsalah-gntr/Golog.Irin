@@ -1,6 +1,6 @@
 import type { CreateExpressContextOptions } from "@trpc/server/adapters/express";
 import type { User } from "../../drizzle/schema.ts";
-import { getUserByAuthUserId, getUserByUsername, upsertUser } from "../db.ts";
+import { getUserByAuthUserId, getUserByUsername, getUserByUsernameForAuthFallback, upsertUser } from "../db.ts";
 import { ENV } from "./env.ts";
 
 export type TrpcContext = {
@@ -94,10 +94,21 @@ export async function createContext(
       username,
     });
 
-    user = (await getUserByAuthUserId(authUser.id)) ?? null;
+    let usedAuthUserLookup = true;
+
+    try {
+      user = (await getUserByAuthUserId(authUser.id)) ?? null;
+    } catch (error) {
+      // A Preview database may still have the pre-auth linkage users schema.
+      // The Supabase token is already validated, so fall back to the stable
+      // username identity without attempting to write auth_user_id there.
+      usedAuthUserLookup = false;
+      console.warn("[Auth] auth_user_id lookup failed; using username fallback:", error);
+      user = (await getUserByUsernameForAuthFallback(username)) ?? null;
+    }
 
     if (!user) {
-      const existingProfile = await getUserByUsername(username);
+      const existingProfile = await getUserByUsernameForAuthFallback(username);
       if (existingProfile) {
         user = (await upsertUser({
           id: existingProfile.id,
@@ -120,7 +131,7 @@ export async function createContext(
       return { req: opts.req, res: opts.res, user: null, authError: "Session Supabase valid, tetapi profil user lokal tidak ditemukan." };
     }
 
-    if (user) {
+    if (user && usedAuthUserLookup) {
       user = await upsertUser({
         id: user.id,
         username: user.username,
