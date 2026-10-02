@@ -7,6 +7,7 @@ export type TrpcContext = {
   req: CreateExpressContextOptions["req"];
   res: CreateExpressContextOptions["res"];
   user: User | null;
+  authError?: string | null;
 };
 
 function getBearerToken(authorization: string | undefined) {
@@ -58,7 +59,7 @@ export async function createContext(
   try {
     const token = getBearerToken(opts.req.get("authorization"));
     if (!token) {
-      return { req: opts.req, res: opts.res, user: null };
+      return { req: opts.req, res: opts.res, user: null, authError: "Session token tidak dikirim oleh browser." };
     }
 
     const requestSupabaseUrl = opts.req.get("x-supabase-url")?.trim() || "";
@@ -74,18 +75,18 @@ export async function createContext(
         hasSupabaseUrl: Boolean(supabaseUrl),
         hasSupabaseKey: Boolean(supabaseKey),
       });
-      return { req: opts.req, res: opts.res, user: null };
+      return { req: opts.req, res: opts.res, user: null, authError: "Konfigurasi Supabase server belum tersedia." };
     }
 
     const authUser = await getSupabaseAuthUser(token, supabaseKey, supabaseUrl);
     if (!authUser) {
-      return { req: opts.req, res: opts.res, user: null };
+      return { req: opts.req, res: opts.res, user: null, authError: "Session Supabase ditolak saat divalidasi oleh backend." };
     }
 
     const username = usernameFromAuthUser(authUser);
     if (!username) {
       console.warn("[Auth] Supabase user has no username/email identity.");
-      return { req: opts.req, res: opts.res, user: null };
+      return { req: opts.req, res: opts.res, user: null, authError: "Identitas username/email dari session Supabase tidak ditemukan." };
     }
 
     console.info("[Auth] Auth user validated:", {
@@ -116,6 +117,7 @@ export async function createContext(
         authUserId: authUser.id,
         username,
       });
+      return { req: opts.req, res: opts.res, user: null, authError: "Session Supabase valid, tetapi profil user lokal tidak ditemukan." };
     }
 
     if (user) {
@@ -133,11 +135,18 @@ export async function createContext(
   } catch (error) {
     console.warn("[Auth] Supabase authentication failed:", error);
     user = null;
+    return {
+      req: opts.req,
+      res: opts.res,
+      user: null,
+      authError: error instanceof Error ? `Autentikasi backend gagal: ${error.message}` : "Autentikasi backend gagal.",
+    };
   }
 
   return {
     req: opts.req,
     res: opts.res,
     user,
+    authError: null,
   };
 }
