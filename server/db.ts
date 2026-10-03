@@ -111,29 +111,6 @@ export async function getUserByUsername(username: string) {
   return result[0];
 }
 
-// Preview compatibility lookup: select only columns that existed before the
-// Supabase auth_user_id linkage was introduced. This allows a Preview database
-// with an older users schema to authenticate by the already-validated username.
-export async function getUserByUsernameForAuthFallback(username: string) {
-  const db = await getDb();
-  if (!db) return undefined;
-
-  const result = await db
-    .select({
-      id: users.id,
-      username: users.username,
-      name: users.name,
-      email: users.email,
-      role: users.role,
-      roomId: users.roomId,
-    })
-    .from(users)
-    .where(eq(users.username, username))
-    .limit(1);
-
-  return result[0] as unknown as User | undefined;
-}
-
 export async function ensureCatalog() {
   const db = await getDb();
   if (!db) return;
