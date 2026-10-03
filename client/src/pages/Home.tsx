@@ -2183,7 +2183,7 @@ function RequestsView({ requests, rooms, items, warehouses, isAdmin, currentUser
           <Button variant="outline" size="sm" onClick={() => setLines([...lines, { itemId: 0, requestedQty: 1 }])}>+ Tambah item</Button>
         </div>
         <div className="mt-5"><Field label="Catatan"><Textarea value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Keperluan atau keterangan permintaan" /></Field></div>
-        <Button className="mt-5 w-full" disabled={busy} onClick={() => {
+        <Button type="button" className="mt-5 w-full" onClick={() => {
           if (!selectedRoom) {
             toast.error("Pilih ruangan aktif terlebih dahulu.");
             return;
