@@ -2223,24 +2223,62 @@ function RequestsView({ requests, rooms, items, warehouses, isAdmin, currentUser
     </Card>
     </div>
 
-    {reviewOpen && <div className="fixed inset-0 z-[80] flex items-center justify-center bg-[#07304A]/45 p-3 backdrop-blur-sm sm:p-6" role="dialog" aria-modal="true" aria-labelledby="request-review-title">
-    <div className="flex max-h-[92vh] w-full max-w-5xl flex-col overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-2xl">
-      <div className="border-b border-slate-100 px-5 py-4 sm:px-7 sm:py-5">
-        <div className="flex items-start justify-between gap-4"><div><p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-teal-700">Final check</p><h2 id="request-review-title" className="mt-1 text-xl font-semibold text-[#07304A] sm:text-2xl">Review permintaan sebelum dikirim</h2><p className="mt-1 text-sm text-slate-500">Pastikan ruangan, tanggal kebutuhan, nama barang, dan jumlah sudah benar.</p></div><button type="button" aria-label="Tutup review" onClick={() => setReviewOpen(false)} className="rounded-xl p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-700">×</button></div>
-        <div className="mt-4 grid gap-2 sm:grid-cols-4">
+    {reviewOpen && <div className="fixed inset-0 z-[80] flex items-end justify-center bg-[#07304A]/45 backdrop-blur-sm sm:items-center sm:p-6" role="dialog" aria-modal="true" aria-labelledby="request-review-title">
+    <div className="flex h-[94dvh] w-full max-w-5xl flex-col overflow-hidden rounded-t-[28px] border border-slate-200 bg-white shadow-2xl sm:h-auto sm:max-h-[92dvh] sm:rounded-3xl">
+      <div className="shrink-0 border-b border-slate-100 px-5 pb-3 pt-4 sm:px-7 sm:py-5">
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-teal-700">Final check</p>
+            <h2 id="request-review-title" className="mt-1 text-xl font-semibold leading-tight text-[#07304A] sm:text-2xl">Review permintaan sebelum dikirim</h2>
+            <p className="mt-1 hidden text-sm text-slate-500 sm:block">Pastikan ruangan, tanggal kebutuhan, nama barang, dan jumlah sudah benar.</p>
+          </div>
+          <button type="button" aria-label="Tutup review" onClick={() => setReviewOpen(false)} className="shrink-0 rounded-xl p-2 text-xl leading-none text-slate-400 hover:bg-slate-100 hover:text-slate-700">×</button>
+        </div>
+        <div className="mt-3 rounded-2xl bg-slate-50 px-4 py-3 sm:hidden">
+          <div className="flex items-center justify-between gap-3">
+            <div className="min-w-0"><p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-400">Ruangan</p><p className="mt-0.5 truncate text-sm font-semibold text-slate-700">{selectedRoomName || "—"}</p></div>
+            <div className="shrink-0 text-right"><p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-400">Kebutuhan</p><p className="mt-0.5 text-sm font-semibold text-slate-700">{requestDate}</p></div>
+          </div>
+          <div className="mt-2 flex gap-2 text-xs font-semibold text-slate-500"><span>{formatNumber(lines.length)} item</span><span>·</span><span>{formatNumber(total)} unit</span></div>
+        </div>
+        <div className="mt-4 hidden gap-2 sm:grid sm:grid-cols-4">
           <div className="rounded-xl bg-slate-50 p-3"><p className="text-[10px] uppercase tracking-wider text-slate-400">Ruangan</p><p className="mt-1 truncate font-semibold text-slate-700">{selectedRoomName || "—"}</p></div>
           <div className="rounded-xl bg-slate-50 p-3"><p className="text-[10px] uppercase tracking-wider text-slate-400">Tanggal kebutuhan</p><p className="mt-1 font-semibold text-slate-700">{requestDate}</p></div>
           <div className="rounded-xl bg-slate-50 p-3"><p className="text-[10px] uppercase tracking-wider text-slate-400">Total item</p><p className="mt-1 font-semibold text-slate-700">{formatNumber(lines.length)}</p></div>
           <div className="rounded-xl bg-slate-50 p-3"><p className="text-[10px] uppercase tracking-wider text-slate-400">Total unit</p><p className="mt-1 font-semibold text-slate-700">{formatNumber(total)}</p></div>
         </div>
       </div>
-      <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4 sm:px-7 sm:py-5"><div className="space-y-3">
-        {lines.map((line: Line, index: number) => { const item = items.find((candidate: any) => Number(candidate.id) === Number(line.itemId)); const stock = Number(item?.warehouseStockQty ?? 0); const over = Number(line.requestedQty) > stock; return <div key={index} className={`flex items-center justify-between gap-4 rounded-2xl border p-4 ${over ? "border-amber-200 bg-amber-50" : "border-slate-200 bg-white"}`}><div className="min-w-0"><p className="font-medium text-slate-800">{item?.name || "Item belum dipilih"}</p><p className="mt-1 text-xs text-slate-400">{item?.sku || "—"} · {item?.unit || "unit"} · stok gudang {formatNumber(stock)}</p></div><div className="shrink-0 text-right"><p className="text-lg font-semibold text-[#07304A]">{formatNumber(Number(line.requestedQty) || 0)}</p><p className="text-[10px] uppercase tracking-wider text-slate-400">diminta</p>{over && <p className="mt-1 text-[10px] font-semibold text-amber-700">melebihi stok</p>}</div></div>; })}
-      </div><div className="mt-4 rounded-2xl border border-[#9CCED8] bg-[#E6F4F7] p-4 text-sm text-[#315563]"><strong>Final check:</strong> setelah dikonfirmasi, permintaan langsung masuk ke antrean Kepala Gudang.</div></div>
-      <div className="flex flex-col-reverse gap-2 border-t border-slate-100 bg-white px-5 py-4 sm:flex-row sm:justify-end sm:px-7"><Button type="button" variant="outline" onClick={() => setReviewOpen(false)} disabled={busy}>Kembali edit</Button><Button type="button" disabled={busy || !selectedRoom || selectedLockedByOther || lines.some((x: Line) => !x.itemId || Number(x.requestedQty) < 1)} onClick={() => { setReviewOpen(false); onCreate({ roomId: selectedRoom, requestDate, priority, notes, lines }); }}><Truck size={16} className="mr-2" />Konfirmasi & kirim</Button></div>
+      <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 py-3 sm:px-7 sm:py-5">
+        <div className="mb-3 flex items-center justify-between sm:hidden"><p className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-400">Daftar barang</p><p className="text-xs font-medium text-slate-400">Geser untuk melihat semua</p></div>
+        <div className="space-y-2.5 sm:space-y-3">
+          {lines.map((line: Line, index: number) => {
+            const item = items.find((candidate: any) => Number(candidate.id) === Number(line.itemId));
+            const stock = Number(item?.warehouseStockQty ?? 0);
+            const over = Number(line.requestedQty) > stock;
+            return <div key={index} className={`rounded-2xl border p-3.5 sm:flex sm:items-center sm:justify-between sm:gap-4 sm:p-4 ${over ? "border-amber-200 bg-amber-50" : "border-slate-200 bg-white"}`}>
+              <div className="min-w-0">
+                <div className="flex items-start gap-3">
+                  <span className="grid h-7 w-7 shrink-0 place-items-center rounded-lg bg-slate-100 text-[11px] font-bold text-slate-500 sm:hidden">{index + 1}</span>
+                  <div className="min-w-0"><p className="text-sm font-semibold leading-5 text-slate-800 sm:text-base">{item?.name || "Item belum dipilih"}</p><p className="mt-1 text-[11px] leading-4 text-slate-400 sm:text-xs">{item?.sku || "—"} · {item?.unit || "unit"} · stok gudang {formatNumber(stock)}</p></div>
+                </div>
+              </div>
+              <div className="mt-3 flex items-end justify-between border-t border-slate-100 pt-2.5 sm:mt-0 sm:block sm:shrink-0 sm:border-0 sm:pt-0 sm:text-right">
+                <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-400 sm:hidden">Jumlah diminta</span>
+                <div><p className="text-lg font-bold leading-none text-[#07304A] sm:text-lg">{formatNumber(Number(line.requestedQty) || 0)}</p><p className="mt-1 text-[10px] uppercase tracking-wider text-slate-400">diminta</p>{over && <p className="mt-1 text-[10px] font-semibold text-amber-700">⚠ melebihi stok</p>}</div>
+              </div>
+            </div>;
+          })}
+        </div>
+        <div className="mt-3 rounded-2xl border border-[#9CCED8] bg-[#E6F4F7] p-3.5 text-xs leading-5 text-[#315563] sm:mt-4 sm:p-4 sm:text-sm"><strong>Final check:</strong> setelah dikonfirmasi, permintaan langsung masuk ke antrean Kepala Gudang.</div>
+      </div>
+      <div className="shrink-0 border-t border-slate-200 bg-white px-4 pb-[max(14px,env(safe-area-inset-bottom))] pt-3 shadow-[0_-8px_20px_rgba(7,48,74,0.06)] sm:px-7 sm:py-4 sm:shadow-none">
+        <div className="flex flex-col gap-2 sm:flex-row sm:justify-end">
+          <Button type="button" variant="outline" className="order-2 w-full sm:order-1 sm:w-auto" onClick={() => setReviewOpen(false)} disabled={busy}>Kembali edit</Button>
+          <Button type="button" className="order-1 w-full sm:order-2 sm:w-auto" disabled={busy || !selectedRoom || selectedLockedByOther || lines.some((x: Line) => !x.itemId || Number(x.requestedQty) < 1)} onClick={() => { setReviewOpen(false); onCreate({ roomId: selectedRoom, requestDate, priority, notes, lines }); }}><Truck size={16} className="mr-2" />Konfirmasi & kirim</Button>
+        </div>
+      </div>
     </div>
-    </div>}
-  </>;
+    </div>}  </>;
 }
 function StockOpnameView({ stock, items, onSubmit, busy }: any) {
   type OpnameRow = { itemId: number; sku: string; name: string; unit: string; systemQty: number; physicalQty: string; };
