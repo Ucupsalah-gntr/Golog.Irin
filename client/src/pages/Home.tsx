@@ -185,6 +185,7 @@ export default function Home() {
   const isAdmin = user?.role === "admin";
   const visibleNav = nav.filter((item) => !item.adminOnly || isAdmin);
   const accessibleRooms = roomAccess.data?.map((row: any) => row.room) ?? [];
+  const roomAccessErrorMessage = roomAccess.error?.message || "Akses ruangan gagal dimuat.";
   const effectiveRooms = isAdmin ? rooms : accessibleRooms;
   const selectedRoomName = effectiveRooms.find((room: any) => room.id === selectedRoom)?.name;
 
@@ -387,7 +388,7 @@ export default function Home() {
             {active === "overview" && <Overview dashboard={dashboard.data} isAdmin={isAdmin} onGo={go} report={isAdmin ? monthlyReport.data : null} requests={requests.data ?? []} userName={user?.name || user?.username || "Kepala Gudang"} unreadNotificationCount={unreadNotificationCount} onOpenNotifications={() => setNotificationOpen(true)} />}
             {active === "stock" && <StockView stock={stock} isAdmin={isAdmin} items={items} warehouses={warehouses} onCreateItem={(input: any) => createItem.mutate(input)} busy={createItem.isPending} onImport={(rows: any[]) => importItems.mutate({ rows })} importBusy={importItems.isPending} focusItemId={notificationTarget?.nav === "stock" ? notificationTarget.itemId : undefined} />}
             {active === "inbound" && <InboundView items={items} warehouses={warehouses} onSubmit={(input: any) => createInbound.mutate(input)} busy={createInbound.isPending} />}
-            {active === "requests" && <RequestsView requests={requests.data ?? []} rooms={rooms} items={items} isAdmin={isAdmin} currentUserId={currentUser.data?.id} todayRoomLocks={todayRoomLocks.data ?? []} selectedRoom={selectedRoom} selectedRoomName={selectedRoomName} setSelectedRoom={setSelectedRoom} accessibleRooms={accessibleRooms} lines={requestLines} setLines={setRequestLines} total={requestTotal} onCreate={(input: any) => createRequest.mutate(input)} onVerify={(input: any) => verifyRequest.mutate(input)} busy={createRequest.isPending || verifyRequest.isPending} focusRequestId={notificationTarget?.nav === "requests" ? notificationTarget.requestId : undefined} />}
+            {active === "requests" && <RequestsView requests={requests.data ?? []} rooms={rooms} items={items} warehouses={warehouses} isAdmin={isAdmin} currentUserId={currentUser.data?.id} todayRoomLocks={todayRoomLocks.data ?? []} selectedRoom={selectedRoom} selectedRoomName={selectedRoomName} setSelectedRoom={setSelectedRoom} accessibleRooms={accessibleRooms} roomAccessLoading={roomAccess.isLoading} roomAccessError={roomAccessErrorMessage} onRetryRoomAccess={() => roomAccess.refetch()} lines={requestLines} setLines={setRequestLines} total={requestTotal} onCreate={(input: any) => createRequest.mutate(input)} onVerify={(input: any) => verifyRequest.mutate(input)} busy={createRequest.isPending || verifyRequest.isPending} focusRequestId={notificationTarget?.nav === "requests" ? notificationTarget.requestId : undefined} />}
             {active === "adjustments" && <AdjustmentsView adjustments={adjustments.data ?? []} items={items} rooms={rooms} onSubmit={(input: any) => createAdjustment.mutate(input)} busy={createAdjustment.isPending} />}
             {active === "stocktake" && <StockOpnameView stock={stock} items={items} onSubmit={(input: any) => createBulkStocktake.mutate(input)} busy={createBulkStocktake.isPending} />}
             {active === "reports" && <ReportsView report={monthlyReport.data} month={reportMonth} onMonthChange={setReportMonth} />}
@@ -1846,12 +1847,13 @@ function StockView({ stock, isAdmin, items, warehouses, onCreateItem, busy, onIm
 }
 function InboundView({ items, warehouses, onSubmit, busy }: any) { const [form, setForm] = useState({ itemId: "", quantity: "", sourceWarehouseId: "", notes: "", occurredAt: new Date().toISOString().slice(0, 10) }); return <Card className="max-w-3xl border-slate-200/80 shadow-sm"><CardHeader><CardTitle>Catat barang masuk</CardTitle><p className="mt-1 text-sm text-slate-500">Penerimaan dari Gudang Farmasi, Gudang RT, CSSD, atau Laboratorium.</p></CardHeader><CardContent><div className="grid gap-4 md:grid-cols-2"><Field label="Barang"><select className="h-10 w-full rounded-lg border-2 border-[#9CCED8] bg-[#FFFFFF] px-3 text-sm text-[#07304A] shadow-[inset_0_0_0_2px_rgba(255,250,240,0.52)]" value={form.itemId} onChange={(e) => setForm({ ...form, itemId: e.target.value })}><option value="">Pilih barang</option>{items.map((item: any) => <option key={item.id} value={item.id}>{item.name} · {item.sku}</option>)}</select></Field><Field label="Sumber gudang"><select className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm" value={form.sourceWarehouseId} onChange={(e) => setForm({ ...form, sourceWarehouseId: e.target.value })}><option value="">Pilih gudang sumber</option>{warehouses.filter((w: any) => w.kind === "source").map((w: any) => <option key={w.id} value={w.id}>{w.name}</option>)}</select></Field><Field label="Jumlah"><Input type="number" min="1" value={form.quantity} onChange={(e) => setForm({ ...form, quantity: e.target.value })} placeholder="0" /></Field><Field label="Tanggal kejadian"><Input type="date" value={form.occurredAt} onChange={(e) => setForm({ ...form, occurredAt: e.target.value })} /></Field><div className="md:col-span-2"><Field label="Catatan"><Textarea value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} placeholder="Nomor dokumen, nota, atau keterangan penerimaan" /></Field></div></div><Button className="mt-6" disabled={busy || !form.itemId || !form.quantity || !form.sourceWarehouseId} onClick={() => onSubmit({ itemId: Number(form.itemId), quantity: Number(form.quantity), sourceWarehouseId: Number(form.sourceWarehouseId), occurredAt: new Date(form.occurredAt) })}><ArrowDownToLine size={16} className="mr-2" />Simpan barang masuk</Button></CardContent></Card> }
 
-function RequestsView({ requests, rooms, items, isAdmin, currentUserId, todayRoomLocks, selectedRoom, selectedRoomName, setSelectedRoom, accessibleRooms, lines, setLines, total, onCreate, onVerify, busy, focusRequestId }: any) {
+function RequestsView({ requests, rooms, items, warehouses, isAdmin, currentUserId, todayRoomLocks, selectedRoom, selectedRoomName, setSelectedRoom, accessibleRooms, roomAccessLoading, roomAccessError, onRetryRoomAccess, lines, setLines, total, onCreate, onVerify, busy, focusRequestId }: any) {
   const [priority, setPriority] = useState("normal");
   const [requestDate, setRequestDate] = useState(getJakartaDateKeyClient());
   const [notes, setNotes] = useState("");
   const [filter, setFilter] = useState("all");
   const [approvalQty, setApprovalQty] = useState<Record<string, number>>({});
+  const [reviewOpen, setReviewOpen] = useState(false);
 
   useEffect(() => {
     if (!focusRequestId) return;
@@ -2110,7 +2112,8 @@ function RequestsView({ requests, rooms, items, isAdmin, currentUserId, todayRoo
     </div>;
   }
 
-  return <div className="grid gap-6 xl:grid-cols-[.85fr_1.5fr]">
+  return <>
+    <div className="grid gap-6 xl:grid-cols-[.85fr_1.5fr]">
     <Card className="border-slate-200/80 shadow-sm">
       <CardHeader><CardTitle>Buat permintaan</CardTitle><p className="mt-1 text-sm text-slate-500">Ajukan kebutuhan untuk hari ini sampai maksimal 7 hari ke depan. Kepala gudang memproses pemenuhan sesuai hari operasional dan ketersediaan stok.</p></CardHeader>
       <CardContent>
@@ -2128,17 +2131,32 @@ function RequestsView({ requests, rooms, items, isAdmin, currentUserId, todayRoo
             className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm font-semibold text-[#07304A]"
             disabled={!accessibleRooms.length}
           >
-            {accessibleRooms.map((room: any) => {
-              const lock = roomLockById.get(Number(room.id));
-              const isMine = Boolean(lock && (lock.isMine || Number(lock.requesterId) === Number(currentUserId)));
-              const label = lock
-                ? isMine
-                  ? `${room.name} — PIC Anda`
-                  : `${room.name} — PIC ${lock.requesterName || "petugas lain"}`
-                : `${room.name} — belum ada PIC`;
-              return <option key={room.id} value={room.id}>{label}</option>;
-            })}
+            {roomAccessLoading && !accessibleRooms.length ? (
+              <option value="">Memuat daftar ruangan…</option>
+            ) : accessibleRooms.length ? (
+              accessibleRooms.map((room: any) => {
+                const lock = roomLockById.get(Number(room.id));
+                const isMine = Boolean(lock && (lock.isMine || Number(lock.requesterId) === Number(currentUserId)));
+                const label = lock
+                  ? isMine
+                    ? `${room.name} — PIC Anda`
+                    : `${room.name} — PIC ${lock.requesterName || "petugas lain"}`
+                  : `${room.name} — belum ada PIC`;
+                return <option key={room.id} value={room.id}>{label}</option>;
+              })
+            ) : (
+              <option value="">Tidak ada ruangan yang ditetapkan</option>
+            )}
           </select>
+          {roomAccessLoading && !accessibleRooms.length && <p className="mt-2 text-xs text-slate-500">Sedang mengambil daftar ruangan yang ditetapkan untuk akun ini…</p>}
+          {roomAccessError && accessibleRooms.length > 0 && <p className="mt-2 text-xs text-slate-400">Akses ruangan terakhir berhasil dimuat. Permintaan ulang data akan dicoba lagi otomatis.</p>}
+          {!roomAccessLoading && roomAccessError && !accessibleRooms.length && (
+            <div className="mt-2 flex items-center justify-between gap-3 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-xs leading-5 text-rose-700">
+              <span>Gagal memuat akses ruangan: {String(roomAccessError)}</span>
+              <button type="button" onClick={onRetryRoomAccess} className="shrink-0 rounded-md border border-rose-300 bg-white px-2.5 py-1.5 font-semibold text-rose-700 hover:bg-rose-100">Coba lagi</button>
+            </div>
+          )}
+          {!roomAccessLoading && !roomAccessError && !accessibleRooms.length && <p className="mt-2 text-xs text-amber-700">Akun ini belum memiliki akses ke ruangan aktif. Minta admin menetapkan ruangan terlebih dahulu.</p>}
         </Field>
         </div>
         <div className={`mt-4 rounded-xl p-3 text-sm ${selectedLockedByOther ? "border-[#FFD1C2] bg-[#f8e3de] text-[#D94A1A]" : selectedLock ? "bg-emerald-50 text-emerald-800" : "border-[#FFD500] bg-[#E6F4F7] text-[#004E9B]"}`}>
@@ -2166,7 +2184,33 @@ function RequestsView({ requests, rooms, items, isAdmin, currentUserId, todayRoo
           <Button variant="outline" size="sm" onClick={() => setLines([...lines, { itemId: 0, requestedQty: 1 }])}>+ Tambah item</Button>
         </div>
         <div className="mt-5"><Field label="Catatan"><Textarea value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Keperluan atau keterangan permintaan" /></Field></div>
-        <Button className="mt-5 w-full" disabled={busy || !selectedRoom || selectedLockedByOther || lines.some((x: Line) => !x.itemId || x.requestedQty < 1)} onClick={() => onCreate({ roomId: selectedRoom, requestDate, priority, notes, lines })}><Truck size={16} className="mr-2" />Ajukan {total} unit</Button>
+        <button
+          type="button"
+          className="mt-5 flex h-10 w-full items-center justify-center gap-2 rounded-md border-2 border-primary bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow-sm transition-all hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          onPointerDown={(event) => {
+            event.preventDefault();
+          }}
+          onClick={(event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            if (!selectedRoom) {
+              toast.error("Pilih ruangan aktif terlebih dahulu.");
+              return;
+            }
+            if (selectedLockedByOther) {
+              toast.error(`Ruangan ${selectedRoomName || "ini"} sudah memiliki PIC lain untuk tanggal kebutuhan tersebut.`);
+              return;
+            }
+            const invalidLine = lines.find((x: Line) => !x.itemId || Number(x.requestedQty) < 1);
+            if (invalidLine) {
+              toast.error("Lengkapi nama barang dan jumlah setiap item sebelum masuk Review.");
+              return;
+            }
+            setReviewOpen(true);
+          }}
+        >
+          <ClipboardCheck size={16} className="mr-2" />Review & cek {total} unit
+        </button>
       </CardContent>
     </Card>
 
@@ -2177,7 +2221,64 @@ function RequestsView({ requests, rooms, items, isAdmin, currentUserId, todayRoo
         <div className="mt-4 grid gap-2 border-t border-slate-100 pt-3 text-sm">{row.lines.map((line: any) => <div key={line.line.id} className="flex justify-between gap-4"><span>{line.item?.name || "Item"}</span><span className="font-medium">{line.line.requestedQty} diminta · {line.line.approvedQty} dipindahkan</span></div>)}</div>
       </div>)}{!sortedRequests.length && <EmptyState title="Belum ada permintaan" text="Buat permintaan pertama untuk memulai." />}</div></CardContent>
     </Card>
-  </div>;
+    </div>
+
+    {reviewOpen && <div className="fixed inset-0 z-[80] flex items-end justify-center bg-[#07304A]/45 backdrop-blur-sm sm:items-center sm:p-6" role="dialog" aria-modal="true" aria-labelledby="request-review-title">
+    <div className="flex h-[94dvh] w-full max-w-5xl flex-col overflow-hidden rounded-t-[28px] border border-slate-200 bg-white shadow-2xl sm:h-auto sm:max-h-[92dvh] sm:rounded-3xl">
+      <div className="shrink-0 border-b border-slate-100 px-5 pb-3 pt-4 sm:px-7 sm:py-5">
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-teal-700">Final check</p>
+            <h2 id="request-review-title" className="mt-1 text-xl font-semibold leading-tight text-[#07304A] sm:text-2xl">Review permintaan sebelum dikirim</h2>
+            <p className="mt-1 hidden text-sm text-slate-500 sm:block">Pastikan ruangan, tanggal kebutuhan, nama barang, dan jumlah sudah benar.</p>
+          </div>
+          <button type="button" aria-label="Tutup review" onClick={() => setReviewOpen(false)} className="shrink-0 rounded-xl p-2 text-xl leading-none text-slate-400 hover:bg-slate-100 hover:text-slate-700">×</button>
+        </div>
+        <div className="mt-3 rounded-2xl bg-slate-50 px-4 py-3 sm:hidden">
+          <div className="flex items-center justify-between gap-3">
+            <div className="min-w-0"><p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-400">Ruangan</p><p className="mt-0.5 truncate text-sm font-semibold text-slate-700">{selectedRoomName || "—"}</p></div>
+            <div className="shrink-0 text-right"><p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-400">Kebutuhan</p><p className="mt-0.5 text-sm font-semibold text-slate-700">{requestDate}</p></div>
+          </div>
+          <div className="mt-2 flex gap-2 text-xs font-semibold text-slate-500"><span>{formatNumber(lines.length)} item</span><span>·</span><span>{formatNumber(total)} unit</span></div>
+        </div>
+        <div className="mt-4 hidden gap-2 sm:grid sm:grid-cols-4">
+          <div className="rounded-xl bg-slate-50 p-3"><p className="text-[10px] uppercase tracking-wider text-slate-400">Ruangan</p><p className="mt-1 truncate font-semibold text-slate-700">{selectedRoomName || "—"}</p></div>
+          <div className="rounded-xl bg-slate-50 p-3"><p className="text-[10px] uppercase tracking-wider text-slate-400">Tanggal kebutuhan</p><p className="mt-1 font-semibold text-slate-700">{requestDate}</p></div>
+          <div className="rounded-xl bg-slate-50 p-3"><p className="text-[10px] uppercase tracking-wider text-slate-400">Total item</p><p className="mt-1 font-semibold text-slate-700">{formatNumber(lines.length)}</p></div>
+          <div className="rounded-xl bg-slate-50 p-3"><p className="text-[10px] uppercase tracking-wider text-slate-400">Total unit</p><p className="mt-1 font-semibold text-slate-700">{formatNumber(total)}</p></div>
+        </div>
+      </div>
+      <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 py-3 sm:px-7 sm:py-5">
+        <div className="mb-3 flex items-center justify-between sm:hidden"><p className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-400">Daftar barang</p><p className="text-xs font-medium text-slate-400">Geser untuk melihat semua</p></div>
+        <div className="space-y-2.5 sm:space-y-3">
+          {lines.map((line: Line, index: number) => {
+            const item = items.find((candidate: any) => Number(candidate.id) === Number(line.itemId));
+            const stock = Number(item?.warehouseStockQty ?? 0);
+            const over = Number(line.requestedQty) > stock;
+            return <div key={index} className={`rounded-2xl border p-3.5 sm:flex sm:items-center sm:justify-between sm:gap-4 sm:p-4 ${over ? "border-amber-200 bg-amber-50" : "border-slate-200 bg-white"}`}>
+              <div className="min-w-0">
+                <div className="flex items-start gap-3">
+                  <span className="grid h-7 w-7 shrink-0 place-items-center rounded-lg bg-slate-100 text-[11px] font-bold text-slate-500 sm:hidden">{index + 1}</span>
+                  <div className="min-w-0"><p className="text-sm font-semibold leading-5 text-slate-800 sm:text-base">{item?.name || "Item belum dipilih"}</p><p className="mt-1 text-[11px] leading-4 text-slate-400 sm:text-xs">{item?.sku || "—"} · {item?.unit || "unit"} · stok gudang {formatNumber(stock)}</p></div>
+                </div>
+              </div>
+              <div className="mt-3 flex items-end justify-between border-t border-slate-100 pt-2.5 sm:mt-0 sm:block sm:shrink-0 sm:border-0 sm:pt-0 sm:text-right">
+                <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-400 sm:hidden">Jumlah diminta</span>
+                <div><p className="text-lg font-bold leading-none text-[#07304A] sm:text-lg">{formatNumber(Number(line.requestedQty) || 0)}</p><p className="mt-1 text-[10px] uppercase tracking-wider text-slate-400">diminta</p>{over && <p className="mt-1 text-[10px] font-semibold text-amber-700">⚠ melebihi stok</p>}</div>
+              </div>
+            </div>;
+          })}
+        </div>
+        <div className="mt-3 rounded-2xl border border-[#9CCED8] bg-[#E6F4F7] p-3.5 text-xs leading-5 text-[#315563] sm:mt-4 sm:p-4 sm:text-sm"><strong>Final check:</strong> setelah dikonfirmasi, permintaan langsung masuk ke antrean Kepala Gudang.</div>
+      </div>
+      <div className="shrink-0 border-t border-slate-200 bg-white px-4 pb-[max(14px,env(safe-area-inset-bottom))] pt-3 shadow-[0_-8px_20px_rgba(7,48,74,0.06)] sm:px-7 sm:py-4 sm:shadow-none">
+        <div className="flex flex-col gap-2 sm:flex-row sm:justify-end">
+          <Button type="button" variant="outline" className="order-2 w-full sm:order-1 sm:w-auto" onClick={() => setReviewOpen(false)} disabled={busy}>Kembali edit</Button>
+          <Button type="button" className="order-1 w-full sm:order-2 sm:w-auto" disabled={busy || !selectedRoom || selectedLockedByOther || lines.some((x: Line) => !x.itemId || Number(x.requestedQty) < 1)} onClick={() => { setReviewOpen(false); onCreate({ roomId: selectedRoom, requestDate, priority, notes, lines }); }}><Truck size={16} className="mr-2" />Konfirmasi & kirim</Button>
+        </div>
+      </div>
+    </div>
+    </div>}  </>;
 }
 function StockOpnameView({ stock, items, onSubmit, busy }: any) {
   type OpnameRow = { itemId: number; sku: string; name: string; unit: string; systemQty: number; physicalQty: string; };
@@ -2524,7 +2625,6 @@ function ReportsView({ report, month, onMonthChange }: any) {
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) { return <div className="space-y-2"><Label className="text-xs font-semibold text-slate-600">{label}</Label>{children}</div>; }
 function EmptyState({ title, text }: { title: string; text: string }) { return <div className="grid place-items-center px-5 py-14 text-center"><div className="grid h-12 w-12 place-items-center rounded-2xl bg-slate-100 text-slate-400"><ClipboardList size={20} /></div><p className="mt-4 font-medium">{title}</p><p className="mt-1 max-w-sm text-sm text-slate-500">{text}</p></div>; }
-
 
 
 
