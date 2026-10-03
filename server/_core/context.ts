@@ -61,8 +61,11 @@ export async function createContext(
       return { req: opts.req, res: opts.res, user: null };
     }
 
+    // The API key used to validate a user JWT is server configuration.
+    // Prefer the server-side value so a stale/mismatched browser build cannot
+    // make production authentication depend on an old client key.
     const requestSupabaseKey = opts.req.get("x-supabase-apikey")?.trim() || "";
-    const supabaseKey = requestSupabaseKey || ENV.supabasePublishableKey;
+    const supabaseKey = ENV.supabasePublishableKey || requestSupabaseKey;
 
     if (!ENV.supabaseUrl || !supabaseKey) {
       console.warn("[Auth] Supabase server environment is not configured.");
