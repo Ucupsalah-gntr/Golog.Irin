@@ -39,7 +39,6 @@ const trpcClient = trpc.createClient({
         return token
           ? {
               Authorization: `Bearer ${token}`,
-              "x-supabase-apikey": String(import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY ?? "").trim(),
             }
           : {};
       },
