@@ -2112,7 +2112,8 @@ function RequestsView({ requests, rooms, items, warehouses, isAdmin, currentUser
     </div>;
   }
 
-  return <div className="grid gap-6 xl:grid-cols-[.85fr_1.5fr]">
+  return <>
+    <div className="grid gap-6 xl:grid-cols-[.85fr_1.5fr]">
     <Card className="border-slate-200/80 shadow-sm">
       <CardHeader><CardTitle>Buat permintaan</CardTitle><p className="mt-1 text-sm text-slate-500">Ajukan kebutuhan untuk hari ini sampai maksimal 7 hari ke depan. Kepala gudang memproses pemenuhan sesuai hari operasional dan ketersediaan stok.</p></CardHeader>
       <CardContent>
@@ -2209,9 +2210,9 @@ function RequestsView({ requests, rooms, items, warehouses, isAdmin, currentUser
         <div className="mt-4 grid gap-2 border-t border-slate-100 pt-3 text-sm">{row.lines.map((line: any) => <div key={line.line.id} className="flex justify-between gap-4"><span>{line.item?.name || "Item"}</span><span className="font-medium">{line.line.requestedQty} diminta · {line.line.approvedQty} dipindahkan</span></div>)}</div>
       </div>)}{!sortedRequests.length && <EmptyState title="Belum ada permintaan" text="Buat permintaan pertama untuk memulai." />}</div></CardContent>
     </Card>
-  </div>;
+    </div>
 
-  {reviewOpen && <div className="fixed inset-0 z-[80] flex items-center justify-center bg-[#07304A]/45 p-3 backdrop-blur-sm sm:p-6" role="dialog" aria-modal="true" aria-labelledby="request-review-title">
+    {reviewOpen && <div className="fixed inset-0 z-[80] flex items-center justify-center bg-[#07304A]/45 p-3 backdrop-blur-sm sm:p-6" role="dialog" aria-modal="true" aria-labelledby="request-review-title">
     <div className="flex max-h-[92vh] w-full max-w-5xl flex-col overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-2xl">
       <div className="border-b border-slate-100 px-5 py-4 sm:px-7 sm:py-5">
         <div className="flex items-start justify-between gap-4"><div><p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-teal-700">Final check</p><h2 id="request-review-title" className="mt-1 text-xl font-semibold text-[#07304A] sm:text-2xl">Review permintaan sebelum dikirim</h2><p className="mt-1 text-sm text-slate-500">Pastikan ruangan, tanggal kebutuhan, nama barang, dan jumlah sudah benar.</p></div><button type="button" aria-label="Tutup review" onClick={() => setReviewOpen(false)} className="rounded-xl p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-700">×</button></div>
@@ -2227,7 +2228,8 @@ function RequestsView({ requests, rooms, items, warehouses, isAdmin, currentUser
       </div><div className="mt-4 rounded-2xl border border-[#9CCED8] bg-[#E6F4F7] p-4 text-sm text-[#315563]"><strong>Final check:</strong> setelah dikonfirmasi, permintaan langsung masuk ke antrean Kepala Gudang.</div></div>
       <div className="flex flex-col-reverse gap-2 border-t border-slate-100 bg-white px-5 py-4 sm:flex-row sm:justify-end sm:px-7"><Button type="button" variant="outline" onClick={() => setReviewOpen(false)} disabled={busy}>Kembali edit</Button><Button type="button" disabled={busy || !selectedRoom || selectedLockedByOther || lines.some((x: Line) => !x.itemId || Number(x.requestedQty) < 1)} onClick={() => { setReviewOpen(false); onCreate({ roomId: selectedRoom, requestDate, priority, notes, lines }); }}><Truck size={16} className="mr-2" />Konfirmasi & kirim</Button></div>
     </div>
-  </div>}
+    </div>}
+  </>;
 }
 function StockOpnameView({ stock, items, onSubmit, busy }: any) {
   type OpnameRow = { itemId: number; sku: string; name: string; unit: string; systemQty: number; physicalQty: string; };
