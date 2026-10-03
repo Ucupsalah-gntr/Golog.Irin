@@ -2183,7 +2183,22 @@ function RequestsView({ requests, rooms, items, warehouses, isAdmin, currentUser
           <Button variant="outline" size="sm" onClick={() => setLines([...lines, { itemId: 0, requestedQty: 1 }])}>+ Tambah item</Button>
         </div>
         <div className="mt-5"><Field label="Catatan"><Textarea value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Keperluan atau keterangan permintaan" /></Field></div>
-        <Button className="mt-5 w-full" disabled={busy || !selectedRoom || selectedLockedByOther || lines.some((x: Line) => !x.itemId || x.requestedQty < 1)} onClick={() => setReviewOpen(true)}><ClipboardCheck size={16} className="mr-2" />Review & cek {total} unit</Button>
+        <Button className="mt-5 w-full" disabled={busy} onClick={() => {
+          if (!selectedRoom) {
+            toast.error("Pilih ruangan aktif terlebih dahulu.");
+            return;
+          }
+          if (selectedLockedByOther) {
+            toast.error(`Ruangan ${selectedRoomName || "ini"} sudah memiliki PIC lain untuk tanggal kebutuhan tersebut.`);
+            return;
+          }
+          const invalidLine = lines.find((x: Line) => !x.itemId || Number(x.requestedQty) < 1);
+          if (invalidLine) {
+            toast.error("Lengkapi nama barang dan jumlah setiap item sebelum masuk Review.");
+            return;
+          }
+          setReviewOpen(true);
+        }}><ClipboardCheck size={16} className="mr-2" />Review & cek {total} unit</Button>
       </CardContent>
     </Card>
 
