@@ -2184,22 +2184,33 @@ function RequestsView({ requests, rooms, items, warehouses, isAdmin, currentUser
           <Button variant="outline" size="sm" onClick={() => setLines([...lines, { itemId: 0, requestedQty: 1 }])}>+ Tambah item</Button>
         </div>
         <div className="mt-5"><Field label="Catatan"><Textarea value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Keperluan atau keterangan permintaan" /></Field></div>
-        <Button type="button" className="mt-5 w-full" onClick={() => {
-          if (!selectedRoom) {
-            toast.error("Pilih ruangan aktif terlebih dahulu.");
-            return;
-          }
-          if (selectedLockedByOther) {
-            toast.error(`Ruangan ${selectedRoomName || "ini"} sudah memiliki PIC lain untuk tanggal kebutuhan tersebut.`);
-            return;
-          }
-          const invalidLine = lines.find((x: Line) => !x.itemId || Number(x.requestedQty) < 1);
-          if (invalidLine) {
-            toast.error("Lengkapi nama barang dan jumlah setiap item sebelum masuk Review.");
-            return;
-          }
-          setReviewOpen(true);
-        }}><ClipboardCheck size={16} className="mr-2" />Review & cek {total} unit</Button>
+        <button
+          type="button"
+          className="mt-5 flex h-10 w-full items-center justify-center gap-2 rounded-md border-2 border-primary bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow-sm transition-all hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          onPointerDown={(event) => {
+            event.preventDefault();
+          }}
+          onClick={(event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            if (!selectedRoom) {
+              toast.error("Pilih ruangan aktif terlebih dahulu.");
+              return;
+            }
+            if (selectedLockedByOther) {
+              toast.error(`Ruangan ${selectedRoomName || "ini"} sudah memiliki PIC lain untuk tanggal kebutuhan tersebut.`);
+              return;
+            }
+            const invalidLine = lines.find((x: Line) => !x.itemId || Number(x.requestedQty) < 1);
+            if (invalidLine) {
+              toast.error("Lengkapi nama barang dan jumlah setiap item sebelum masuk Review.");
+              return;
+            }
+            setReviewOpen(true);
+          }}
+        >
+          <ClipboardCheck size={16} className="mr-2" />Review & cek {total} unit
+        </button>
       </CardContent>
     </Card>
 
