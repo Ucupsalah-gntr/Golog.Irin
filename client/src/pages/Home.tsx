@@ -2198,7 +2198,18 @@ function RequestsView({ requests, rooms, items, warehouses, isAdmin, currentUser
             const exceeds = Boolean(selectedItem && Number(line.requestedQty) > warehouseQty);
             return <div key={index} className="rounded-xl border border-slate-200 bg-slate-50/70 p-3">
               <div className="grid grid-cols-[1fr_90px_auto] gap-2">
-                <select className="h-10 rounded-md border border-input bg-background px-3 text-sm" value={line.itemId || ""} onChange={(e) => setLines(lines.map((x: Line, i: number) => i === index ? { ...x, itemId: Number(e.target.value) } : x))}><option value="">Pilih barang</option>{items.map((item: any) => <option key={item.id} value={item.id}>{item.name}</option>)}</select>
+                <select className="h-10 rounded-md border border-input bg-background px-3 text-sm" value={line.itemId || ""} onChange={(e) => {
+                  const nextItemId = Number(e.target.value);
+                  if (nextItemId) {
+                    const alreadyUsed = lines.some((x: Line, i: number) => i !== index && Number(x.itemId) === nextItemId);
+                    if (alreadyUsed) {
+                      const duplicateItem = items.find((item: any) => Number(item.id) === nextItemId);
+                      toast.error(`${duplicateItem?.name || "Barang"} sudah ada di daftar permintaan. Ubah jumlah pada baris tersebut.`);
+                      return;
+                    }
+                  }
+                  setLines(lines.map((x: Line, i: number) => i === index ? { ...x, itemId: nextItemId } : x));
+                }}><option value="">Pilih barang</option>{items.map((item: any) => <option key={item.id} value={item.id}>{item.name}</option>)}</select>
                 <Input type="number" min="1" value={line.requestedQty} onChange={(e) => setLines(lines.map((x: Line, i: number) => i === index ? { ...x, requestedQty: Number(e.target.value) } : x))} />
                 <button type="button" className="rounded-lg px-2 text-slate-400 hover:bg-white" onClick={() => setLines(lines.filter((_: Line, i: number) => i !== index))}>×</button>
               </div>
@@ -2228,6 +2239,14 @@ function RequestsView({ requests, rooms, items, warehouses, isAdmin, currentUser
             const invalidLine = lines.find((x: Line) => !x.itemId || Number(x.requestedQty) < 1);
             if (invalidLine) {
               toast.error("Lengkapi nama barang dan jumlah setiap item sebelum masuk Review.");
+              return;
+            }
+            const duplicateItemId = lines.find((line: Line, index: number) =>
+              lines.some((other: Line, otherIndex: number) => otherIndex > index && Number(other.itemId) === Number(line.itemId)),
+            )?.itemId;
+            if (duplicateItemId) {
+              const duplicateItem = items.find((item: any) => Number(item.id) === Number(duplicateItemId));
+              toast.error(`${duplicateItem?.name || "Barang"} muncul lebih dari sekali. Gabungkan jumlahnya pada satu baris sebelum masuk Review.`);
               return;
             }
             setReviewOpen(true);
