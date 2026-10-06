@@ -124,7 +124,7 @@ export default function Home() {
   const [active, setActive] = useState<NavKey>("overview");
   const [mobileOpen, setMobileOpen] = useState(false);
   const [selectedRoom, setSelectedRoom] = useState<number | null>(null);
-  const roomInitUserRef = useRef<string | null>(null);
+  const roomInitUserRef = useRef<number | null>(null);
   const [requestLines, setRequestLines] = useState<Line[]>([{ itemId: 0, requestedQty: 1 }]);
   const [reportMonth, setReportMonth] = useState(getJakartaMonthKeyClient());
   const [roomDemandDays, setRoomDemandDays] = useState<7 | 30 | 90>(30);
