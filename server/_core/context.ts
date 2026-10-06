@@ -108,12 +108,20 @@ export async function createContext(
 
     const requestSupabaseKey = opts.req.get("x-supabase-apikey")?.trim() || "";
     const supabaseKey = ENV.supabasePublishableKey || requestSupabaseKey;
+    const supabaseKeySource = ENV.supabasePublishableKey
+      ? "server-env-or-vite-fallback"
+      : requestSupabaseKey
+        ? "request-header-compatibility"
+        : "none";
 
     console.info("[AuthDiag] request", {
       hasAuthorizationHeader: Boolean(authorizationHeader),
       hasBearerToken: Boolean(token),
       hasSupabaseUrl: Boolean(ENV.supabaseUrl),
       hasSupabaseKey: Boolean(supabaseKey),
+      supabaseKeySource,
+      keyLooksLikePublishable: supabaseKey.startsWith("sb_publishable_"),
+      keyLength: supabaseKey.length,
     });
 
     if (!token) {
