@@ -154,6 +154,9 @@ export default function Home() {
       utils.requests.locks.invalidate();
       setRequestLines([{ itemId: 0, requestedQty: 1 }]);
     },
+    onError: (error) => {
+      toast.error(error instanceof Error ? error.message : "Permintaan gagal diajukan.");
+    },
   });
   const verifyRequest = trpc.requests.verify.useMutation({
     onSuccess: () => {
@@ -388,7 +391,7 @@ export default function Home() {
             {active === "overview" && <Overview dashboard={dashboard.data} isAdmin={isAdmin} onGo={go} report={isAdmin ? monthlyReport.data : null} requests={requests.data ?? []} userName={user?.name || user?.username || "Kepala Gudang"} unreadNotificationCount={unreadNotificationCount} onOpenNotifications={() => setNotificationOpen(true)} />}
             {active === "stock" && <StockView stock={stock} isAdmin={isAdmin} items={items} warehouses={warehouses} onCreateItem={(input: any) => createItem.mutate(input)} busy={createItem.isPending} onImport={(rows: any[]) => importItems.mutate({ rows })} importBusy={importItems.isPending} focusItemId={notificationTarget?.nav === "stock" ? notificationTarget.itemId : undefined} />}
             {active === "inbound" && <InboundView items={items} warehouses={warehouses} onSubmit={(input: any) => createInbound.mutate(input)} busy={createInbound.isPending} />}
-            {active === "requests" && <RequestsView requests={requests.data ?? []} rooms={rooms} items={items} warehouses={warehouses} isAdmin={isAdmin} currentUserId={currentUser.data?.id} todayRoomLocks={todayRoomLocks.data ?? []} selectedRoom={selectedRoom} selectedRoomName={selectedRoomName} setSelectedRoom={setSelectedRoom} accessibleRooms={accessibleRooms} roomAccessLoading={roomAccess.isLoading} roomAccessError={roomAccessErrorMessage} onRetryRoomAccess={() => roomAccess.refetch()} lines={requestLines} setLines={setRequestLines} total={requestTotal} onCreate={(input: any) => createRequest.mutate(input)} onVerify={(input: any) => verifyRequest.mutate(input)} busy={createRequest.isPending || verifyRequest.isPending} focusRequestId={notificationTarget?.nav === "requests" ? notificationTarget.requestId : undefined} />}
+            {active === "requests" && <RequestsView requests={requests.data ?? []} rooms={rooms} items={items} warehouses={warehouses} isAdmin={isAdmin} currentUserId={currentUser.data?.id} todayRoomLocks={todayRoomLocks.data ?? []} selectedRoom={selectedRoom} selectedRoomName={selectedRoomName} setSelectedRoom={setSelectedRoom} accessibleRooms={accessibleRooms} roomAccessLoading={roomAccess.isLoading} roomAccessError={roomAccessErrorMessage} onRetryRoomAccess={() => roomAccess.refetch()} lines={requestLines} setLines={setRequestLines} total={requestTotal} onCreate={(input: any) => createRequest.mutateAsync(input)} onVerify={(input: any) => verifyRequest.mutate(input)} busy={createRequest.isPending || verifyRequest.isPending} focusRequestId={notificationTarget?.nav === "requests" ? notificationTarget.requestId : undefined} />}
             {active === "adjustments" && <AdjustmentsView adjustments={adjustments.data ?? []} items={items} rooms={rooms} onSubmit={(input: any) => createAdjustment.mutate(input)} busy={createAdjustment.isPending} />}
             {active === "stocktake" && <StockOpnameView stock={stock} items={items} onSubmit={(input: any) => createBulkStocktake.mutate(input)} busy={createBulkStocktake.isPending} />}
             {active === "reports" && <ReportsView report={monthlyReport.data} month={reportMonth} onMonthChange={setReportMonth} />}
@@ -2274,7 +2277,15 @@ function RequestsView({ requests, rooms, items, warehouses, isAdmin, currentUser
       <div className="shrink-0 border-t border-slate-200 bg-white px-4 pb-[max(14px,env(safe-area-inset-bottom))] pt-3 shadow-[0_-8px_20px_rgba(7,48,74,0.06)] sm:px-7 sm:py-4 sm:shadow-none">
         <div className="flex flex-col gap-2 sm:flex-row sm:justify-end">
           <Button type="button" variant="outline" className="order-2 w-full sm:order-1 sm:w-auto" onClick={() => setReviewOpen(false)} disabled={busy}>Kembali edit</Button>
-          <Button type="button" className="order-1 w-full sm:order-2 sm:w-auto" disabled={busy || !selectedRoom || selectedLockedByOther || lines.some((x: Line) => !x.itemId || Number(x.requestedQty) < 1)} onClick={() => { setReviewOpen(false); onCreate({ roomId: selectedRoom, requestDate, priority, notes, lines }); }}><Truck size={16} className="mr-2" />Konfirmasi & kirim</Button>
+          <Button type="button" className="order-1 w-full sm:order-2 sm:w-auto" disabled={busy || !selectedRoom || selectedLockedByOther || lines.some((x: Line) => !x.itemId || Number(x.requestedQty) < 1)} onClick={async () => {
+            try {
+              await onCreate({ roomId: selectedRoom, requestDate, priority, notes, lines });
+              setReviewOpen(false);
+            } catch {
+              // onError on the mutation already presents the server message.
+              // Keep the Review modal open so the user can correct/retry.
+            }
+          }}><Truck size={16} className="mr-2" />Konfirmasi & kirim</Button>
         </div>
       </div>
     </div>
