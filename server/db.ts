@@ -89,15 +89,64 @@ export async function upsertUser(user: InsertUser): Promise<User | undefined> {
   return inserted[0];
 }
 
+function getDatabaseErrorDetails(error: unknown) {
+  let current: unknown = error;
+  for (let depth = 0; depth < 5 && current; depth += 1) {
+    if (typeof current === "object" && current !== null) {
+      const candidate = current as {
+        code?: unknown;
+        message?: unknown;
+        cause?: unknown;
+      };
+
+      if (
+        typeof candidate.code === "string" ||
+        typeof candidate.message === "string"
+      ) {
+        return {
+          code: typeof candidate.code === "string" ? candidate.code : null,
+          message:
+            typeof candidate.message === "string"
+              ? candidate.message.split("\\n")[0]
+              : null,
+        };
+      }
+
+      current = candidate.cause;
+      continue;
+    }
+
+    break;
+  }
+
+  return { code: null, message: null };
+}
+
 export async function getUserByAuthUserId(authUserId: string) {
   const db = await getDb();
-  if (!db) return undefined;
-  const result = await db
-    .select()
-    .from(users)
-    .where(eq(users.authUserId, authUserId))
-    .limit(1);
-  return result[0];
+  if (!db) {
+    console.warn("[DBDiag] database unavailable");
+    return undefined;
+  }
+
+  try {
+    const result = await db
+      .select()
+      .from(users)
+      .where(eq(users.authUserId, authUserId))
+      .limit(1);
+    return result[0];
+  } catch (error) {
+    const details = getDatabaseErrorDetails(error);
+
+    console.warn("[DBDiag] getUserByAuthUserId failed", {
+      code: details.code,
+      message: details.message,
+      errorName: error instanceof Error ? error.name : null,
+    });
+
+    throw error;
+  }
 }
 
 export async function getUserByUsername(username: string) {
