@@ -124,12 +124,50 @@ function getDatabaseErrorDetails(error: unknown) {
 
 export async function getUserByAuthUserId(authUserId: string) {
   const db = await getDb();
-  if (!db) {
+  if (!db || !_pool) {
     console.warn("[DBDiag] database unavailable");
     return undefined;
   }
 
   try {
+    // Temporary raw pg probe: Drizzle can wrap the underlying PostgreSQL
+    // error as a generic Error, so this gives us the native connection/query
+    // diagnostics without exposing the connection string or credentials.
+    try {
+      await _pool.query("select 1 as ok");
+      console.info("[DBDiag] raw pg connectivity", { ok: true });
+    } catch (error) {
+      const details = getDatabaseErrorDetails(error);
+      console.warn("[DBDiag] raw pg connectivity", {
+        ok: false,
+        code: details.code,
+        message: details.message,
+        errorName: error instanceof Error ? error.name : null,
+      });
+      throw error;
+    }
+
+    try {
+      const probe = await _pool.query(
+        'select "id" from "users" where "auth_user_id" = $1 limit 1',
+        [authUserId],
+      );
+
+      console.info("[DBDiag] raw users lookup", {
+        ok: true,
+        found: probe.rows.length > 0,
+      });
+    } catch (error) {
+      const details = getDatabaseErrorDetails(error);
+      console.warn("[DBDiag] raw users lookup", {
+        ok: false,
+        code: details.code,
+        message: details.message,
+        errorName: error instanceof Error ? error.name : null,
+      });
+      throw error;
+    }
+
     const result = await db
       .select()
       .from(users)
