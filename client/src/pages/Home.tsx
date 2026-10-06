@@ -1,4 +1,4 @@
-import { type FormEvent, useEffect, useMemo, useState } from "react";
+import { type FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import * as XLSX from "xlsx";
 import { computeMonthlyPivot } from "@shared/monthly-pivot";
 import { importTemplateCsv, validateItemImport, type ImportPreview } from "@shared/item-import";
@@ -124,6 +124,7 @@ export default function Home() {
   const [active, setActive] = useState<NavKey>("overview");
   const [mobileOpen, setMobileOpen] = useState(false);
   const [selectedRoom, setSelectedRoom] = useState<number | null>(null);
+  const roomInitUserRef = useRef<string | null>(null);
   const [requestLines, setRequestLines] = useState<Line[]>([{ itemId: 0, requestedQty: 1 }]);
   const [reportMonth, setReportMonth] = useState(getJakartaMonthKeyClient());
   const [roomDemandDays, setRoomDemandDays] = useState<7 | 30 | 90>(30);
@@ -328,21 +329,37 @@ export default function Home() {
   }, [active, isAdmin]);
 
   useEffect(() => {
-    if (isAdmin || !roomAccess.data) return;
+    if (isAdmin || !user?.id) {
+      roomInitUserRef.current = null;
+      return;
+    }
+
+    if (!roomAccess.data) return;
+
     const accessIds = accessibleRooms.map((room: any) => Number(room.id));
     if (!accessIds.length) {
       if (selectedRoom !== null) setSelectedRoom(null);
+      roomInitUserRef.current = user.id;
       return;
     }
-    const stored = window.sessionStorage.getItem(`gologirin-active-room:${user?.id ?? "unknown"}`);
-    const storedId = stored ? Number(stored) : null;
-    const nextRoomId = storedId && accessIds.includes(storedId)
-      ? storedId
-      : dashboard.data?.roomId && accessIds.includes(Number(dashboard.data.roomId))
-        ? Number(dashboard.data.roomId)
-        : accessIds[0];
-    if (nextRoomId !== selectedRoom) setSelectedRoom(nextRoomId);
-  }, [dashboard.data?.roomId, isAdmin, roomAccess.data, user?.id, selectedRoom, accessibleRooms.map((room: any) => room.id).join(",")]);
+
+    // Restore the persisted room only once per user session.
+    // Never re-read sessionStorage on every selectedRoom/dashboard change,
+    // otherwise a fresh room choice can be immediately overwritten by the old room.
+    if (roomInitUserRef.current !== user.id) {
+      const stored = window.sessionStorage.getItem(`gologirin-active-room:${user.id}`);
+      const storedId = stored ? Number(stored) : null;
+      const nextRoomId = storedId && accessIds.includes(storedId) ? storedId : accessIds[0];
+      roomInitUserRef.current = user.id;
+      if (nextRoomId !== selectedRoom) setSelectedRoom(nextRoomId);
+      return;
+    }
+
+    // Keep the current choice while it's valid; only recover if access changed.
+    if (selectedRoom !== null && !accessIds.includes(Number(selectedRoom))) {
+      setSelectedRoom(accessIds[0]);
+    }
+  }, [isAdmin, roomAccess.data, user?.id, selectedRoom, accessibleRooms.map((room: any) => room.id).join(",")]);
 
   useEffect(() => {
     if (!isAdmin && user?.id && selectedRoom !== null) {
