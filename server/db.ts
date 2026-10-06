@@ -30,7 +30,7 @@ function describeDatabaseUrl(value: string) {
       hostname: url.hostname,
       port: url.port || null,
       username: url.username || null,
-      database: url.pathname.replace(/^\\/+/, "") || null,
+      database: url.pathname.replace(/^\/+/, "") || null,
       hasPassword: Boolean(url.password),
     };
   } catch {
