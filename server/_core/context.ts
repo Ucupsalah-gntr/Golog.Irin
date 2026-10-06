@@ -206,9 +206,29 @@ export async function createContext(
       });
     }
   } catch (error) {
+    const dbError =
+      typeof error === "object" && error !== null
+        ? (error as {
+            code?: unknown;
+            detail?: unknown;
+            hint?: unknown;
+            routine?: unknown;
+            severity?: unknown;
+          })
+        : null;
+
     console.warn("[AuthDiag] authentication failed", {
       stage: authStage,
-      error: error instanceof Error ? error.message : String(error),
+      errorName: error instanceof Error ? error.name : null,
+      errorMessage:
+        error instanceof Error ? error.message.split("\\n")[0] : String(error),
+      dbCode: typeof dbError?.code === "string" ? dbError.code : null,
+      dbSeverity:
+        typeof dbError?.severity === "string" ? dbError.severity : null,
+      dbDetail: typeof dbError?.detail === "string" ? dbError.detail : null,
+      dbHint: typeof dbError?.hint === "string" ? dbError.hint : null,
+      dbRoutine:
+        typeof dbError?.routine === "string" ? dbError.routine : null,
     });
     user = null;
   }
