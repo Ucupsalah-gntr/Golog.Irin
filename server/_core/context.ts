@@ -50,6 +50,43 @@ async function getSupabaseAuthUser(
   });
 
   if (!response.ok) {
+    let errorCode: string | null = null;
+    let errorMessage: string | null = null;
+
+    try {
+      const body = (await response.json()) as {
+        code?: unknown;
+        error?: unknown;
+        error_code?: unknown;
+        msg?: unknown;
+        message?: unknown;
+      };
+
+      errorCode =
+        typeof body.code === "string"
+          ? body.code
+          : typeof body.error_code === "string"
+            ? body.error_code
+            : typeof body.error === "string"
+              ? body.error
+              : null;
+
+      errorMessage =
+        typeof body.msg === "string"
+          ? body.msg
+          : typeof body.message === "string"
+            ? body.message
+            : null;
+    } catch {
+      // Keep diagnostics safe even when Supabase does not return JSON.
+    }
+
+    console.warn("[AuthDiag] Supabase rejection", {
+      status: response.status,
+      errorCode,
+      errorMessage,
+    });
+
     console.warn("[Auth] Supabase /auth/v1/user returned", response.status);
     return null;
   }
