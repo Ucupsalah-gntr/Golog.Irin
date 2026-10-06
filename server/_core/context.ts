@@ -32,13 +32,21 @@ function usernameFromAuthUser(user: SupabaseAuthUser) {
   return at > 0 ? email.slice(0, at) : "";
 }
 
-async function getSupabaseAuthUser(accessToken: string, supabaseKey: string): Promise<SupabaseAuthUser | null> {
+async function getSupabaseAuthUser(
+  accessToken: string,
+  supabaseKey: string,
+): Promise<SupabaseAuthUser | null> {
   const response = await fetch(`${ENV.supabaseUrl}/auth/v1/user`, {
     method: "GET",
     headers: {
       apikey: supabaseKey,
       Authorization: `Bearer ${accessToken}`,
     },
+  });
+
+  console.info("[AuthDiag] Supabase validation", {
+    status: response.status,
+    ok: response.ok,
   });
 
   if (!response.ok) {
@@ -54,9 +62,23 @@ export async function createContext(
   opts: CreateExpressContextOptions,
 ): Promise<TrpcContext> {
   let user: User | null = null;
+  let authStage = "start";
 
   try {
-    const token = getBearerToken(opts.req.get("authorization"));
+    authStage = "request";
+    const authorizationHeader = opts.req.get("authorization");
+    const token = getBearerToken(authorizationHeader);
+
+    const requestSupabaseKey = opts.req.get("x-supabase-apikey")?.trim() || "";
+    const supabaseKey = ENV.supabasePublishableKey || requestSupabaseKey;
+
+    console.info("[AuthDiag] request", {
+      hasAuthorizationHeader: Boolean(authorizationHeader),
+      hasBearerToken: Boolean(token),
+      hasSupabaseUrl: Boolean(ENV.supabaseUrl),
+      hasSupabaseKey: Boolean(supabaseKey),
+    });
+
     if (!token) {
       return { req: opts.req, res: opts.res, user: null };
     }
@@ -64,15 +86,18 @@ export async function createContext(
     // The API key used to validate a user JWT is server configuration.
     // Prefer the server-side value so a stale/mismatched browser build cannot
     // make production authentication depend on an old client key.
-    const requestSupabaseKey = opts.req.get("x-supabase-apikey")?.trim() || "";
-    const supabaseKey = ENV.supabasePublishableKey || requestSupabaseKey;
-
     if (!ENV.supabaseUrl || !supabaseKey) {
       console.warn("[Auth] Supabase server environment is not configured.");
       return { req: opts.req, res: opts.res, user: null };
     }
 
+    authStage = "supabase-user";
     const authUser = await getSupabaseAuthUser(token, supabaseKey);
+
+    console.info("[AuthDiag] auth user", {
+      found: Boolean(authUser),
+    });
+
     if (!authUser) {
       return { req: opts.req, res: opts.res, user: null };
     }
@@ -88,7 +113,12 @@ export async function createContext(
       username,
     });
 
+    authStage = "local-user";
     user = (await getUserByAuthUserId(authUser.id)) ?? null;
+
+    console.info("[AuthDiag] local profile", {
+      foundByAuthUserId: Boolean(user),
+    });
 
     if (!user) {
       const existingProfile = await getUserByUsername(username);
@@ -114,6 +144,7 @@ export async function createContext(
     }
 
     if (user) {
+      authStage = "upsert-user";
       user = await upsertUser({
         id: user.id,
         username: user.username,
@@ -124,9 +155,16 @@ export async function createContext(
         roomId: user.roomId,
         lastSignedIn: new Date(),
       }) ?? user;
+
+      console.info("[AuthDiag] context user", {
+        found: Boolean(user),
+      });
     }
   } catch (error) {
-    console.warn("[Auth] Supabase authentication failed:", error);
+    console.warn("[AuthDiag] authentication failed", {
+      stage: authStage,
+      error: error instanceof Error ? error.message : String(error),
+    });
     user = null;
   }
 
