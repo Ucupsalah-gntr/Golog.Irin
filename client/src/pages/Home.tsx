@@ -1866,11 +1866,15 @@ function RequestsView({ requests, rooms, items, warehouses, isAdmin, currentUser
     window.requestAnimationFrame(() => element?.scrollIntoView({ behavior: "smooth", block: "center" }));
   }, [focusRequestId]);
 
+  const roomRequests = selectedRoom
+    ? requests.filter((row: any) => Number(row.request.roomId) === Number(selectedRoom))
+    : [];
+
   const filtered = filter === "all"
-    ? requests
+    ? roomRequests
     : filter === "pending"
-      ? requests.filter((row: any) => row.request.status === "submitted")
-      : requests.filter((row: any) => row.request.status === filter);
+      ? roomRequests.filter((row: any) => row.request.status === "submitted")
+      : roomRequests.filter((row: any) => row.request.status === filter);
 
   const priorityRank: Record<string, number> = { darurat: 0, mendesak: 1, normal: 2 };
   const sortedRequests = [...filtered].sort((a: any, b: any) => {
@@ -1886,11 +1890,11 @@ function RequestsView({ requests, rooms, items, warehouses, isAdmin, currentUser
   });
 
   const requestCounts = {
-    all: requests.length,
-    pending: requests.filter((row: any) => row.request.status === "submitted").length,
-    partial: requests.filter((row: any) => row.request.status === "partial").length,
-    approved: requests.filter((row: any) => row.request.status === "approved").length,
-    rejected: requests.filter((row: any) => row.request.status === "rejected").length,
+    all: roomRequests.length,
+    pending: roomRequests.filter((row: any) => row.request.status === "submitted").length,
+    partial: roomRequests.filter((row: any) => row.request.status === "partial").length,
+    approved: roomRequests.filter((row: any) => row.request.status === "approved").length,
+    rejected: roomRequests.filter((row: any) => row.request.status === "rejected").length,
   };
 
   const requestLocks = trpc.requests.locks.useQuery({ requestDate }, { enabled: Boolean(requestDate) });
@@ -2218,11 +2222,39 @@ function RequestsView({ requests, rooms, items, warehouses, isAdmin, currentUser
     </Card>
 
     <Card className="border-slate-200/80 shadow-sm">
-      <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"><div><CardTitle>Daftar permintaan</CardTitle><p className="mt-1 text-sm text-slate-500">Riwayat permintaan yang Anda buat</p></div><select className="h-9 rounded-lg border-2 border-[#9CCED8] bg-[#FFFFFF] px-2 text-xs text-[#07304A]" value={filter} onChange={(e) => setFilter(e.target.value)}><option value="all">Semua status</option><option value="submitted">Diajukan</option><option value="approved">Disetujui</option><option value="partial">Sebagian</option><option value="rejected">Ditolak</option></select></CardHeader>
-      <CardContent><div className="space-y-3">{sortedRequests.map((row: any) => <div key={row.request.id} className="rounded-2xl border border-slate-200 p-4">
-        <div className="flex flex-wrap items-start justify-between gap-3"><div><div className="flex items-center gap-2"><span className="font-semibold">{row.request.requestNo}</span><Badge className={statusTone(row.request.status)}>{statusLabel(row.request.status)}</Badge></div><p className="mt-1 text-sm text-slate-500">{row.room?.name || "Ruangan"} · {formatDate(row.request.createdAt)} · <span className="capitalize">{row.request.priority}</span></p></div></div>
-        <div className="mt-4 grid gap-2 border-t border-slate-100 pt-3 text-sm">{row.lines.map((line: any) => <div key={line.line.id} className="flex justify-between gap-4"><span>{line.item?.name || "Item"}</span><span className="font-medium">{line.line.requestedQty} diminta · {line.line.approvedQty} dipindahkan</span></div>)}</div>
-      </div>)}{!sortedRequests.length && <EmptyState title="Belum ada permintaan" text="Buat permintaan pertama untuk memulai." />}</div></CardContent>
+      <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+      <div className="min-w-0">
+        <CardTitle>Daftar permintaan{selectedRoomName ? ` · ${selectedRoomName}` : ""}</CardTitle>
+        <p className="mt-1 text-sm text-slate-500">
+          {selectedRoomName ? `Riwayat permintaan untuk ${selectedRoomName}.` : "Pilih ruangan untuk melihat daftar permintaannya."}
+        </p>
+      </div>
+      <select className="h-9 rounded-lg border-2 border-[#9CCED8] bg-[#FFFFFF] px-2 text-xs text-[#07304A]" value={filter} onChange={(e) => setFilter(e.target.value)}>
+        <option value="all">Semua status</option>
+        <option value="submitted">Diajukan</option>
+        <option value="approved">Disetujui</option>
+        <option value="partial">Sebagian</option>
+        <option value="rejected">Ditolak</option>
+      </select>
+    </CardHeader>
+    <CardContent>
+      {!selectedRoom ? (
+        <EmptyState title="Pilih ruangan terlebih dahulu" text="Daftar permintaan akan mengikuti ruangan yang sedang dipilih." />
+      ) : (
+        <div className="max-h-[420px] space-y-3 overflow-y-auto pr-1 sm:max-h-[520px]">
+          {sortedRequests.map((row: any) => <div key={row.request.id} className="rounded-2xl border border-slate-200 p-4">
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <div className="flex items-center gap-2"><span className="font-semibold">{row.request.requestNo}</span><Badge className={statusTone(row.request.status)}>{statusLabel(row.request.status)}</Badge></div>
+                <p className="mt-1 text-sm text-slate-500">{row.room?.name || "Ruangan"} · {formatDate(row.request.createdAt)} · <span className="capitalize">{row.request.priority}</span></p>
+              </div>
+            </div>
+            <div className="mt-4 grid gap-2 border-t border-slate-100 pt-3 text-sm">{row.lines.map((line: any) => <div key={line.line.id} className="flex justify-between gap-4"><span>{line.item?.name || "Item"}</span><span className="font-medium">{line.line.requestedQty} diminta · {line.line.approvedQty} dipindahkan</span></div>)}</div>
+          </div>)}
+          {!sortedRequests.length && <EmptyState title="Belum ada permintaan" text={`Belum ada permintaan untuk ${selectedRoomName || "ruangan ini"} dengan filter tersebut.`} />}
+        </div>
+      )}
+    </CardContent>
     </Card>
     </div>
 
