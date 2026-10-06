@@ -27,6 +27,20 @@ queryClient.getMutationCache().subscribe((event) => {
   }
 });
 
+if (typeof window !== "undefined") {
+  (window as any).__gologirinAuthDiagnostic = async () => {
+    const { data, error } = await supabase.auth.getSession();
+
+    console.log("[AUTH DIAGNOSTIC]", {
+      hasSession: Boolean(data.session),
+      hasAccessToken: Boolean(data.session?.access_token),
+      userId: data.session?.user?.id ?? null,
+      email: data.session?.user?.email ?? null,
+      error: error?.message ?? null,
+    });
+  };
+}
+
 const trpcClient = trpc.createClient({
   links: [
     httpBatchLink({
