@@ -22,26 +22,40 @@ import { isLowStock } from "../shared/inventory.ts";
 let _db: ReturnType<typeof drizzle> | null = null;
 let _pool: Pool | null = null;
 
+import { createHash } from "node:crypto";
+
 function describeDatabaseUrl(value: string) {
+  const raw = value.trim();
+
   try {
-    const url = new URL(value);
+    const url = new URL(raw);
     return {
+      parseError: false,
       protocol: url.protocol,
       hostname: url.hostname,
       port: url.port || null,
       username: url.username || null,
       database: url.pathname.replace(/^\/+/, "") || null,
       hasPassword: Boolean(url.password),
+      length: raw.length,
+      fingerprint: createHash("sha256").update(raw).digest("hex").slice(0, 12),
     };
   } catch {
+    const poolerMatch = raw.match(/@([^:/?#]+)(?::(\d+))?(?:[/?#]|$)/);
+    const protocolMatch = raw.match(/^([a-z][a-z0-9+.-]*):\/\//i);
+
     return {
-      protocol: null,
-      hostname: null,
-      port: null,
-      username: null,
-      database: null,
-      hasPassword: false,
       parseError: true,
+      protocol: protocolMatch?.[1] ? `${protocolMatch[1]}:` : null,
+      hostname: poolerMatch?.[1] ?? null,
+      port: poolerMatch?.[2] ?? null,
+      length: raw.length,
+      fingerprint: createHash("sha256").update(raw).digest("hex").slice(0, 12),
+      looksLikePostgresUrl: /^postgres(?:ql)?:\/\//i.test(raw),
+      containsSupabasePoolerHost: raw.includes(".pooler.supabase.com"),
+      containsProjectRef: raw.includes("mqjqdgduokpxwobianmf"),
+      containsAtSymbol: raw.includes("@"),
+      containsPort5432: /:5432(?:[/?#]|$)/.test(raw),
     };
   }
 }
