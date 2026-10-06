@@ -32,10 +32,7 @@ function usernameFromAuthUser(user: SupabaseAuthUser) {
   return at > 0 ? email.slice(0, at) : "";
 }
 
-async function getSupabaseAuthUser(
-  accessToken: string,
-  supabaseKey: string,
-): Promise<SupabaseAuthUser | null> {
+async function getSupabaseAuthUser(accessToken: string, supabaseKey: string): Promise<SupabaseAuthUser | null> {
   const response = await fetch(`${ENV.supabaseUrl}/auth/v1/user`, {
     method: "GET",
     headers: {
@@ -44,49 +41,7 @@ async function getSupabaseAuthUser(
     },
   });
 
-  console.info("[AuthDiag] Supabase validation", {
-    status: response.status,
-    ok: response.ok,
-  });
-
   if (!response.ok) {
-    let errorCode: string | null = null;
-    let errorMessage: string | null = null;
-
-    try {
-      const body = (await response.json()) as {
-        code?: unknown;
-        error?: unknown;
-        error_code?: unknown;
-        msg?: unknown;
-        message?: unknown;
-      };
-
-      errorCode =
-        typeof body.code === "string"
-          ? body.code
-          : typeof body.error_code === "string"
-            ? body.error_code
-            : typeof body.error === "string"
-              ? body.error
-              : null;
-
-      errorMessage =
-        typeof body.msg === "string"
-          ? body.msg
-          : typeof body.message === "string"
-            ? body.message
-            : null;
-    } catch {
-      // Keep diagnostics safe even when Supabase does not return JSON.
-    }
-
-    console.warn("[AuthDiag] Supabase rejection", {
-      status: response.status,
-      errorCode,
-      errorMessage,
-    });
-
     console.warn("[Auth] Supabase /auth/v1/user returned", response.status);
     return null;
   }
@@ -99,31 +54,9 @@ export async function createContext(
   opts: CreateExpressContextOptions,
 ): Promise<TrpcContext> {
   let user: User | null = null;
-  let authStage = "start";
 
   try {
-    authStage = "request";
-    const authorizationHeader = opts.req.get("authorization");
-    const token = getBearerToken(authorizationHeader);
-
-    const requestSupabaseKey = opts.req.get("x-supabase-apikey")?.trim() || "";
-    const supabaseKey = ENV.supabasePublishableKey || requestSupabaseKey;
-    const supabaseKeySource = ENV.supabasePublishableKey
-      ? "server-env-or-vite-fallback"
-      : requestSupabaseKey
-        ? "request-header-compatibility"
-        : "none";
-
-    console.info("[AuthDiag] request", {
-      hasAuthorizationHeader: Boolean(authorizationHeader),
-      hasBearerToken: Boolean(token),
-      hasSupabaseUrl: Boolean(ENV.supabaseUrl),
-      hasSupabaseKey: Boolean(supabaseKey),
-      supabaseKeySource,
-      keyLooksLikePublishable: supabaseKey.startsWith("sb_publishable_"),
-      keyLength: supabaseKey.length,
-    });
-
+    const token = getBearerToken(opts.req.get("authorization"));
     if (!token) {
       return { req: opts.req, res: opts.res, user: null };
     }
@@ -131,18 +64,15 @@ export async function createContext(
     // The API key used to validate a user JWT is server configuration.
     // Prefer the server-side value so a stale/mismatched browser build cannot
     // make production authentication depend on an old client key.
+    const requestSupabaseKey = opts.req.get("x-supabase-apikey")?.trim() || "";
+    const supabaseKey = ENV.supabasePublishableKey || requestSupabaseKey;
+
     if (!ENV.supabaseUrl || !supabaseKey) {
       console.warn("[Auth] Supabase server environment is not configured.");
       return { req: opts.req, res: opts.res, user: null };
     }
 
-    authStage = "supabase-user";
     const authUser = await getSupabaseAuthUser(token, supabaseKey);
-
-    console.info("[AuthDiag] auth user", {
-      found: Boolean(authUser),
-    });
-
     if (!authUser) {
       return { req: opts.req, res: opts.res, user: null };
     }
@@ -158,12 +88,7 @@ export async function createContext(
       username,
     });
 
-    authStage = "local-user";
     user = (await getUserByAuthUserId(authUser.id)) ?? null;
-
-    console.info("[AuthDiag] local profile", {
-      foundByAuthUserId: Boolean(user),
-    });
 
     if (!user) {
       const existingProfile = await getUserByUsername(username);
@@ -189,7 +114,6 @@ export async function createContext(
     }
 
     if (user) {
-      authStage = "upsert-user";
       user = await upsertUser({
         id: user.id,
         username: user.username,
@@ -200,36 +124,9 @@ export async function createContext(
         roomId: user.roomId,
         lastSignedIn: new Date(),
       }) ?? user;
-
-      console.info("[AuthDiag] context user", {
-        found: Boolean(user),
-      });
     }
   } catch (error) {
-    const dbError =
-      typeof error === "object" && error !== null
-        ? (error as {
-            code?: unknown;
-            detail?: unknown;
-            hint?: unknown;
-            routine?: unknown;
-            severity?: unknown;
-          })
-        : null;
-
-    console.warn("[AuthDiag] authentication failed", {
-      stage: authStage,
-      errorName: error instanceof Error ? error.name : null,
-      errorMessage:
-        error instanceof Error ? error.message.split("\\n")[0] : String(error),
-      dbCode: typeof dbError?.code === "string" ? dbError.code : null,
-      dbSeverity:
-        typeof dbError?.severity === "string" ? dbError.severity : null,
-      dbDetail: typeof dbError?.detail === "string" ? dbError.detail : null,
-      dbHint: typeof dbError?.hint === "string" ? dbError.hint : null,
-      dbRoutine:
-        typeof dbError?.routine === "string" ? dbError.routine : null,
-    });
+    console.warn("[Auth] Supabase authentication failed:", error);
     user = null;
   }
 
