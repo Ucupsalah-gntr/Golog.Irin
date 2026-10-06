@@ -22,9 +22,35 @@ import { isLowStock } from "../shared/inventory.ts";
 let _db: ReturnType<typeof drizzle> | null = null;
 let _pool: Pool | null = null;
 
+function describeDatabaseUrl(value: string) {
+  try {
+    const url = new URL(value);
+    return {
+      protocol: url.protocol,
+      hostname: url.hostname,
+      port: url.port || null,
+      username: url.username || null,
+      database: url.pathname.replace(/^\\/+/, "") || null,
+      hasPassword: Boolean(url.password),
+    };
+  } catch {
+    return {
+      protocol: null,
+      hostname: null,
+      port: null,
+      username: null,
+      database: null,
+      hasPassword: false,
+      parseError: true,
+    };
+  }
+}
+
 export async function getDb() {
   if (!_db && ENV.databaseUrl) {
     try {
+      console.info("[DBDiag] database target", describeDatabaseUrl(ENV.databaseUrl));
+
       _pool = new Pool({
         connectionString: ENV.databaseUrl,
         max: 1,
