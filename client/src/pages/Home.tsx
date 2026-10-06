@@ -1874,6 +1874,7 @@ function RequestsView({ requests, rooms, items, warehouses, isAdmin, currentUser
   const [filter, setFilter] = useState("all");
   const [approvalQty, setApprovalQty] = useState<Record<string, number>>({});
   const [reviewOpen, setReviewOpen] = useState(false);
+  const [duplicateDialog, setDuplicateDialog] = useState<string | null>(null);
 
   useEffect(() => {
     if (!focusRequestId) return;
@@ -2204,7 +2205,7 @@ function RequestsView({ requests, rooms, items, warehouses, isAdmin, currentUser
                     const alreadyUsed = lines.some((x: Line, i: number) => i !== index && Number(x.itemId) === nextItemId);
                     if (alreadyUsed) {
                       const duplicateItem = items.find((item: any) => Number(item.id) === nextItemId);
-                      toast.error(`${duplicateItem?.name || "Barang"} sudah ada di daftar permintaan. Ubah jumlah pada baris tersebut.`);
+                      setDuplicateDialog(`${duplicateItem?.name || "Barang"} sudah ada di daftar permintaan. Ubah jumlah pada baris tersebut.`);
                       return;
                     }
                   }
@@ -2233,7 +2234,7 @@ function RequestsView({ requests, rooms, items, warehouses, isAdmin, currentUser
               return;
             }
             if (selectedLockedByOther) {
-              toast.error(`Ruangan ${selectedRoomName || "ini"} sudah memiliki PIC lain untuk tanggal kebutuhan tersebut.`);
+              setDuplicateDialog(`Ruangan ${selectedRoomName || "ini"} sudah memiliki PIC lain untuk tanggal kebutuhan tersebut.`);
               return;
             }
             const invalidLine = lines.find((x: Line) => !x.itemId || Number(x.requestedQty) < 1);
@@ -2294,6 +2295,39 @@ function RequestsView({ requests, rooms, items, warehouses, isAdmin, currentUser
     </Card>
     </div>
 
+    {duplicateDialog && (
+      <div
+        className="fixed inset-0 z-[90] flex items-center justify-center bg-[#07304A]/40 px-4 backdrop-blur-sm"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="duplicate-item-title"
+      >
+        <div className="w-full max-w-md overflow-hidden rounded-3xl border border-[#9CCED8] bg-white shadow-2xl">
+          <div className="border-b border-[#D5E8ED] px-5 py-4 sm:px-6">
+            <div className="flex items-start gap-3">
+              <div className="grid h-10 w-10 shrink-0 place-items-center rounded-2xl bg-amber-50 text-amber-600">
+                <ClipboardCheck size={20} />
+              </div>
+              <div className="min-w-0">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-amber-600">Periksa daftar barang</p>
+                <h2 id="duplicate-item-title" className="mt-1 text-lg font-semibold leading-tight text-[#07304A]">Barang sudah dipilih</h2>
+              </div>
+            </div>
+          </div>
+          <div className="px-5 py-5 sm:px-6">
+            <p className="text-sm leading-6 text-[#315563]">{duplicateDialog}</p>
+            <div className="mt-4 rounded-2xl border border-[#FFD500] bg-[#FFF9D9] px-4 py-3 text-xs leading-5 text-[#6d5a2a]">
+              Satu barang cukup dibuat dalam satu baris. Silakan kembali ke baris barang tersebut lalu ubah jumlahnya.
+            </div>
+          </div>
+          <div className="flex justify-end border-t border-[#D5E8ED] bg-[#F8FCFD] px-5 py-4 sm:px-6">
+            <Button type="button" onClick={() => setDuplicateDialog(null)}>
+              Mengerti
+            </Button>
+          </div>
+        </div>
+      </div>
+    )}
     {reviewOpen && <div className="fixed inset-0 z-[80] flex items-end justify-center bg-[#07304A]/45 backdrop-blur-sm sm:items-center sm:p-6" role="dialog" aria-modal="true" aria-labelledby="request-review-title">
     <div className="flex h-[94dvh] w-full max-w-5xl flex-col overflow-hidden rounded-t-[28px] border border-slate-200 bg-white shadow-2xl sm:h-auto sm:max-h-[92dvh] sm:rounded-3xl">
       <div className="shrink-0 border-b border-slate-100 px-5 pb-3 pt-4 sm:px-7 sm:py-5">
