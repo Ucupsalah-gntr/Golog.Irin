@@ -2513,6 +2513,9 @@ function StockOpnameView({ stock, items, warehouses, selectedWarehouseId, setSel
     if (value !== "" && (!/^\d+$/.test(value) || Number(value) < 0)) return;
     setRows((current) => current.map((row) => row.itemId === itemId ? { ...row, physicalQty: value } : row));
   }
+  function markAsSystem(itemId: number, checked: boolean) {
+    setPhysicalQty(itemId, checked ? String(rows.find((row) => row.itemId === itemId)?.systemQty ?? 0) : "");
+  }
   function markAllAsSystem() { setRows((current) => current.map((row) => ({ ...row, physicalQty: String(row.systemQty) }))); }
   function clearAll() { setRows((current) => current.map((row) => ({ ...row, physicalQty: "" }))); }
   function submit() {
@@ -2603,7 +2606,7 @@ function StockOpnameView({ stock, items, warehouses, selectedWarehouseId, setSel
           <div className="overflow-hidden rounded-2xl border-2 border-[#9CCED8] bg-[#FFFFFF]">
             <div className="hidden overflow-x-auto md:block">
               <table className="w-full min-w-[900px] text-left text-sm">
-                <thead className="border-b border-[#B8D5DE] bg-[#F4FAFC] text-[11px] uppercase tracking-[0.12em] text-[#315563]"><tr><th className="px-4 py-3">Barang</th><th className="px-4 py-3 text-right">Sistem</th><th className="px-4 py-3">Stok fisik</th><th className="px-4 py-3 text-right">Selisih</th><th className="px-4 py-3 text-center">Status</th></tr></thead>
+                <thead className="border-b border-[#B8D5DE] bg-[#F4FAFC] text-[11px] uppercase tracking-[0.12em] text-[#315563]"><tr><th className="px-4 py-3">Barang</th><th className="px-4 py-3 text-right">Sistem</th><th className="px-4 py-3">Stok fisik</th><th className="px-4 py-3 text-center">Sesuai</th><th className="px-4 py-3 text-right">Selisih</th><th className="px-4 py-3 text-center">Status</th></tr></thead>
                 <tbody className="divide-y divide-[#C7E0E6]/70">
                   {visibleRows.map((row) => {
                     const meta = rowMeta(row);
@@ -2611,11 +2614,24 @@ function StockOpnameView({ stock, items, warehouses, selectedWarehouseId, setSel
                       <td className="px-4 py-4"><p className="font-semibold text-[#07304A]">{row.name}</p><p className="mt-1 text-xs text-[#55727C]">{row.sku} · {row.unit}</p></td>
                       <td className="px-4 py-4 text-right"><p className="font-semibold text-[#07304A]">{formatNumber(row.systemQty)}</p><p className="mt-1 text-[10px] uppercase tracking-[0.1em] text-[#55727C]">saldo sistem</p></td>
                       <td className="px-4 py-4"><Input type="number" min="0" step="1" value={row.physicalQty} onChange={(e) => setPhysicalQty(row.itemId, e.target.value)} placeholder="Isi hasil hitung" className="h-10 w-40 bg-[#FFFFFF]" /></td>
+                      <td className="px-4 py-4 text-center">
+                        <label className="golog-checkbox justify-center" title="Tandai stok fisik sama dengan saldo sistem">
+                          <input
+                            id={`stocktake-system-match-${row.itemId}`}
+                            type="checkbox"
+                            checked={row.physicalQty !== "" && Number(row.physicalQty) === row.systemQty}
+                            onChange={(e) => markAsSystem(row.itemId, e.target.checked)}
+                            disabled={busy || loading}
+                          />
+                          <span className="cbx" aria-hidden="true"><span className="flip"><span className="front" /><span className="back"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8.2 6.3 11.2 13 4.8" fill="none" /></svg></span></span></span>
+                          <span className="sr-only">Sesuai sistem</span>
+                        </label>
+                      </td>
                       <td className={"px-4 py-4 text-right font-bold " + (meta.difference === null ? "text-[#b1a38f]" : meta.difference > 0 ? "text-[#004E9B]" : meta.difference < 0 ? "text-[#D94A1A]" : "text-[#6d7d3e]")}>{meta.difference === null ? "—" : meta.difference > 0 ? "+" + formatNumber(meta.difference) : formatNumber(meta.difference)}</td>
                       <td className="px-4 py-4 text-center"><Badge className={meta.className}>{meta.label}</Badge></td>
                     </tr>;
                   })}
-                  {!visibleRows.length && <tr><td colSpan={5} className="px-4 py-12 text-center text-sm text-[#55727C]">Tidak ada barang yang cocok dengan filter.</td></tr>}
+                  {!visibleRows.length && <tr><td colSpan={6} className="px-4 py-12 text-center text-sm text-[#55727C]">Tidak ada barang yang cocok dengan filter.</td></tr>}
                 </tbody>
               </table>
             </div>
@@ -2626,7 +2642,20 @@ function StockOpnameView({ stock, items, warehouses, selectedWarehouseId, setSel
                   <div className="flex items-start gap-3"><div className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-[#BAE4F0] text-[#6b573f]"><ClipboardType size={20} /></div><div className="min-w-0 flex-1">
                     <div className="flex items-start justify-between gap-3"><div className="min-w-0"><p className="truncate font-semibold text-[#07304A]">{row.name}</p><p className="mt-1 truncate text-xs text-[#55727C]">{row.sku} · {row.unit}</p></div><Badge className={meta.className}>{meta.label}</Badge></div>
                     <div className="mt-4 grid grid-cols-2 gap-3"><div className="rounded-xl border border-[#B8D5DE] bg-[#F4FAFC]/55 p-3"><p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-[#55727C]">Sistem</p><p className="mt-1 text-lg font-semibold text-[#07304A]">{formatNumber(row.systemQty)}</p></div><div className="rounded-xl border border-[#B8D5DE] bg-[#FFFFFF] p-3"><p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-[#55727C]">Selisih</p><p className={"mt-1 text-lg font-semibold " + (meta.difference === null ? "text-[#b1a38f]" : meta.difference > 0 ? "text-[#004E9B]" : meta.difference < 0 ? "text-[#D94A1A]" : "text-[#6d7d3e]")}>{meta.difference === null ? "—" : meta.difference > 0 ? "+" + formatNumber(meta.difference) : formatNumber(meta.difference)}</p></div></div>
-                    <div className="mt-3"><Field label="Stok fisik"><Input type="number" min="0" step="1" inputMode="numeric" value={row.physicalQty} onChange={(e) => setPhysicalQty(row.itemId, e.target.value)} placeholder="Isi hasil hitung" className="h-11 bg-[#FFFFFF]" /></Field></div>
+                    <div className="mt-3 flex flex-col gap-3">
+                      <Field label="Stok fisik"><Input type="number" min="0" step="1" inputMode="numeric" value={row.physicalQty} onChange={(e) => setPhysicalQty(row.itemId, e.target.value)} placeholder="Isi hasil hitung" className="h-11 bg-[#FFFFFF]" /></Field>
+                      <label className="golog-checkbox self-start" title="Tandai stok fisik sama dengan saldo sistem">
+                        <input
+                          id={`stocktake-system-match-mobile-${row.itemId}`}
+                          type="checkbox"
+                          checked={row.physicalQty !== "" && Number(row.physicalQty) === row.systemQty}
+                          onChange={(e) => markAsSystem(row.itemId, e.target.checked)}
+                          disabled={busy || loading}
+                        />
+                        <span className="cbx" aria-hidden="true"><span className="flip"><span className="front" /><span className="back"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8.2 6.3 11.2 13 4.8" fill="none" /></svg></span></span></span>
+                        <span className="golog-checkbox-label">Sesuai saldo sistem</span>
+                      </label>
+                    </div>
                   </div></div>
                 </div>;
               })}
@@ -2635,7 +2664,7 @@ function StockOpnameView({ stock, items, warehouses, selectedWarehouseId, setSel
           </div>
           <div className="sticky bottom-3 z-10 rounded-2xl border-2 border-[#9CCED8] bg-[#FFFFFF]/95 p-4 shadow-[0_14px_35px_rgba(90,71,56,0.15)] backdrop-blur">
             <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-              <div><p className="text-sm font-semibold text-[#07304A]">Siap disimpan: {formatNumber(checkedRows.length)} barang</p><div className="mt-2 flex flex-wrap gap-2 text-[11px] font-semibold"><span className="rounded-lg border border-[#B8D5DE] bg-[#F4FAFC] px-2.5 py-1 text-[#315563]">Selisih bersih {totalDifference > 0 ? "+" : ""}{formatNumber(totalDifference)}</span>{changedRows.length > 0 && <span className="rounded-lg border border-[#FFB45C] bg-[#FFF6D6] px-2.5 py-1 text-[#FF6500]">{formatNumber(changedRows.length)} koreksi</span>}{allChecked && <span className="rounded-lg border border-[#FFD500] bg-[#E6F4F7] px-2.5 py-1 text-[#004E9B]">Semua SKU diperiksa</span>}</div><p className="mt-2 text-xs leading-5 text-[#55727C]">Barang tanpa selisih tetap tercatat sebagai hasil pemeriksaan dan tidak membuat movement baru.</p></div>
+              <div><p className="text-sm font-semibold text-[#07304A]">Siap disimpan: {formatNumber(checkedRows.length)} barang</p><div className="mt-2 flex flex-wrap gap-2 text-[11px] font-semibold"><span className="rounded-lg border border-[#B8D5DE] bg-[#F4FAFC] px-2.5 py-1 text-[#315563]">Selisih bersih {totalDifference > 0 ? "+" : ""}{formatNumber(totalDifference)}</span>{changedRows.length > 0 && <span className="rounded-lg border border-[#FFB45C] bg-[#FFF6D6] px-2.5 py-1 text-[#FF6500]">{formatNumber(changedRows.length)} koreksi</span>}{allChecked && <span className="rounded-lg border border-[#FFD500] bg-[#E6F4F7] px-2.5 py-1 text-[#004E9B]">Semua SKU diperiksa</span>}</div><p className="mt-2 text-xs leading-5 text-[#55727C]">Barang tanpa selisih tetap tercatat sebagai hasil pemeriksaan dan tidak membuat movement baru. Checklist “Sesuai saldo sistem” hanya mengisi stok fisik dengan saldo sistem sebagai pintasan.</p></div>
               <Button className="w-full sm:w-auto" disabled={busy || loading || !selectedWarehouseId || !checkedRows.length || reason.trim().length < 10} onClick={submit}><ClipboardCheck size={16} className="mr-2" />{busy ? "Menyimpan hasil…" : "Simpan " + formatNumber(checkedRows.length) + " hasil opname"}</Button>
             </div>
           </div>
