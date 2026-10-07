@@ -172,6 +172,30 @@ export async function getWarehouseStockRows() {
   return getStockRowsForRoom(null);
 }
 
+export async function getStockRowsForWarehouse(sourceWarehouseId: number) {
+  const db = await getDb();
+  if (!db) return [];
+
+  return db
+    .select({
+      itemId: items.id,
+      sku: items.sku,
+      name: items.name,
+      category: items.category,
+      unit: items.unit,
+      minStock: items.minStock,
+      movementQty: sql<number>`COALESCE(SUM(${stockMovements.quantity}), 0)`,
+    })
+    .from(items)
+    .leftJoin(stockMovements, and(
+      eq(stockMovements.itemId, items.id),
+      isNull(stockMovements.roomId),
+      eq(stockMovements.sourceWarehouseId, sourceWarehouseId),
+    ))
+    .where(eq(items.active, true))
+    .groupBy(items.id, items.sku, items.name, items.category, items.unit, items.minStock)
+    .orderBy(items.name);
+}
 export async function getRoomStockRows(roomId: number) {
   return getStockRowsForRoom(roomId);
 }
