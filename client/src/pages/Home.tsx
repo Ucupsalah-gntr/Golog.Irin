@@ -386,7 +386,7 @@ export default function Home() {
         <aside className={`${mobileOpen ? "translate-y-0 opacity-100" : "-translate-y-3 opacity-0 pointer-events-none"} fixed left-3 right-3 top-[76px] z-40 max-h-[calc(100vh-92px)] overflow-y-auto rounded-2xl border border-white/10 golog-sidebar text-white shadow-2xl transition-all duration-200 md:pointer-events-auto md:inset-y-0 md:left-0 md:right-auto md:top-0 md:z-30 md:max-h-none md:w-72 md:translate-y-0 md:overflow-y-auto md:rounded-none md:border-0 md:opacity-100 md:shadow-none`}>
           <div className="flex min-h-full flex-col px-5 py-5 md:h-full md:py-6">
             <div className="flex items-center justify-between border-b border-white/10 pb-6"><div className="flex items-center gap-3"><div className="golog-brand-mark grid h-11 w-11 place-items-center rounded-2xl"><Hospital size={22} /></div><div><p className="golog-display text-lg not-italic text-[#FFFFFF]">Golog.Irin</p><p className="text-xs text-[#BAE4F0]/75">Rawat Intensif</p></div></div><button className="md:hidden" onClick={() => setMobileOpen(false)}><X size={18} /></button></div>
-            <div className="mt-7 rounded-xl border border-[#BAE4F0]/15 bg-black/10 p-4"><p className="text-[11px] uppercase tracking-[0.18em] text-[#BAE4F0]/60">Sesi aktif</p><p className="mt-1 truncate font-medium">{user?.name || user?.email || "Pengguna"}</p><div className="mt-2 flex items-center gap-2 text-xs text-[#BAE4F0]/70"><ShieldCheck size={14} />{isAdmin ? "Kepala gudang" : "Petugas ruangan"}</div></div>
+            <div className="mt-7 rounded-xl border border-[#BAE4F0]/15 bg-black/10 p-4"><p className="text-[11px] uppercase tracking-[0.18em] text-[#BAE4F0]/60">Sesi aktif</p><p className="mt-1 truncate font-medium">{user?.name || user?.email || "Pengguna"}</p><div className="mt-2 flex items-center gap-2 text-xs text-[#BAE4F0]/70"><ShieldCheck size={14} />{isAdmin ? "Bang Ucup" : "Petugas ruangan"}</div></div>
             <nav className="mt-8 space-y-1">{visibleNav.map((item) => { const Icon = item.icon; return <button key={item.key} onClick={() => go(item.key)} className={`flex w-full items-center gap-3 rounded-xl px-4 py-3 text-left text-sm transition ${active === item.key ? "golog-nav-active font-semibold" : "text-[#f5ecd5]/70 hover:bg-white/10 hover:text-white"}`}><Icon size={18} />{item.label}</button>; })}</nav>
             <div className="mt-auto border-t border-white/10 pt-5"><button onClick={() => logout()} className="flex w-full items-center gap-3 rounded-xl px-4 py-3 text-sm text-teal-50/70 hover:bg-white/10 hover:text-white"><LogOut size={18} />Keluar</button></div>
           </div>
@@ -402,9 +402,9 @@ export default function Home() {
             >
               <Bell size={17} />
               {unreadNotificationCount > 0 && <span className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-[#FF6500] ring-2 ring-[#FFFFFF]" />}
-            </button><button title="Refresh" onClick={refreshAll} className="rounded-xl border border-[#9CCED8] bg-[#FFFFFF] p-2.5 text-slate-500 hover:text-teal-700"><RefreshCw size={17} /></button><div className="hidden rounded-xl border border-[#9CCED8] bg-[#FFFFFF] px-3 py-2 text-right sm:block"><p className="text-xs font-semibold">{user?.name || "Akun aktif"}</p><p className="text-[11px] text-slate-500">{isAdmin ? "Kepala gudang" : "Petugas"}</p></div></div></header>
+            </button><button title="Refresh" onClick={refreshAll} className="rounded-xl border border-[#9CCED8] bg-[#FFFFFF] p-2.5 text-slate-500 hover:text-teal-700"><RefreshCw size={17} /></button><div className="hidden rounded-xl border border-[#9CCED8] bg-[#FFFFFF] px-3 py-2 text-right sm:block"><p className="text-xs font-semibold">{user?.name || "Akun aktif"}</p><p className="text-[11px] text-slate-500">{isAdmin ? "Bang Ucup" : "Petugas"}</p></div></div></header>
           <div className={`golog-page mx-auto max-w-[1500px] space-y-6 ${active === "overview" ? "p-0 pb-28 md:p-8 md:pb-8" : "p-5 md:p-8"}`}>
-            {active === "overview" && <Overview dashboard={dashboard.data} isAdmin={isAdmin} onGo={go} report={isAdmin ? monthlyReport.data : null} requests={requests.data ?? []} userName={user?.name || user?.username || "Kepala Gudang"} unreadNotificationCount={unreadNotificationCount} onOpenNotifications={() => setNotificationOpen(true)} />}
+            {active === "overview" && <Overview dashboard={dashboard.data} isAdmin={isAdmin} onGo={go} report={isAdmin ? monthlyReport.data : null} requests={requests.data ?? []} userName={user?.name || user?.username || "Bang Ucup"} unreadNotificationCount={unreadNotificationCount} onOpenNotifications={() => setNotificationOpen(true)} />}
             {active === "stock" && <StockView stock={stock} isAdmin={isAdmin} items={items} warehouses={warehouses} onCreateItem={(input: any) => createItem.mutate(input)} busy={createItem.isPending} onImport={(rows: any[]) => importItems.mutate({ rows })} importBusy={importItems.isPending} focusItemId={notificationTarget?.nav === "stock" ? notificationTarget.itemId : undefined} />}
             {active === "inbound" && <InboundView items={items} warehouses={warehouses} onSubmit={(input: any) => createInbound.mutate(input)} busy={createInbound.isPending} />}
             {active === "requests" && <RequestsView requests={requests.data ?? []} rooms={rooms} items={items} warehouses={warehouses} isAdmin={isAdmin} currentUserId={currentUser.data?.id} todayRoomLocks={todayRoomLocks.data ?? []} selectedRoom={selectedRoom} selectedRoomName={selectedRoomName} setSelectedRoom={setSelectedRoom} accessibleRooms={accessibleRooms} roomAccessLoading={roomAccess.isLoading} roomAccessError={roomAccessErrorMessage} onRetryRoomAccess={() => roomAccess.refetch()} lines={requestLines} setLines={setRequestLines} total={requestTotal} onCreate={(input: any) => createRequest.mutateAsync(input)} onVerify={(input: any) => verifyRequest.mutateAsync(input)} busy={createRequest.isPending || verifyRequest.isPending} focusRequestId={notificationTarget?.nav === "requests" ? notificationTarget.requestId : undefined} />}
@@ -1210,7 +1210,7 @@ function MobileAdminOverview({
             <div className="grid h-10 w-10 place-items-center rounded-xl bg-amber-100 text-amber-700"><ClipboardCheck size={18} /></div>
             <div>
               <p className="text-xs font-semibold text-amber-800">{pendingRequests.length} Permintaan menunggu</p>
-              <p className="mt-0.5 text-[11px] text-amber-700/80">Perlu ditinjau Kepala Gudang</p>
+              <p className="mt-0.5 text-[11px] text-amber-700/80">Perlu ditinjau Bang Ucup</p>
             </div>
           </div>
           <span className="rounded-full bg-amber-100 px-3 py-1 text-[11px] font-bold text-amber-800">Review</span>
@@ -1451,7 +1451,7 @@ function MobileUserOverview({
             <div className="grid h-10 w-10 place-items-center rounded-xl bg-amber-100 text-amber-700"><ClipboardCheck size={18} /></div>
             <div>
               <p className="text-xs font-semibold text-amber-800">{pendingRequests.length} Permintaan menunggu</p>
-              <p className="mt-0.5 text-[11px] text-amber-700/80">{pendingRequests.length ? "Menunggu verifikasi Kepala Gudang" : "Tidak ada permintaan yang tertunda"}</p>
+              <p className="mt-0.5 text-[11px] text-amber-700/80">{pendingRequests.length ? "Menunggu verifikasi Bang Ucup" : "Tidak ada permintaan yang tertunda"}</p>
             </div>
           </div>
           <span className="rounded-full bg-amber-100 px-3 py-1 text-[11px] font-bold text-amber-800">Lihat</span>
@@ -2017,7 +2017,7 @@ function RequestsView({ requests, rooms, items, warehouses, isAdmin, currentUser
           <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
             <div>
               <CardTitle>Antrean permintaan</CardTitle>
-              <p className="mt-1 max-w-3xl text-sm text-slate-500">Prioritas permintaan ditampilkan lebih dulu. Kepala gudang menentukan jumlah yang benar-benar dipindahkan berdasarkan stok yang tersedia.</p>
+              <p className="mt-1 max-w-3xl text-sm text-slate-500">Prioritas permintaan ditampilkan lebih dulu. Bang Ucup menentukan jumlah yang benar-benar dipindahkan berdasarkan stok yang tersedia.</p>
             </div>
             <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 xl:grid-cols-5">
               <button type="button" onClick={() => setFilter("all")} className={`rounded-xl border px-4 py-3 text-left transition ${filter === "all" ? "border-[#07304A] bg-[#07304A] text-white" : "border-[#9CCED8] bg-[#FFFFFF] hover:bg-slate-50"}`}><p className="text-[11px] opacity-70">Semua</p><p className="mt-1 text-xl font-semibold">{formatNumber(requestCounts.all)}</p></button>
@@ -2154,7 +2154,7 @@ function RequestsView({ requests, rooms, items, warehouses, isAdmin, currentUser
   return <>
     <div className="grid gap-6 xl:grid-cols-[.85fr_1.5fr]">
     <Card className="border-slate-200/80 shadow-sm">
-      <CardHeader><CardTitle>Buat permintaan</CardTitle><p className="mt-1 text-sm text-slate-500">Ajukan kebutuhan untuk hari ini sampai maksimal 7 hari ke depan. Kepala gudang memproses pemenuhan sesuai hari operasional dan ketersediaan stok.</p></CardHeader>
+      <CardHeader><CardTitle>Buat permintaan</CardTitle><p className="mt-1 text-sm text-slate-500">Ajukan kebutuhan untuk hari ini sampai maksimal 7 hari ke depan. Bang Ucup memproses pemenuhan sesuai hari operasional dan ketersediaan stok.</p></CardHeader>
       <CardContent>
         <Field label="Tanggal kebutuhan"><Input type="date" value={requestDate} min={getJakartaDateKeyClient()} max={new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Jakarta" }).format(new Date(Date.now() + 7 * 86400000))} onChange={(e) => setRequestDate(e.target.value)} /></Field>
         <div className="mt-5"><Field label="Ruangan aktif">
@@ -2331,7 +2331,7 @@ function RequestsView({ requests, rooms, items, warehouses, isAdmin, currentUser
           <div className="px-5 py-5 sm:px-6">
             <p className="text-sm leading-6 text-[#315563]">{requestSuccessDialog}</p>
             <div className="mt-4 rounded-2xl border border-[#FFD500] bg-[#FFF9D9] px-4 py-3 text-xs leading-5 text-[#6d5a2a]">
-              Permintaan sekarang masuk ke antrean Kepala Gudang untuk diproses.
+              Permintaan sekarang masuk ke antrean Bang Ucup untuk diproses.
             </div>
           </div>
           <div className="flex justify-end border-t border-[#D5E8ED] bg-[#F8FCFD] px-5 py-4 sm:px-6">
@@ -2421,7 +2421,7 @@ function RequestsView({ requests, rooms, items, warehouses, isAdmin, currentUser
             </div>;
           })}
         </div>
-        <div className="mt-3 rounded-2xl border border-[#9CCED8] bg-[#E6F4F7] p-3.5 text-xs leading-5 text-[#315563] sm:mt-4 sm:p-4 sm:text-sm"><strong>Final check:</strong> setelah dikonfirmasi, permintaan langsung masuk ke antrean Kepala Gudang.</div>
+        <div className="mt-3 rounded-2xl border border-[#9CCED8] bg-[#E6F4F7] p-3.5 text-xs leading-5 text-[#315563] sm:mt-4 sm:p-4 sm:text-sm"><strong>Final check:</strong> setelah dikonfirmasi, permintaan langsung masuk ke antrean Bang Ucup.</div>
       </div>
       <div className="shrink-0 border-t border-slate-200 bg-white px-4 pb-[max(14px,env(safe-area-inset-bottom))] pt-3 shadow-[0_-8px_20px_rgba(7,48,74,0.06)] sm:px-7 sm:py-4 sm:shadow-none">
         <div className="flex flex-col gap-2 sm:flex-row sm:justify-end">
