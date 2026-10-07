@@ -575,57 +575,56 @@ function LoginScreen({ initialError = "" }: { initialError?: string }) {
         </section>
 
         <section className="flex items-center justify-center lg:pl-4">
-          <Card className="w-full max-w-md border-0 golog-panel p-2.5">
-            <CardContent className="rounded-[1.35rem] golog-panel-soft p-6 sm:p-8">
-              <div className="mx-auto grid h-14 w-14 place-items-center rounded-2xl bg-[#BAE4F0] text-[#07304A]">
+          <Card className="w-full max-w-md border-0 bg-transparent p-0 shadow-none">
+            <CardContent className="golog-login-card">
+              <div className="mx-auto grid h-14 w-14 place-items-center rounded-2xl bg-[#BAE4F0] text-[#07304A] shadow-sm">
                 <Hospital size={26} />
               </div>
-              <div className="mt-6 text-center">
+              <div className="text-center">
                 <p className="text-xs font-bold uppercase tracking-[0.2em] text-[#0091B9]">Ruang kerja</p>
-                <h2 className="mt-3 text-3xl font-bold tracking-tight text-[#07304A]">Selamat Datang</h2>
+                <h2 className="mt-3 golog-login-title">Selamat Datang</h2>
                 <p className="mx-auto mt-2.5 max-w-sm text-[13px] leading-5 text-slate-500">
                   Masuk menggunakan username dan password akun Gudang IR.
                 </p>
               </div>
 
-              <form onSubmit={handleLogin} className="mt-7 space-y-4">
-                <div>
-                  <Label htmlFor="golog-username" className="text-sm font-semibold text-[#07304A]">Username</Label>
+              <form onSubmit={handleLogin} className="w-full space-y-4">
+                <div className="golog-login-inputBox">
                   <Input
                     id="golog-username"
                     value={username}
                     onChange={(event) => setUsername(event.target.value)}
                     autoComplete="username"
-                    placeholder="contoh: kepala.gudang"
-                    className="mt-2 h-11 rounded-xl border-[#9CCED8] bg-[#FFFFFF]"
+                    placeholder=" "
+                    aria-label="Username"
                     disabled={starting}
                   />
+                  <span>Username</span>
                 </div>
 
-                <div>
-                  <Label htmlFor="golog-password" className="text-sm font-semibold text-[#07304A]">Password</Label>
-                  <div className="relative mt-2">
-                    <Input
-                      id="golog-password"
-                      type={showPassword ? "text" : "password"}
-                      value={password}
-                      onChange={(event) => setPassword(event.target.value)}
-                      autoComplete="current-password"
-                      placeholder="Masukkan password"
-                      className="h-11 rounded-xl border-[#9CCED8] bg-[#FFFFFF] pr-11"
-                      disabled={starting}
-                    />
-                    <button
-                      type="button"
-                      aria-label={showPassword ? "Sembunyikan password" : "Tampilkan password"}
-                      title={showPassword ? "Sembunyikan password" : "Tampilkan password"}
-                      onClick={() => setShowPassword((visible) => !visible)}
-                      disabled={starting}
-                      className="absolute inset-y-0 right-0 grid w-11 place-items-center text-slate-400 hover:text-[#0091B9] disabled:opacity-50"
-                    >
-                      {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-                    </button>
-                  </div>
+                <div className="golog-login-inputBox">
+                  <Input
+                    id="golog-password"
+                    type={showPassword ? "text" : "password"}
+                    value={password}
+                    onChange={(event) => setPassword(event.target.value)}
+                    autoComplete="current-password"
+                    placeholder=" "
+                    aria-label="Password"
+                    className="pr-11"
+                    disabled={starting}
+                  />
+                  <span>Password</span>
+                  <button
+                    type="button"
+                    aria-label={showPassword ? "Sembunyikan password" : "Tampilkan password"}
+                    title={showPassword ? "Sembunyikan password" : "Tampilkan password"}
+                    onClick={() => setShowPassword((visible) => !visible)}
+                    disabled={starting}
+                    className="absolute inset-y-0 right-0 grid w-11 place-items-center text-slate-400 hover:text-[#0091B9] disabled:opacity-50"
+                  >
+                    {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                  </button>
                 </div>
 
                 {loginError && (
@@ -634,11 +633,7 @@ function LoginScreen({ initialError = "" }: { initialError?: string }) {
                   </div>
                 )}
 
-                <Button
-                  type="submit"
-                  disabled={starting}
-                  className="h-12 w-full rounded-2xl bg-[#0091B9] text-base font-bold text-[#FFFFFF] shadow-lg shadow-[#0091B9]/20 hover:bg-[#004E9B]"
-                >
+                <Button type="submit" disabled={starting} className="golog-login-enter">
                   {starting ? "Memeriksa akun…" : "Masuk"}
                 </Button>
               </form>
