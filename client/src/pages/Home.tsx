@@ -1,4 +1,4 @@
-import { type FormEvent, useEffect, useMemo, useState } from "react";
+import { type FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import * as XLSX from "xlsx";
 import { computeMonthlyPivot } from "@shared/monthly-pivot";
 import { importTemplateCsv, validateItemImport, type ImportPreview } from "@shared/item-import";
@@ -124,6 +124,7 @@ export default function Home() {
   const [active, setActive] = useState<NavKey>("overview");
   const [mobileOpen, setMobileOpen] = useState(false);
   const [selectedRoom, setSelectedRoom] = useState<number | null>(null);
+  const roomInitUserRef = useRef<number | null>(null);
   const [requestLines, setRequestLines] = useState<Line[]>([{ itemId: 0, requestedQty: 1 }]);
   const [reportMonth, setReportMonth] = useState(getJakartaMonthKeyClient());
   const [roomDemandDays, setRoomDemandDays] = useState<7 | 30 | 90>(30);
@@ -148,11 +149,13 @@ export default function Home() {
   );
   const createRequest = trpc.requests.create.useMutation({
     onSuccess: () => {
-      toast.success("Permintaan berhasil diajukan");
       requests.refetch();
       todayRoomLocks.refetch();
       utils.requests.locks.invalidate();
       setRequestLines([{ itemId: 0, requestedQty: 1 }]);
+    },
+    onError: (error) => {
+      toast.error(error instanceof Error ? error.message : "Permintaan gagal diajukan.");
     },
   });
   const verifyRequest = trpc.requests.verify.useMutation({
@@ -325,21 +328,37 @@ export default function Home() {
   }, [active, isAdmin]);
 
   useEffect(() => {
-    if (isAdmin || !roomAccess.data) return;
+    if (isAdmin || !user?.id) {
+      roomInitUserRef.current = null;
+      return;
+    }
+
+    if (!roomAccess.data) return;
+
     const accessIds = accessibleRooms.map((room: any) => Number(room.id));
     if (!accessIds.length) {
       if (selectedRoom !== null) setSelectedRoom(null);
+      roomInitUserRef.current = user.id;
       return;
     }
-    const stored = window.sessionStorage.getItem(`gologirin-active-room:${user?.id ?? "unknown"}`);
-    const storedId = stored ? Number(stored) : null;
-    const nextRoomId = storedId && accessIds.includes(storedId)
-      ? storedId
-      : dashboard.data?.roomId && accessIds.includes(Number(dashboard.data.roomId))
-        ? Number(dashboard.data.roomId)
-        : accessIds[0];
-    if (nextRoomId !== selectedRoom) setSelectedRoom(nextRoomId);
-  }, [dashboard.data?.roomId, isAdmin, roomAccess.data, user?.id, selectedRoom, accessibleRooms.map((room: any) => room.id).join(",")]);
+
+    // Restore the persisted room only once per user session.
+    // Never re-read sessionStorage on every selectedRoom/dashboard change,
+    // otherwise a fresh room choice can be immediately overwritten by the old room.
+    if (roomInitUserRef.current !== user.id) {
+      const stored = window.sessionStorage.getItem(`gologirin-active-room:${user.id}`);
+      const storedId = stored ? Number(stored) : null;
+      const nextRoomId = storedId && accessIds.includes(storedId) ? storedId : accessIds[0];
+      roomInitUserRef.current = user.id;
+      if (nextRoomId !== selectedRoom) setSelectedRoom(nextRoomId);
+      return;
+    }
+
+    // Keep the current choice while it's valid; only recover if access changed.
+    if (selectedRoom !== null && !accessIds.includes(Number(selectedRoom))) {
+      setSelectedRoom(accessIds[0]);
+    }
+  }, [isAdmin, roomAccess.data, user?.id, selectedRoom, accessibleRooms.map((room: any) => room.id).join(",")]);
 
   useEffect(() => {
     if (!isAdmin && user?.id && selectedRoom !== null) {
@@ -388,7 +407,7 @@ export default function Home() {
             {active === "overview" && <Overview dashboard={dashboard.data} isAdmin={isAdmin} onGo={go} report={isAdmin ? monthlyReport.data : null} requests={requests.data ?? []} userName={user?.name || user?.username || "Kepala Gudang"} unreadNotificationCount={unreadNotificationCount} onOpenNotifications={() => setNotificationOpen(true)} />}
             {active === "stock" && <StockView stock={stock} isAdmin={isAdmin} items={items} warehouses={warehouses} onCreateItem={(input: any) => createItem.mutate(input)} busy={createItem.isPending} onImport={(rows: any[]) => importItems.mutate({ rows })} importBusy={importItems.isPending} focusItemId={notificationTarget?.nav === "stock" ? notificationTarget.itemId : undefined} />}
             {active === "inbound" && <InboundView items={items} warehouses={warehouses} onSubmit={(input: any) => createInbound.mutate(input)} busy={createInbound.isPending} />}
-            {active === "requests" && <RequestsView requests={requests.data ?? []} rooms={rooms} items={items} warehouses={warehouses} isAdmin={isAdmin} currentUserId={currentUser.data?.id} todayRoomLocks={todayRoomLocks.data ?? []} selectedRoom={selectedRoom} selectedRoomName={selectedRoomName} setSelectedRoom={setSelectedRoom} accessibleRooms={accessibleRooms} roomAccessLoading={roomAccess.isLoading} roomAccessError={roomAccessErrorMessage} onRetryRoomAccess={() => roomAccess.refetch()} lines={requestLines} setLines={setRequestLines} total={requestTotal} onCreate={(input: any) => createRequest.mutate(input)} onVerify={(input: any) => verifyRequest.mutate(input)} busy={createRequest.isPending || verifyRequest.isPending} focusRequestId={notificationTarget?.nav === "requests" ? notificationTarget.requestId : undefined} />}
+            {active === "requests" && <RequestsView requests={requests.data ?? []} rooms={rooms} items={items} warehouses={warehouses} isAdmin={isAdmin} currentUserId={currentUser.data?.id} todayRoomLocks={todayRoomLocks.data ?? []} selectedRoom={selectedRoom} selectedRoomName={selectedRoomName} setSelectedRoom={setSelectedRoom} accessibleRooms={accessibleRooms} roomAccessLoading={roomAccess.isLoading} roomAccessError={roomAccessErrorMessage} onRetryRoomAccess={() => roomAccess.refetch()} lines={requestLines} setLines={setRequestLines} total={requestTotal} onCreate={(input: any) => createRequest.mutateAsync(input)} onVerify={(input: any) => verifyRequest.mutateAsync(input)} busy={createRequest.isPending || verifyRequest.isPending} focusRequestId={notificationTarget?.nav === "requests" ? notificationTarget.requestId : undefined} />}
             {active === "adjustments" && <AdjustmentsView adjustments={adjustments.data ?? []} items={items} rooms={rooms} onSubmit={(input: any) => createAdjustment.mutate(input)} busy={createAdjustment.isPending} />}
             {active === "stocktake" && <StockOpnameView stock={stock} items={items} onSubmit={(input: any) => createBulkStocktake.mutate(input)} busy={createBulkStocktake.isPending} />}
             {active === "reports" && <ReportsView report={monthlyReport.data} month={reportMonth} onMonthChange={setReportMonth} />}
@@ -1854,6 +1873,8 @@ function RequestsView({ requests, rooms, items, warehouses, isAdmin, currentUser
   const [filter, setFilter] = useState("all");
   const [approvalQty, setApprovalQty] = useState<Record<string, number>>({});
   const [reviewOpen, setReviewOpen] = useState(false);
+  const [duplicateDialog, setDuplicateDialog] = useState<string | null>(null);
+  const [requestSuccessDialog, setRequestSuccessDialog] = useState<string | null>(null);
 
   useEffect(() => {
     if (!focusRequestId) return;
@@ -1863,11 +1884,15 @@ function RequestsView({ requests, rooms, items, warehouses, isAdmin, currentUser
     window.requestAnimationFrame(() => element?.scrollIntoView({ behavior: "smooth", block: "center" }));
   }, [focusRequestId]);
 
+  const roomRequests = selectedRoom
+    ? requests.filter((row: any) => Number(row.request.roomId) === Number(selectedRoom))
+    : [];
+
   const filtered = filter === "all"
-    ? requests
+    ? roomRequests
     : filter === "pending"
-      ? requests.filter((row: any) => row.request.status === "submitted")
-      : requests.filter((row: any) => row.request.status === filter);
+      ? roomRequests.filter((row: any) => row.request.status === "submitted")
+      : roomRequests.filter((row: any) => row.request.status === filter);
 
   const priorityRank: Record<string, number> = { darurat: 0, mendesak: 1, normal: 2 };
   const sortedRequests = [...filtered].sort((a: any, b: any) => {
@@ -1883,11 +1908,11 @@ function RequestsView({ requests, rooms, items, warehouses, isAdmin, currentUser
   });
 
   const requestCounts = {
-    all: requests.length,
-    pending: requests.filter((row: any) => row.request.status === "submitted").length,
-    partial: requests.filter((row: any) => row.request.status === "partial").length,
-    approved: requests.filter((row: any) => row.request.status === "approved").length,
-    rejected: requests.filter((row: any) => row.request.status === "rejected").length,
+    all: roomRequests.length,
+    pending: roomRequests.filter((row: any) => row.request.status === "submitted").length,
+    partial: roomRequests.filter((row: any) => row.request.status === "partial").length,
+    approved: roomRequests.filter((row: any) => row.request.status === "approved").length,
+    rejected: roomRequests.filter((row: any) => row.request.status === "rejected").length,
   };
 
   const requestLocks = trpc.requests.locks.useQuery({ requestDate }, { enabled: Boolean(requestDate) });
@@ -1946,11 +1971,17 @@ function RequestsView({ requests, rooms, items, warehouses, isAdmin, currentUser
     }
 
     const full = approvalLines.every((line: any) => line.approvedQty === line.requestedQty);
-    onVerify({
-      requestId: row.request.id,
-      status: full ? "approved" : "partial",
-      lines: approvalLines.map(({ lineId, approvedQty }: any) => ({ lineId, approvedQty })),
-    });
+    void (async () => {
+      try {
+        await onVerify({
+          requestId: row.request.id,
+          status: full ? "approved" : "partial",
+          lines: approvalLines.map(({ lineId, approvedQty }: any) => ({ lineId, approvedQty })),
+        });
+      } catch {
+        // Keep the queue visible for retry when verification fails.
+      }
+    })();
   }
 
   function fillFullApproval(row: any) {
@@ -2029,7 +2060,15 @@ function RequestsView({ requests, rooms, items, warehouses, isAdmin, currentUser
                 {isSubmitted && <div className="flex flex-wrap gap-2">
                   <Button size="sm" variant="outline" onClick={() => fillFullApproval(row)}>Isi penuh</Button>
                   <Button size="sm" onClick={() => submitApproval(row)} disabled={busy || approval.exceedsStock || approval.approved <= 0}><Truck size={15} className="mr-2" />Terapkan distribusi</Button>
-                  <Button size="sm" variant="outline" onClick={() => onVerify({ requestId: row.request.id, status: "rejected" })} disabled={busy}>Tolak</Button>
+                  <Button size="sm" variant="outline" onClick={() => {
+                    void (async () => {
+                      try {
+                        await onVerify({ requestId: row.request.id, status: "rejected" });
+                      } catch {
+                        // Keep the queue visible for retry.
+                      }
+                    })();
+                  }} disabled={busy}>Tolak</Button>
                 </div>}
               </div>
 
@@ -2174,7 +2213,18 @@ function RequestsView({ requests, rooms, items, warehouses, isAdmin, currentUser
             const exceeds = Boolean(selectedItem && Number(line.requestedQty) > warehouseQty);
             return <div key={index} className="rounded-xl border border-slate-200 bg-slate-50/70 p-3">
               <div className="grid grid-cols-[1fr_90px_auto] gap-2">
-                <select className="h-10 rounded-md border border-input bg-background px-3 text-sm" value={line.itemId || ""} onChange={(e) => setLines(lines.map((x: Line, i: number) => i === index ? { ...x, itemId: Number(e.target.value) } : x))}><option value="">Pilih barang</option>{items.map((item: any) => <option key={item.id} value={item.id}>{item.name}</option>)}</select>
+                <select className="h-10 rounded-md border border-input bg-background px-3 text-sm" value={line.itemId || ""} onChange={(e) => {
+                  const nextItemId = Number(e.target.value);
+                  if (nextItemId) {
+                    const alreadyUsed = lines.some((x: Line, i: number) => i !== index && Number(x.itemId) === nextItemId);
+                    if (alreadyUsed) {
+                      const duplicateItem = items.find((item: any) => Number(item.id) === nextItemId);
+                      setDuplicateDialog(`${duplicateItem?.name || "Barang"} sudah ada di daftar permintaan. Ubah jumlah pada baris tersebut.`);
+                      return;
+                    }
+                  }
+                  setLines(lines.map((x: Line, i: number) => i === index ? { ...x, itemId: nextItemId } : x));
+                }}><option value="">Pilih barang</option>{items.map((item: any) => <option key={item.id} value={item.id}>{item.name}</option>)}</select>
                 <Input type="number" min="1" value={line.requestedQty} onChange={(e) => setLines(lines.map((x: Line, i: number) => i === index ? { ...x, requestedQty: Number(e.target.value) } : x))} />
                 <button type="button" className="rounded-lg px-2 text-slate-400 hover:bg-white" onClick={() => setLines(lines.filter((_: Line, i: number) => i !== index))}>×</button>
               </div>
@@ -2206,6 +2256,14 @@ function RequestsView({ requests, rooms, items, warehouses, isAdmin, currentUser
               toast.error("Lengkapi nama barang dan jumlah setiap item sebelum masuk Review.");
               return;
             }
+            const duplicateItemId = lines.find((line: Line, index: number) =>
+              lines.some((other: Line, otherIndex: number) => otherIndex > index && Number(other.itemId) === Number(line.itemId)),
+            )?.itemId;
+            if (duplicateItemId) {
+              const duplicateItem = items.find((item: any) => Number(item.id) === Number(duplicateItemId));
+              setDuplicateDialog(`${duplicateItem?.name || "Barang"} muncul lebih dari sekali. Gabungkan jumlahnya pada satu baris sebelum masuk Review.`);
+              return;
+            }
             setReviewOpen(true);
           }}
         >
@@ -2215,14 +2273,108 @@ function RequestsView({ requests, rooms, items, warehouses, isAdmin, currentUser
     </Card>
 
     <Card className="border-slate-200/80 shadow-sm">
-      <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"><div><CardTitle>Daftar permintaan</CardTitle><p className="mt-1 text-sm text-slate-500">Riwayat permintaan yang Anda buat</p></div><select className="h-9 rounded-lg border-2 border-[#9CCED8] bg-[#FFFFFF] px-2 text-xs text-[#07304A]" value={filter} onChange={(e) => setFilter(e.target.value)}><option value="all">Semua status</option><option value="submitted">Diajukan</option><option value="approved">Disetujui</option><option value="partial">Sebagian</option><option value="rejected">Ditolak</option></select></CardHeader>
-      <CardContent><div className="space-y-3">{sortedRequests.map((row: any) => <div key={row.request.id} className="rounded-2xl border border-slate-200 p-4">
-        <div className="flex flex-wrap items-start justify-between gap-3"><div><div className="flex items-center gap-2"><span className="font-semibold">{row.request.requestNo}</span><Badge className={statusTone(row.request.status)}>{statusLabel(row.request.status)}</Badge></div><p className="mt-1 text-sm text-slate-500">{row.room?.name || "Ruangan"} · {formatDate(row.request.createdAt)} · <span className="capitalize">{row.request.priority}</span></p></div></div>
-        <div className="mt-4 grid gap-2 border-t border-slate-100 pt-3 text-sm">{row.lines.map((line: any) => <div key={line.line.id} className="flex justify-between gap-4"><span>{line.item?.name || "Item"}</span><span className="font-medium">{line.line.requestedQty} diminta · {line.line.approvedQty} dipindahkan</span></div>)}</div>
-      </div>)}{!sortedRequests.length && <EmptyState title="Belum ada permintaan" text="Buat permintaan pertama untuk memulai." />}</div></CardContent>
+      <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+      <div className="min-w-0">
+        <CardTitle>Daftar permintaan{selectedRoomName ? ` · ${selectedRoomName}` : ""}</CardTitle>
+        <p className="mt-1 text-sm text-slate-500">
+          {selectedRoomName ? `Riwayat permintaan untuk ${selectedRoomName}.` : "Pilih ruangan untuk melihat daftar permintaannya."}
+        </p>
+      </div>
+      <select className="h-9 rounded-lg border-2 border-[#9CCED8] bg-[#FFFFFF] px-2 text-xs text-[#07304A]" value={filter} onChange={(e) => setFilter(e.target.value)}>
+        <option value="all">Semua status</option>
+        <option value="submitted">Diajukan</option>
+        <option value="approved">Disetujui</option>
+        <option value="partial">Sebagian</option>
+        <option value="rejected">Ditolak</option>
+      </select>
+    </CardHeader>
+    <CardContent>
+      {!selectedRoom ? (
+        <EmptyState title="Pilih ruangan terlebih dahulu" text="Daftar permintaan akan mengikuti ruangan yang sedang dipilih." />
+      ) : (
+        <div className="max-h-[420px] space-y-3 overflow-y-auto pr-1 sm:max-h-[520px]">
+          {sortedRequests.map((row: any) => <div key={row.request.id} className="rounded-2xl border border-slate-200 p-4">
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <div className="flex items-center gap-2"><span className="font-semibold">{row.request.requestNo}</span><Badge className={statusTone(row.request.status)}>{statusLabel(row.request.status)}</Badge></div>
+                <p className="mt-1 text-sm text-slate-500">{row.room?.name || "Ruangan"} · {formatDate(row.request.createdAt)} · <span className="capitalize">{row.request.priority}</span></p>
+              </div>
+            </div>
+            <div className="mt-4 grid gap-2 border-t border-slate-100 pt-3 text-sm">{row.lines.map((line: any) => <div key={line.line.id} className="flex justify-between gap-4"><span>{line.item?.name || "Item"}</span><span className="font-medium">{line.line.requestedQty} diminta · {line.line.approvedQty} dipindahkan</span></div>)}</div>
+          </div>)}
+          {!sortedRequests.length && <EmptyState title="Belum ada permintaan" text={`Belum ada permintaan untuk ${selectedRoomName || "ruangan ini"} dengan filter tersebut.`} />}
+        </div>
+      )}
+    </CardContent>
     </Card>
     </div>
 
+    {requestSuccessDialog && (
+      <div
+        className="fixed inset-0 z-[90] flex items-center justify-center bg-[#07304A]/40 px-4 backdrop-blur-sm"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="request-success-title"
+      >
+        <div className="w-full max-w-md overflow-hidden rounded-3xl border border-[#9CCED8] bg-white shadow-2xl">
+          <div className="border-b border-[#D5E8ED] px-5 py-4 sm:px-6">
+            <div className="flex items-start gap-3">
+              <div className="grid h-10 w-10 shrink-0 place-items-center rounded-2xl bg-emerald-50 text-emerald-600">
+                <ClipboardCheck size={20} />
+              </div>
+              <div className="min-w-0">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-emerald-600">Permintaan berhasil</p>
+                <h2 id="request-success-title" className="mt-1 text-lg font-semibold leading-tight text-[#07304A]">Permintaan sudah dikirim</h2>
+              </div>
+            </div>
+          </div>
+          <div className="px-5 py-5 sm:px-6">
+            <p className="text-sm leading-6 text-[#315563]">{requestSuccessDialog}</p>
+            <div className="mt-4 rounded-2xl border border-[#FFD500] bg-[#FFF9D9] px-4 py-3 text-xs leading-5 text-[#6d5a2a]">
+              Permintaan sekarang masuk ke antrean Kepala Gudang untuk diproses.
+            </div>
+          </div>
+          <div className="flex justify-end border-t border-[#D5E8ED] bg-[#F8FCFD] px-5 py-4 sm:px-6">
+            <Button type="button" onClick={() => setRequestSuccessDialog(null)}>
+              Mengerti
+            </Button>
+          </div>
+        </div>
+      </div>
+    )}
+    {duplicateDialog && (
+      <div
+        className="fixed inset-0 z-[90] flex items-center justify-center bg-[#07304A]/40 px-4 backdrop-blur-sm"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="duplicate-item-title"
+      >
+        <div className="w-full max-w-md overflow-hidden rounded-3xl border border-[#9CCED8] bg-white shadow-2xl">
+          <div className="border-b border-[#D5E8ED] px-5 py-4 sm:px-6">
+            <div className="flex items-start gap-3">
+              <div className="grid h-10 w-10 shrink-0 place-items-center rounded-2xl bg-amber-50 text-amber-600">
+                <ClipboardCheck size={20} />
+              </div>
+              <div className="min-w-0">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-amber-600">Periksa daftar barang</p>
+                <h2 id="duplicate-item-title" className="mt-1 text-lg font-semibold leading-tight text-[#07304A]">Barang sudah dipilih</h2>
+              </div>
+            </div>
+          </div>
+          <div className="px-5 py-5 sm:px-6">
+            <p className="text-sm leading-6 text-[#315563]">{duplicateDialog}</p>
+            <div className="mt-4 rounded-2xl border border-[#FFD500] bg-[#FFF9D9] px-4 py-3 text-xs leading-5 text-[#6d5a2a]">
+              Satu barang cukup dibuat dalam satu baris. Silakan kembali ke baris barang tersebut lalu ubah jumlahnya.
+            </div>
+          </div>
+          <div className="flex justify-end border-t border-[#D5E8ED] bg-[#F8FCFD] px-5 py-4 sm:px-6">
+            <Button type="button" onClick={() => setDuplicateDialog(null)}>
+              Mengerti
+            </Button>
+          </div>
+        </div>
+      </div>
+    )}
     {reviewOpen && <div className="fixed inset-0 z-[80] flex items-end justify-center bg-[#07304A]/45 backdrop-blur-sm sm:items-center sm:p-6" role="dialog" aria-modal="true" aria-labelledby="request-review-title">
     <div className="flex h-[94dvh] w-full max-w-5xl flex-col overflow-hidden rounded-t-[28px] border border-slate-200 bg-white shadow-2xl sm:h-auto sm:max-h-[92dvh] sm:rounded-3xl">
       <div className="shrink-0 border-b border-slate-100 px-5 pb-3 pt-4 sm:px-7 sm:py-5">
@@ -2274,7 +2426,16 @@ function RequestsView({ requests, rooms, items, warehouses, isAdmin, currentUser
       <div className="shrink-0 border-t border-slate-200 bg-white px-4 pb-[max(14px,env(safe-area-inset-bottom))] pt-3 shadow-[0_-8px_20px_rgba(7,48,74,0.06)] sm:px-7 sm:py-4 sm:shadow-none">
         <div className="flex flex-col gap-2 sm:flex-row sm:justify-end">
           <Button type="button" variant="outline" className="order-2 w-full sm:order-1 sm:w-auto" onClick={() => setReviewOpen(false)} disabled={busy}>Kembali edit</Button>
-          <Button type="button" className="order-1 w-full sm:order-2 sm:w-auto" disabled={busy || !selectedRoom || selectedLockedByOther || lines.some((x: Line) => !x.itemId || Number(x.requestedQty) < 1)} onClick={() => { setReviewOpen(false); onCreate({ roomId: selectedRoom, requestDate, priority, notes, lines }); }}><Truck size={16} className="mr-2" />Konfirmasi & kirim</Button>
+          <Button type="button" className="order-1 w-full sm:order-2 sm:w-auto" disabled={busy || !selectedRoom || selectedLockedByOther || lines.some((x: Line) => !x.itemId || Number(x.requestedQty) < 1)} onClick={async () => {
+            try {
+              await onCreate({ roomId: selectedRoom, requestDate, priority, notes, lines });
+              setReviewOpen(false);
+              setRequestSuccessDialog("Permintaan berhasil dibuat dan sudah tercatat untuk ruangan yang dipilih.");
+            } catch {
+              // onError on the mutation already presents the server message.
+              // Keep the Review modal open so the user can correct/retry.
+            }
+          }}><Truck size={16} className="mr-2" />Konfirmasi & kirim</Button>
         </div>
       </div>
     </div>
