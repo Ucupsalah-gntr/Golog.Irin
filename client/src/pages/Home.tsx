@@ -1,4 +1,5 @@
-import { type FormEvent, useEffect, useMemo, useRef, useState } from "react";
+import * as React from "react";
+import { type FormEvent, useEffect, useId, useMemo, useRef, useState } from "react";
 import * as XLSX from "xlsx";
 import { computeMonthlyPivot } from "@shared/monthly-pivot";
 import { importTemplateCsv, validateItemImport, type ImportPreview } from "@shared/item-import";
@@ -2886,7 +2887,34 @@ function ReportsView({ report, month, onMonthChange }: any) {
   </div>;
 }
 
-function Field({ label, children }: { label: string; children: React.ReactNode }) { return <div className="space-y-2"><Label className="text-xs font-semibold text-slate-600">{label}</Label>{children}</div>; }
+function Field({ label, children }: { label: string; children: React.ReactNode }) {
+  const fieldId = `golog-input-${useId().replace(/:/g, "")}`;
+  const child = React.Children.only(children);
+
+  if (React.isValidElement(child) && child.type === Input) {
+    const childProps = child.props as { id?: string; value?: unknown; className?: string };
+    const inputId = childProps.id ?? fieldId;
+    const filled =
+      childProps.value !== undefined &&
+      childProps.value !== null &&
+      String(childProps.value) !== "";
+
+    const input = React.cloneElement(child, {
+      id: inputId,
+      "data-filled": filled ? "true" : "false",
+      className: [childProps.className, "golog-app-input"].filter(Boolean).join(" "),
+    } as any);
+
+    return (
+      <div className="golog-input-group">
+        {input}
+        <Label htmlFor={inputId} className="golog-user-label">{label}</Label>
+      </div>
+    );
+  }
+
+  return <div className="space-y-2"><Label className="text-xs font-semibold text-slate-600">{label}</Label>{children}</div>;
+}
 function EmptyState({ title, text }: { title: string; text: string }) { return <div className="grid place-items-center px-5 py-14 text-center"><div className="grid h-12 w-12 place-items-center rounded-2xl bg-slate-100 text-slate-400"><ClipboardList size={20} /></div><p className="mt-4 font-medium">{title}</p><p className="mt-1 max-w-sm text-sm text-slate-500">{text}</p></div>; }
 
 
