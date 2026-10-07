@@ -575,56 +575,57 @@ function LoginScreen({ initialError = "" }: { initialError?: string }) {
         </section>
 
         <section className="flex items-center justify-center lg:pl-4">
-          <Card className="w-full max-w-md border-0 bg-transparent p-0 shadow-none">
-            <CardContent className="golog-login-card">
-              <div className="mx-auto grid h-14 w-14 place-items-center rounded-2xl bg-[#BAE4F0] text-[#07304A] shadow-sm">
+          <Card className="w-full max-w-md border-0 golog-panel p-2.5">
+            <CardContent className="rounded-[1.35rem] golog-panel-soft p-6 sm:p-8">
+              <div className="mx-auto grid h-14 w-14 place-items-center rounded-2xl bg-[#BAE4F0] text-[#07304A]">
                 <Hospital size={26} />
               </div>
-              <div className="text-center">
+              <div className="mt-6 text-center">
                 <p className="text-xs font-bold uppercase tracking-[0.2em] text-[#0091B9]">Ruang kerja</p>
-                <h2 className="mt-3 golog-login-title">Selamat Datang</h2>
+                <h2 className="mt-3 text-3xl font-bold tracking-tight text-[#07304A]">Selamat Datang</h2>
                 <p className="mx-auto mt-2.5 max-w-sm text-[13px] leading-5 text-slate-500">
                   Masuk menggunakan username dan password akun Gudang IR.
                 </p>
               </div>
 
-              <form onSubmit={handleLogin} className="w-full space-y-4">
-                <div className="golog-inputGroup">
+              <form onSubmit={handleLogin} className="mt-7 space-y-4">
+                <div>
+                  <Label htmlFor="golog-username" className="text-sm font-semibold text-[#07304A]">Username</Label>
                   <Input
                     id="golog-username"
                     value={username}
                     onChange={(event) => setUsername(event.target.value)}
                     autoComplete="username"
-                    placeholder=" "
-                    aria-label="Username"
+                    placeholder="contoh: kepala.gudang"
+                    className="mt-2 h-11 rounded-xl border-[#9CCED8] bg-[#FFFFFF]"
                     disabled={starting}
                   />
-                  <Label htmlFor="golog-username" className="golog-inputGroup-label">Username</Label>
                 </div>
 
-                <div className="golog-inputGroup">
-                  <Input
-                    id="golog-password"
-                    type={showPassword ? "text" : "password"}
-                    value={password}
-                    onChange={(event) => setPassword(event.target.value)}
-                    autoComplete="current-password"
-                    placeholder=" "
-                    aria-label="Password"
-                    className="pr-11"
-                    disabled={starting}
-                  />
-                  <Label htmlFor="golog-password" className="golog-inputGroup-label">Password</Label>
-                  <button
-                    type="button"
-                    aria-label={showPassword ? "Sembunyikan password" : "Tampilkan password"}
-                    title={showPassword ? "Sembunyikan password" : "Tampilkan password"}
-                    onClick={() => setShowPassword((visible) => !visible)}
-                    disabled={starting}
-                    className="absolute inset-y-0 right-0 grid w-11 place-items-center text-slate-400 hover:text-[#0091B9] disabled:opacity-50"
-                  >
-                    {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-                  </button>
+                <div>
+                  <Label htmlFor="golog-password" className="text-sm font-semibold text-[#07304A]">Password</Label>
+                  <div className="relative mt-2">
+                    <Input
+                      id="golog-password"
+                      type={showPassword ? "text" : "password"}
+                      value={password}
+                      onChange={(event) => setPassword(event.target.value)}
+                      autoComplete="current-password"
+                      placeholder="Masukkan password"
+                      className="h-11 rounded-xl border-[#9CCED8] bg-[#FFFFFF] pr-11"
+                      disabled={starting}
+                    />
+                    <button
+                      type="button"
+                      aria-label={showPassword ? "Sembunyikan password" : "Tampilkan password"}
+                      title={showPassword ? "Sembunyikan password" : "Tampilkan password"}
+                      onClick={() => setShowPassword((visible) => !visible)}
+                      disabled={starting}
+                      className="absolute inset-y-0 right-0 grid w-11 place-items-center text-slate-400 hover:text-[#0091B9] disabled:opacity-50"
+                    >
+                      {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                    </button>
+                  </div>
                 </div>
 
                 {loginError && (
@@ -633,7 +634,11 @@ function LoginScreen({ initialError = "" }: { initialError?: string }) {
                   </div>
                 )}
 
-                <Button type="submit" disabled={starting} className="golog-login-enter">
+                <Button
+                  type="submit"
+                  disabled={starting}
+                  className="h-12 w-full rounded-2xl bg-[#0091B9] text-base font-bold text-[#FFFFFF] shadow-lg shadow-[#0091B9]/20 hover:bg-[#004E9B]"
+                >
                   {starting ? "Memeriksa akun…" : "Masuk"}
                 </Button>
               </form>
@@ -2881,26 +2886,7 @@ function ReportsView({ report, month, onMonthChange }: any) {
   </div>;
 }
 
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
-  const child = React.Children.only(children);
-  const childProps = React.isValidElement(child) ? child.props as { value?: unknown; id?: string; className?: string } : {};
-  const filled = childProps.value !== undefined && childProps.value !== null && String(childProps.value) !== "";
-  const fieldId = childProps.id ?? undefined;
-
-  const control = React.isValidElement(child)
-    ? React.cloneElement(child, {
-        ...(fieldId ? {} : {}),
-        className: cn("golog-field-control", childProps.className),
-      } as any)
-    : child;
-
-  return (
-    <div className={cn("golog-inputGroup", filled && "is-filled")}>
-      {control}
-      <Label htmlFor={fieldId} className="golog-inputGroup-label">{label}</Label>
-    </div>
-  );
-}
+function Field({ label, children }: { label: string; children: React.ReactNode }) { return <div className="space-y-2"><Label className="text-xs font-semibold text-slate-600">{label}</Label>{children}</div>; }
 function EmptyState({ title, text }: { title: string; text: string }) { return <div className="grid place-items-center px-5 py-14 text-center"><div className="grid h-12 w-12 place-items-center rounded-2xl bg-slate-100 text-slate-400"><ClipboardList size={20} /></div><p className="mt-4 font-medium">{title}</p><p className="mt-1 max-w-sm text-sm text-slate-500">{text}</p></div>; }
 
 
