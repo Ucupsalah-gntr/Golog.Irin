@@ -128,6 +128,7 @@ export default function Home() {
   const [requestLines, setRequestLines] = useState<Line[]>([{ itemId: 0, requestedQty: 1 }]);
   const [reportMonth, setReportMonth] = useState(getJakartaMonthKeyClient());
   const [roomDemandDays, setRoomDemandDays] = useState<7 | 30 | 90>(30);
+  const [stocktakeWarehouseId, setStocktakeWarehouseId] = useState<number | null>(null);
   const [notificationOpen, setNotificationOpen] = useState(false);
   const [readNotificationKeys, setReadNotificationKeys] = useState<string[]>([]);
   const [notificationTarget, setNotificationTarget] = useState<{ nav: NavKey; requestId?: number; itemId?: number } | null>(null);
@@ -176,6 +177,7 @@ export default function Home() {
       dashboard.refetch();
       adjustments.refetch();
       utils.catalog.all.invalidate();
+      utils.adjustments.stocktakeStock.invalidate();
     },
   });
   const createItem = trpc.catalog.createItem.useMutation({ onSuccess: () => { toast.success("Master barang dibuat"); utils.catalog.all.invalidate(); } });
@@ -186,6 +188,10 @@ export default function Home() {
   const warehouses = catalog.data?.warehouses ?? [];
   const stock = dashboard.data?.stock ?? [];
   const isAdmin = user?.role === "admin";
+  const stocktakeStock = trpc.adjustments.stocktakeStock.useQuery(
+    { warehouseId: stocktakeWarehouseId ?? 0 },
+    { enabled: isAuthenticated && isAdmin && active === "stocktake" && stocktakeWarehouseId !== null },
+  );
   const visibleNav = nav.filter((item) => !item.adminOnly || isAdmin);
   const accessibleRooms = roomAccess.data?.map((row: any) => row.room) ?? [];
   const roomAccessErrorMessage = roomAccess.error?.message || "Akses ruangan gagal dimuat.";
@@ -328,6 +334,18 @@ export default function Home() {
   }, [active, isAdmin]);
 
   useEffect(() => {
+    if (!isAdmin || !warehouses.length) {
+      setStocktakeWarehouseId(null);
+      return;
+    }
+
+    const currentIsValid = warehouses.some((warehouse: any) => Number(warehouse.id) === Number(stocktakeWarehouseId));
+    if (!currentIsValid) {
+      setStocktakeWarehouseId(Number(warehouses[0].id));
+    }
+  }, [isAdmin, warehouses, stocktakeWarehouseId]);
+
+  useEffect(() => {
     if (isAdmin || !user?.id) {
       roomInitUserRef.current = null;
       return;
@@ -409,7 +427,20 @@ export default function Home() {
             {active === "inbound" && <InboundView items={items} warehouses={warehouses} onSubmit={(input: any) => createInbound.mutate(input)} busy={createInbound.isPending} />}
             {active === "requests" && <RequestsView requests={requests.data ?? []} rooms={rooms} items={items} warehouses={warehouses} isAdmin={isAdmin} currentUserId={currentUser.data?.id} todayRoomLocks={todayRoomLocks.data ?? []} selectedRoom={selectedRoom} selectedRoomName={selectedRoomName} setSelectedRoom={setSelectedRoom} accessibleRooms={accessibleRooms} roomAccessLoading={roomAccess.isLoading} roomAccessError={roomAccessErrorMessage} onRetryRoomAccess={() => roomAccess.refetch()} lines={requestLines} setLines={setRequestLines} total={requestTotal} onCreate={(input: any) => createRequest.mutateAsync(input)} onVerify={(input: any) => verifyRequest.mutateAsync(input)} busy={createRequest.isPending || verifyRequest.isPending} focusRequestId={notificationTarget?.nav === "requests" ? notificationTarget.requestId : undefined} />}
             {active === "adjustments" && <AdjustmentsView adjustments={adjustments.data ?? []} items={items} rooms={rooms} onSubmit={(input: any) => createAdjustment.mutate(input)} busy={createAdjustment.isPending} />}
-            {active === "stocktake" && <StockOpnameView stock={stock} items={items} onSubmit={(input: any) => createBulkStocktake.mutate(input)} busy={createBulkStocktake.isPending} />}
+            {active === "stocktake" && (
+              <StockOpnameView
+                stock={stocktakeStock.data ?? []}
+                items={items}
+                warehouses={warehouses}
+                selectedWarehouseId={stocktakeWarehouseId}
+                setSelectedWarehouseId={setStocktakeWarehouseId}
+                loading={stocktakeStock.isLoading}
+                error={stocktakeStock.error?.message || null}
+                onRetry={() => stocktakeStock.refetch()}
+                onSubmit={(input: any) => createBulkStocktake.mutate(input)}
+                busy={createBulkStocktake.isPending}
+              />
+            )}
             {active === "reports" && <ReportsView report={monthlyReport.data} month={reportMonth} onMonthChange={setReportMonth} />}
             {active === "room-demand" && isAdmin && <RoomDemandView data={roomDemand.data} items={items} days={roomDemandDays} onDaysChange={setRoomDemandDays} />}
           </div>
@@ -2441,7 +2472,7 @@ function RequestsView({ requests, rooms, items, warehouses, isAdmin, currentUser
     </div>
     </div>}  </>;
 }
-function StockOpnameView({ stock, items, onSubmit, busy }: any) {
+function StockOpnameView({ stock, items, warehouses, selectedWarehouseId, setSelectedWarehouseId, loading, error, onRetry, onSubmit, busy }: any) {
   type OpnameRow = { itemId: number; sku: string; name: string; unit: string; systemQty: number; physicalQty: string; };
   const initialRows = useMemo<OpnameRow[]>(() => items.map((item: any) => {
     const stockRow = stock.find((row: any) => Number(row.itemId) === Number(item.id));
@@ -2481,9 +2512,10 @@ function StockOpnameView({ stock, items, onSubmit, busy }: any) {
   function submit() {
     if (!reason.trim() || reason.trim().length < 10) { toast.error("Catatan opname minimal 10 karakter."); return; }
     const filled = rows.filter((row) => row.physicalQty !== "").map((row) => ({ itemId: row.itemId, physicalQty: Number(row.physicalQty) }));
+    if (!selectedWarehouseId) { toast.error("Pilih gudang sumber sebelum menyimpan."); return; }
     if (!filled.length) { toast.error("Isi minimal satu stok fisik sebelum menyimpan."); return; }
     if (filled.some((row) => !Number.isInteger(row.physicalQty) || row.physicalQty < 0)) { toast.error("Stok fisik harus berupa bilangan bulat 0 atau lebih."); return; }
-    onSubmit({ lines: filled, reason: reason.trim(), incidentDate: new Date(incidentDate) });
+    onSubmit({ warehouseId: Number(selectedWarehouseId), lines: filled, reason: reason.trim(), incidentDate: new Date(incidentDate) });
   }
   function rowMeta(row: OpnameRow) {
     const physical = row.physicalQty === "" ? null : Number(row.physicalQty);
@@ -2498,15 +2530,51 @@ function StockOpnameView({ stock, items, onSubmit, busy }: any) {
       <Card className="overflow-hidden">
         <CardHeader className="border-b border-[#9CCED8]/60 pb-5">
           <div className="flex flex-col gap-5 xl:flex-row xl:items-end xl:justify-between">
-            <div className="max-w-3xl"><p className="golog-kicker">Warehouse control</p><CardTitle className="mt-1">Stock Opname Gudang Pusat</CardTitle><p className="mt-2 text-sm leading-6 text-[#315563]">Hitung stok fisik, bandingkan dengan saldo sistem, lalu simpan seluruh koreksi sekaligus dalam satu transaksi.</p></div>
+            <div className="max-w-3xl">
+              <p className="golog-kicker">Warehouse control</p>
+              <CardTitle className="mt-1">Stock Opname</CardTitle>
+              <p className="mt-2 text-sm leading-6 text-[#315563]">Pilih gudang yang sedang dihitung, lalu bandingkan stok fisik dengan saldo sistem gudang tersebut.</p>
+            </div>
+            <div className="w-full xl:w-[300px]">
+              <Field label="Gudang sumber *">
+                <select
+                  className="h-11 w-full rounded-xl border-2 border-[#9CCED8] bg-[#FFFFFF] px-3 text-sm font-semibold text-[#07304A]"
+                  value={selectedWarehouseId ?? ""}
+                  onChange={(e) => setSelectedWarehouseId(e.target.value ? Number(e.target.value) : null)}
+                  disabled={busy || loading}
+                  aria-label="Gudang sumber stock opname"
+                >
+                  <option value="">Pilih gudang sumber</option>
+                  {warehouses.map((warehouse: any) => (
+                    <option key={warehouse.id} value={warehouse.id}>
+                      {warehouse.name}{warehouse.kind === "logistics" ? " · Logistik" : " · Sumber"}
+                    </option>
+                  ))}
+                </select>
+              </Field>
+              {selectedWarehouseId && <p className="mt-1.5 text-xs text-[#55727C]">Saldo sistem yang tampil di bawah khusus untuk gudang yang dipilih.</p>}
+            </div>
+            <div className="rounded-2xl border-2 border-[#9CCED8] bg-[#FFFFFF] px-4 py-3 xl:min-w-[250px]">
             <div className="rounded-2xl border-2 border-[#9CCED8] bg-[#FFFFFF] px-4 py-3 xl:min-w-[250px]">
               <div className="flex items-center justify-between gap-3"><p className="text-xs font-semibold uppercase tracking-[0.14em] text-[#55727C]">Progres opname</p><span className="text-sm font-bold text-[#07304A]">{progress}%</span></div>
               <div className="mt-3 h-2 overflow-hidden rounded-full bg-[#dfd1a7]"><div className="h-full rounded-full bg-[#0091B9] transition-all" style={{ width: progress + "%" }} /></div>
-              <p className="mt-2 text-xs text-[#55727C]">{formatNumber(checkedRows.length)} dari {formatNumber(rows.length)} barang diperiksa</p>
+              <p className="mt-2 text-xs text-[#55727C]">{loading ? "Memuat saldo gudang…" : formatNumber(checkedRows.length) + " dari " + formatNumber(rows.length) + " barang diperiksa"}</p>
             </div>
           </div>
         </CardHeader>
         <CardContent className="space-y-5 pt-5">
+          {error && (
+            <div className="flex flex-col gap-3 rounded-2xl border-2 border-rose-200 bg-rose-50 p-4 text-sm text-rose-700 sm:flex-row sm:items-center sm:justify-between">
+              <div><p className="font-semibold">Stok gudang gagal dimuat.</p><p className="mt-1 text-xs text-rose-600/80">{error}</p></div>
+              <Button type="button" variant="outline" onClick={onRetry}>Coba lagi</Button>
+            </div>
+          )}
+          {!selectedWarehouseId && (
+            <div className="rounded-2xl border-2 border-[#FFB45C] bg-[#FFF6D6] p-4 text-sm text-[#6d4c2f]">
+              <p className="font-semibold">Pilih gudang sumber terlebih dahulu.</p>
+              <p className="mt-1 text-xs leading-5 text-[#8a694b]">Daftar barang dan saldo sistem akan mengikuti gudang yang dipilih.</p>
+            </div>
+          )}
           <div className="grid gap-3 md:grid-cols-[1fr_190px]">
             <Field label="Catatan opname *"><Textarea value={reason} onChange={(e) => setReason(e.target.value)} placeholder="Contoh: Stock opname akhir bulan, dihitung bersama petugas gudang." className="min-h-[86px]" /></Field>
             <Field label="Tanggal opname"><Input type="date" value={incidentDate} onChange={(e) => setIncidentDate(e.target.value)} /></Field>
@@ -2563,15 +2631,15 @@ function StockOpnameView({ stock, items, onSubmit, busy }: any) {
           <div className="sticky bottom-3 z-10 rounded-2xl border-2 border-[#9CCED8] bg-[#FFFFFF]/95 p-4 shadow-[0_14px_35px_rgba(90,71,56,0.15)] backdrop-blur">
             <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
               <div><p className="text-sm font-semibold text-[#07304A]">Siap disimpan: {formatNumber(checkedRows.length)} barang</p><div className="mt-2 flex flex-wrap gap-2 text-[11px] font-semibold"><span className="rounded-lg border border-[#B8D5DE] bg-[#F4FAFC] px-2.5 py-1 text-[#315563]">Selisih bersih {totalDifference > 0 ? "+" : ""}{formatNumber(totalDifference)}</span>{changedRows.length > 0 && <span className="rounded-lg border border-[#FFB45C] bg-[#FFF6D6] px-2.5 py-1 text-[#FF6500]">{formatNumber(changedRows.length)} koreksi</span>}{allChecked && <span className="rounded-lg border border-[#FFD500] bg-[#E6F4F7] px-2.5 py-1 text-[#004E9B]">Semua SKU diperiksa</span>}</div><p className="mt-2 text-xs leading-5 text-[#55727C]">Barang tanpa selisih tetap tercatat sebagai hasil pemeriksaan dan tidak membuat movement baru.</p></div>
-              <Button className="w-full sm:w-auto" disabled={busy || !checkedRows.length || reason.trim().length < 10} onClick={submit}><ClipboardCheck size={16} className="mr-2" />{busy ? "Menyimpan hasil…" : "Simpan " + formatNumber(checkedRows.length) + " hasil opname"}</Button>
+              <Button className="w-full sm:w-auto" disabled={busy || loading || !selectedWarehouseId || !checkedRows.length || reason.trim().length < 10} onClick={submit}><ClipboardCheck size={16} className="mr-2" />{busy ? "Menyimpan hasil…" : "Simpan " + formatNumber(checkedRows.length) + " hasil opname"}</Button>
             </div>
           </div>
         </CardContent>
       </Card>
       <Card className="overflow-hidden">
-        <CardHeader className="border-b border-[#9CCED8]/60"><p className="golog-kicker">Cara kerja</p><CardTitle className="mt-1">Satu sesi, satu koreksi terkontrol</CardTitle></CardHeader>
+        <CardHeader className="border-b border-[#9CCED8]/60"><p className="golog-kicker">Cara kerja</p><CardTitle className="mt-1">Satu gudang, satu koreksi terkontrol</CardTitle></CardHeader>
         <CardContent className="pt-5"><div className="grid gap-3 md:grid-cols-4">
-          {[["1", "Hitung fisik", "Masukkan jumlah nyata yang ditemukan di Gudang Pusat."], ["2", "Review", "Sistem menghitung fisik − saldo sistem secara langsung."], ["3", "Simpan", "Semua hasil diproses sekaligus dalam satu transaksi."], ["4", "Selesai", "Stok gudang dan histori koreksi langsung diperbarui."]].map(([number, title, text]) => <div key={number} className="rounded-2xl border-2 border-[#9CCED8] bg-[#FFFFFF] p-4"><div className="grid h-8 w-8 place-items-center rounded-full bg-[#07304A] text-sm font-semibold text-white">{number}</div><p className="mt-3 font-semibold text-[#07304A]">{title}</p><p className="mt-1 text-xs leading-5 text-[#315563]">{text}</p></div>)}
+          {[["1", "Pilih gudang & hitung fisik", "Pilih gudang sumber lalu masukkan jumlah nyata yang ditemukan di gudang tersebut."], ["2", "Review", "Sistem menghitung fisik − saldo sistem secara langsung."], ["3", "Simpan", "Semua hasil diproses sekaligus dalam satu transaksi."], ["4", "Selesai", "Stok gudang dan histori koreksi langsung diperbarui."]].map(([number, title, text]) => <div key={number} className="rounded-2xl border-2 border-[#9CCED8] bg-[#FFFFFF] p-4"><div className="grid h-8 w-8 place-items-center rounded-full bg-[#07304A] text-sm font-semibold text-white">{number}</div><p className="mt-3 font-semibold text-[#07304A]">{title}</p><p className="mt-1 text-xs leading-5 text-[#315563]">{text}</p></div>)}
         </div></CardContent>
       </Card>
     </div>
