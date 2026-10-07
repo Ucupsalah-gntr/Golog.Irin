@@ -621,28 +621,6 @@ export const appRouter = router({
       const db = await getDb(); if (!db) return [];
       return db.select({ adjustment: stockAdjustments, item: items, room: rooms }).from(stockAdjustments).leftJoin(items, eq(stockAdjustments.itemId, items.id)).leftJoin(rooms, eq(stockAdjustments.roomId, rooms.id)).orderBy(desc(stockAdjustments.createdAt)).limit(100);
     }),
-    stocktakeBase: adminProcedure.query(async () => {
-      const db = await getDb();
-      if (!db) return { warehouses: [], stock: [] };
-
-      const activeWarehouses = await db
-        .select({
-          id: warehouses.id,
-          code: warehouses.code,
-          name: warehouses.name,
-          kind: warehouses.kind,
-        })
-        .from(warehouses)
-        .where(eq(warehouses.active, true))
-        .orderBy(warehouses.name);
-
-      return {
-        warehouses: activeWarehouses,
-        stock: activeWarehouses.length
-          ? await getStockRowsForWarehouse(activeWarehouses[0].id)
-          : [],
-      };
-    }),
     stocktakeStock: adminProcedure.input(
       z.object({ warehouseId: z.number().int().positive() }),
     ).query(async ({ input }) => {
