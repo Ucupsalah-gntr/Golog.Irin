@@ -2881,7 +2881,26 @@ function ReportsView({ report, month, onMonthChange }: any) {
   </div>;
 }
 
-function Field({ label, children }: { label: string; children: React.ReactNode }) { return <div className="space-y-2"><Label className="text-xs font-semibold text-slate-600">{label}</Label>{children}</div>; }
+function Field({ label, children }: { label: string; children: React.ReactNode }) {
+  const child = React.Children.only(children);
+  const childProps = React.isValidElement(child) ? child.props as { value?: unknown; id?: string; className?: string } : {};
+  const filled = childProps.value !== undefined && childProps.value !== null && String(childProps.value) !== "";
+  const fieldId = childProps.id ?? undefined;
+
+  const control = React.isValidElement(child)
+    ? React.cloneElement(child, {
+        ...(fieldId ? {} : {}),
+        className: cn("golog-field-control", childProps.className),
+      } as any)
+    : child;
+
+  return (
+    <div className={cn("golog-inputGroup", filled && "is-filled")}>
+      {control}
+      <Label htmlFor={fieldId} className="golog-inputGroup-label">{label}</Label>
+    </div>
+  );
+}
 function EmptyState({ title, text }: { title: string; text: string }) { return <div className="grid place-items-center px-5 py-14 text-center"><div className="grid h-12 w-12 place-items-center rounded-2xl bg-slate-100 text-slate-400"><ClipboardList size={20} /></div><p className="mt-4 font-medium">{title}</p><p className="mt-1 max-w-sm text-sm text-slate-500">{text}</p></div>; }
 
 
