@@ -2484,6 +2484,12 @@ function StockOpnameView({ stock, items, warehouses, selectedWarehouseId, setSel
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<"all" | "pending" | "difference">("all");
   useEffect(() => { setRows(initialRows); }, [initialRows]);
+  useEffect(() => {
+    setRows([]);
+    setQuery("");
+    setFilter("all");
+  }, [selectedWarehouseId]);
+
   const visibleRows = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();
     return rows.filter((row) => {
@@ -2554,7 +2560,6 @@ function StockOpnameView({ stock, items, warehouses, selectedWarehouseId, setSel
               </Field>
               {selectedWarehouseId && <p className="mt-1.5 text-xs text-[#55727C]">Saldo sistem yang tampil di bawah khusus untuk gudang yang dipilih.</p>}
             </div>
-            <div className="rounded-2xl border-2 border-[#9CCED8] bg-[#FFFFFF] px-4 py-3 xl:min-w-[250px]">
             <div className="rounded-2xl border-2 border-[#9CCED8] bg-[#FFFFFF] px-4 py-3 xl:min-w-[250px]">
               <div className="flex items-center justify-between gap-3"><p className="text-xs font-semibold uppercase tracking-[0.14em] text-[#55727C]">Progres opname</p><span className="text-sm font-bold text-[#07304A]">{progress}%</span></div>
               <div className="mt-3 h-2 overflow-hidden rounded-full bg-[#dfd1a7]"><div className="h-full rounded-full bg-[#0091B9] transition-all" style={{ width: progress + "%" }} /></div>
