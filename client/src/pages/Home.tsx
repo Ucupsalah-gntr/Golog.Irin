@@ -1,5 +1,4 @@
-import * as React from "react";
-import { type FormEvent, useEffect, useId, useMemo, useRef, useState } from "react";
+import { type FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import * as XLSX from "xlsx";
 import { computeMonthlyPivot } from "@shared/monthly-pivot";
 import { importTemplateCsv, validateItemImport, type ImportPreview } from "@shared/item-import";
@@ -2887,28 +2886,7 @@ function ReportsView({ report, month, onMonthChange }: any) {
   </div>;
 }
 
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
-  const generatedId = useId().replace(/:/g, "");
-  const isInput = React.isValidElement(children) && children.type === Input;
-
-  if (!isInput) {
-    return <div className="space-y-2"><Label className="text-xs font-semibold text-slate-600">{label}</Label>{children}</div>;
-  }
-
-  const childProps = children.props as { id?: string; className?: string };
-  const fieldId = childProps.id ?? `golog-field-${generatedId}`;
-  const input = React.cloneElement(children, {
-    id: fieldId,
-    className: [childProps.className, "golog-floating-control"].filter(Boolean).join(" "),
-  } as any);
-
-  return (
-    <div className="golog-inputGroup">
-      {input}
-      <Label htmlFor={fieldId} className="golog-inputGroup-label">{label}</Label>
-    </div>
-  );
-}
+function Field({ label, children }: { label: string; children: React.ReactNode }) { return <div className="space-y-2"><Label className="text-xs font-semibold text-slate-600">{label}</Label>{children}</div>; }
 function EmptyState({ title, text }: { title: string; text: string }) { return <div className="grid place-items-center px-5 py-14 text-center"><div className="grid h-12 w-12 place-items-center rounded-2xl bg-slate-100 text-slate-400"><ClipboardList size={20} /></div><p className="mt-4 font-medium">{title}</p><p className="mt-1 max-w-sm text-sm text-slate-500">{text}</p></div>; }
 
 
