@@ -407,7 +407,7 @@ export default function Home() {
             {active === "overview" && <Overview dashboard={dashboard.data} isAdmin={isAdmin} onGo={go} report={isAdmin ? monthlyReport.data : null} requests={requests.data ?? []} userName={user?.name || user?.username || "Kepala Gudang"} unreadNotificationCount={unreadNotificationCount} onOpenNotifications={() => setNotificationOpen(true)} />}
             {active === "stock" && <StockView stock={stock} isAdmin={isAdmin} items={items} warehouses={warehouses} onCreateItem={(input: any) => createItem.mutate(input)} busy={createItem.isPending} onImport={(rows: any[]) => importItems.mutate({ rows })} importBusy={importItems.isPending} focusItemId={notificationTarget?.nav === "stock" ? notificationTarget.itemId : undefined} />}
             {active === "inbound" && <InboundView items={items} warehouses={warehouses} onSubmit={(input: any) => createInbound.mutate(input)} busy={createInbound.isPending} />}
-            {active === "requests" && <RequestsView requests={requests.data ?? []} rooms={rooms} items={items} warehouses={warehouses} isAdmin={isAdmin} currentUserId={currentUser.data?.id} todayRoomLocks={todayRoomLocks.data ?? []} selectedRoom={selectedRoom} selectedRoomName={selectedRoomName} setSelectedRoom={setSelectedRoom} accessibleRooms={accessibleRooms} roomAccessLoading={roomAccess.isLoading} roomAccessError={roomAccessErrorMessage} onRetryRoomAccess={() => roomAccess.refetch()} lines={requestLines} setLines={setRequestLines} total={requestTotal} onCreate={async (input: any) => { const result = await createRequest.mutateAsync(input); return result; }} onVerify={(input: any) => verifyRequest.mutateAsync(input)} busy={createRequest.isPending || verifyRequest.isPending} focusRequestId={notificationTarget?.nav === "requests" ? notificationTarget.requestId : undefined} />}
+            {active === "requests" && <RequestsView requests={requests.data ?? []} rooms={rooms} items={items} warehouses={warehouses} isAdmin={isAdmin} currentUserId={currentUser.data?.id} todayRoomLocks={todayRoomLocks.data ?? []} selectedRoom={selectedRoom} selectedRoomName={selectedRoomName} setSelectedRoom={setSelectedRoom} accessibleRooms={accessibleRooms} roomAccessLoading={roomAccess.isLoading} roomAccessError={roomAccessErrorMessage} onRetryRoomAccess={() => roomAccess.refetch()} lines={requestLines} setLines={setRequestLines} total={requestTotal} onCreate={(input: any) => createRequest.mutateAsync(input)} onVerify={(input: any) => verifyRequest.mutateAsync(input)} busy={createRequest.isPending || verifyRequest.isPending} focusRequestId={notificationTarget?.nav === "requests" ? notificationTarget.requestId : undefined} />}
             {active === "adjustments" && <AdjustmentsView adjustments={adjustments.data ?? []} items={items} rooms={rooms} onSubmit={(input: any) => createAdjustment.mutate(input)} busy={createAdjustment.isPending} />}
             {active === "stocktake" && <StockOpnameView stock={stock} items={items} onSubmit={(input: any) => createBulkStocktake.mutate(input)} busy={createBulkStocktake.isPending} />}
             {active === "reports" && <ReportsView report={monthlyReport.data} month={reportMonth} onMonthChange={setReportMonth} />}
@@ -2248,7 +2248,7 @@ function RequestsView({ requests, rooms, items, warehouses, isAdmin, currentUser
               return;
             }
             if (selectedLockedByOther) {
-              setDuplicateDialog(`Ruangan ${selectedRoomName || "ini"} sudah memiliki PIC lain untuk tanggal kebutuhan tersebut.`);
+              toast.error(`Ruangan ${selectedRoomName || "ini"} sudah memiliki PIC lain untuk tanggal kebutuhan tersebut.`);
               return;
             }
             const invalidLine = lines.find((x: Line) => !x.itemId || Number(x.requestedQty) < 1);
@@ -2261,7 +2261,7 @@ function RequestsView({ requests, rooms, items, warehouses, isAdmin, currentUser
             )?.itemId;
             if (duplicateItemId) {
               const duplicateItem = items.find((item: any) => Number(item.id) === Number(duplicateItemId));
-              toast.error(`${duplicateItem?.name || "Barang"} muncul lebih dari sekali. Gabungkan jumlahnya pada satu baris sebelum masuk Review.`);
+              setDuplicateDialog(`${duplicateItem?.name || "Barang"} muncul lebih dari sekali. Gabungkan jumlahnya pada satu baris sebelum masuk Review.`);
               return;
             }
             setReviewOpen(true);
@@ -2308,37 +2308,6 @@ function RequestsView({ requests, rooms, items, warehouses, isAdmin, currentUser
     </CardContent>
     </Card>
     </div>
-
-    {actionDialog && (
-      <div
-        className="fixed inset-0 z-[90] flex items-center justify-center bg-[#07304A]/40 px-4 backdrop-blur-sm"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="request-action-title"
-      >
-        <div className="w-full max-w-md overflow-hidden rounded-3xl border border-[#9CCED8] bg-white shadow-2xl">
-          <div className="border-b border-[#D5E8ED] px-5 py-4 sm:px-6">
-            <div className="flex items-start gap-3">
-              <div className="grid h-10 w-10 shrink-0 place-items-center rounded-2xl bg-emerald-50 text-emerald-600">
-                <ClipboardCheck size={20} />
-              </div>
-              <div className="min-w-0">
-                <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-emerald-600">Status permintaan</p>
-                <h2 id="request-action-title" className="mt-1 text-lg font-semibold leading-tight text-[#07304A]">{actionDialog.title}</h2>
-              </div>
-            </div>
-          </div>
-          <div className="px-5 py-5 sm:px-6">
-            <p className="text-sm leading-6 text-[#315563]">{actionDialog.message}</p>
-          </div>
-          <div className="flex justify-end border-t border-[#D5E8ED] bg-[#F8FCFD] px-5 py-4 sm:px-6">
-            <Button type="button" onClick={() => setActionDialog(null)}>
-              Mengerti
-            </Button>
-          </div>
-        </div>
-      </div>
-    )}
 
     {requestSuccessDialog && (
       <div
