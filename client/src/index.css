@@ -642,3 +642,68 @@
   color: #315563;
   cursor: pointer;
 }
+
+
+/* App input experiment only — login fields do not use this wrapper. */
+.golog-input-group {
+  position: relative;
+  width: 100%;
+}
+.golog-app-input {
+  width: 100%;
+  min-height: 44px;
+  border: 1.5px solid #A9BCC2 !important;
+  border-radius: 1rem !important;
+  background: transparent !important;
+  padding: 1rem !important;
+  font-size: 1rem !important;
+  color: #07304A !important;
+  box-shadow: none !important;
+  transition: border-color 150ms cubic-bezier(0.4, 0, 0.2, 1),
+    box-shadow 150ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+.golog-app-input:focus {
+  outline: none !important;
+  border-color: #0091B9 !important;
+  box-shadow: 0 0 0 3px rgba(0,145,185,.10) !important;
+}
+.golog-app-input::placeholder {
+  color: transparent !important;
+}
+.golog-user-label {
+  position: absolute;
+  z-index: 2;
+  left: 15px;
+  top: 50%;
+  color: #55727C !important;
+  pointer-events: none;
+  transform: translateY(-50%);
+  transition: 150ms cubic-bezier(0.4, 0, 0.2, 1);
+  background: transparent;
+  padding: 0 .2em;
+  font-size: .9rem !important;
+  font-weight: 500 !important;
+  line-height: 1;
+}
+.golog-app-input:focus ~ .golog-user-label,
+.golog-app-input[data-filled="true"] ~ .golog-user-label {
+  top: 0;
+  transform: translateY(-50%) scale(.82);
+  padding: 0 .45em;
+  color: #0091B9 !important;
+  background-color: #FFFFFF;
+  font-weight: 700 !important;
+}
+/* Match the warm content cards without affecting login. */
+.golog-panel-soft .golog-user-label,
+.golog-panel .golog-user-label {
+  background-color: #FFFFFF;
+}
+@media (max-width: 640px) {
+  .golog-app-input {
+    min-height: 46px;
+  }
+  .golog-user-label {
+    font-size: .85rem !important;
+  }
+}
