@@ -161,7 +161,6 @@ export default function Home() {
   });
   const verifyRequest = trpc.requests.verify.useMutation({
     onSuccess: () => {
-      toast.success("Permintaan disetujui dan stok dipindahkan ke ruangan");
       requests.refetch();
       dashboard.refetch();
       utils.catalog.all.invalidate();
@@ -408,7 +407,7 @@ export default function Home() {
             {active === "overview" && <Overview dashboard={dashboard.data} isAdmin={isAdmin} onGo={go} report={isAdmin ? monthlyReport.data : null} requests={requests.data ?? []} userName={user?.name || user?.username || "Kepala Gudang"} unreadNotificationCount={unreadNotificationCount} onOpenNotifications={() => setNotificationOpen(true)} />}
             {active === "stock" && <StockView stock={stock} isAdmin={isAdmin} items={items} warehouses={warehouses} onCreateItem={(input: any) => createItem.mutate(input)} busy={createItem.isPending} onImport={(rows: any[]) => importItems.mutate({ rows })} importBusy={importItems.isPending} focusItemId={notificationTarget?.nav === "stock" ? notificationTarget.itemId : undefined} />}
             {active === "inbound" && <InboundView items={items} warehouses={warehouses} onSubmit={(input: any) => createInbound.mutate(input)} busy={createInbound.isPending} />}
-            {active === "requests" && <RequestsView requests={requests.data ?? []} rooms={rooms} items={items} warehouses={warehouses} isAdmin={isAdmin} currentUserId={currentUser.data?.id} todayRoomLocks={todayRoomLocks.data ?? []} selectedRoom={selectedRoom} selectedRoomName={selectedRoomName} setSelectedRoom={setSelectedRoom} accessibleRooms={accessibleRooms} roomAccessLoading={roomAccess.isLoading} roomAccessError={roomAccessErrorMessage} onRetryRoomAccess={() => roomAccess.refetch()} lines={requestLines} setLines={setRequestLines} total={requestTotal} onCreate={(input: any) => createRequest.mutateAsync(input)} onVerify={(input: any) => verifyRequest.mutate(input)} busy={createRequest.isPending || verifyRequest.isPending} focusRequestId={notificationTarget?.nav === "requests" ? notificationTarget.requestId : undefined} />}
+            {active === "requests" && <RequestsView requests={requests.data ?? []} rooms={rooms} items={items} warehouses={warehouses} isAdmin={isAdmin} currentUserId={currentUser.data?.id} todayRoomLocks={todayRoomLocks.data ?? []} selectedRoom={selectedRoom} selectedRoomName={selectedRoomName} setSelectedRoom={setSelectedRoom} accessibleRooms={accessibleRooms} roomAccessLoading={roomAccess.isLoading} roomAccessError={roomAccessErrorMessage} onRetryRoomAccess={() => roomAccess.refetch()} lines={requestLines} setLines={setRequestLines} total={requestTotal} onCreate={(input: any) => createRequest.mutateAsync(input)} onVerify={(input: any) => verifyRequest.mutateAsync(input)} busy={createRequest.isPending || verifyRequest.isPending} focusRequestId={notificationTarget?.nav === "requests" ? notificationTarget.requestId : undefined} />}
             {active === "adjustments" && <AdjustmentsView adjustments={adjustments.data ?? []} items={items} rooms={rooms} onSubmit={(input: any) => createAdjustment.mutate(input)} busy={createAdjustment.isPending} />}
             {active === "stocktake" && <StockOpnameView stock={stock} items={items} onSubmit={(input: any) => createBulkStocktake.mutate(input)} busy={createBulkStocktake.isPending} />}
             {active === "reports" && <ReportsView report={monthlyReport.data} month={reportMonth} onMonthChange={setReportMonth} />}
@@ -1875,6 +1874,7 @@ function RequestsView({ requests, rooms, items, warehouses, isAdmin, currentUser
   const [approvalQty, setApprovalQty] = useState<Record<string, number>>({});
   const [reviewOpen, setReviewOpen] = useState(false);
   const [duplicateDialog, setDuplicateDialog] = useState<string | null>(null);
+  const [actionDialog, setActionDialog] = useState<{ title: string; message: string } | null>(null);
 
   useEffect(() => {
     if (!focusRequestId) return;
@@ -1971,11 +1971,23 @@ function RequestsView({ requests, rooms, items, warehouses, isAdmin, currentUser
     }
 
     const full = approvalLines.every((line: any) => line.approvedQty === line.requestedQty);
-    onVerify({
-      requestId: row.request.id,
-      status: full ? "approved" : "partial",
-      lines: approvalLines.map(({ lineId, approvedQty }: any) => ({ lineId, approvedQty })),
-    });
+    void (async () => {
+      try {
+        await onVerify({
+          requestId: row.request.id,
+          status: full ? "approved" : "partial",
+          lines: approvalLines.map(({ lineId, approvedQty }: any) => ({ lineId, approvedQty })),
+        });
+        setActionDialog({
+          title: full ? "Permintaan disetujui" : "Permintaan disetujui sebagian",
+          message: full
+            ? "Stok berhasil dipindahkan ke ruangan dan permintaan masuk ke status disetujui."
+            : "Jumlah yang tersedia berhasil dipindahkan ke ruangan. Permintaan tercatat sebagai pemenuhan sebagian.",
+        });
+      } catch {
+        // Mutation errors are surfaced by the mutation layer; keep the queue visible for retry.
+      }
+    })();
   }
 
   function fillFullApproval(row: any) {
@@ -2054,7 +2066,19 @@ function RequestsView({ requests, rooms, items, warehouses, isAdmin, currentUser
                 {isSubmitted && <div className="flex flex-wrap gap-2">
                   <Button size="sm" variant="outline" onClick={() => fillFullApproval(row)}>Isi penuh</Button>
                   <Button size="sm" onClick={() => submitApproval(row)} disabled={busy || approval.exceedsStock || approval.approved <= 0}><Truck size={15} className="mr-2" />Terapkan distribusi</Button>
-                  <Button size="sm" variant="outline" onClick={() => onVerify({ requestId: row.request.id, status: "rejected" })} disabled={busy}>Tolak</Button>
+                  <Button size="sm" variant="outline" onClick={() => {
+                    void (async () => {
+                      try {
+                        await onVerify({ requestId: row.request.id, status: "rejected" });
+                        setActionDialog({
+                          title: "Permintaan ditolak",
+                          message: "Permintaan berhasil ditolak dan statusnya sudah diperbarui.",
+                        });
+                      } catch {
+                        // Keep the queue visible for retry.
+                      }
+                    })();
+                  }} disabled={busy}>Tolak</Button>
                 </div>}
               </div>
 
@@ -2294,6 +2318,37 @@ function RequestsView({ requests, rooms, items, warehouses, isAdmin, currentUser
     </CardContent>
     </Card>
     </div>
+
+    {actionDialog && (
+      <div
+        className="fixed inset-0 z-[90] flex items-center justify-center bg-[#07304A]/40 px-4 backdrop-blur-sm"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="request-action-title"
+      >
+        <div className="w-full max-w-md overflow-hidden rounded-3xl border border-[#9CCED8] bg-white shadow-2xl">
+          <div className="border-b border-[#D5E8ED] px-5 py-4 sm:px-6">
+            <div className="flex items-start gap-3">
+              <div className="grid h-10 w-10 shrink-0 place-items-center rounded-2xl bg-emerald-50 text-emerald-600">
+                <ClipboardCheck size={20} />
+              </div>
+              <div className="min-w-0">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-emerald-600">Status permintaan</p>
+                <h2 id="request-action-title" className="mt-1 text-lg font-semibold leading-tight text-[#07304A]">{actionDialog.title}</h2>
+              </div>
+            </div>
+          </div>
+          <div className="px-5 py-5 sm:px-6">
+            <p className="text-sm leading-6 text-[#315563]">{actionDialog.message}</p>
+          </div>
+          <div className="flex justify-end border-t border-[#D5E8ED] bg-[#F8FCFD] px-5 py-4 sm:px-6">
+            <Button type="button" onClick={() => setActionDialog(null)}>
+              Mengerti
+            </Button>
+          </div>
+        </div>
+      </div>
+    )}
 
     {duplicateDialog && (
       <div
