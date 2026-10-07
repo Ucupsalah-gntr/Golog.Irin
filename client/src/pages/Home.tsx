@@ -589,7 +589,7 @@ function LoginScreen({ initialError = "" }: { initialError?: string }) {
               </div>
 
               <form onSubmit={handleLogin} className="w-full space-y-4">
-                <div className="golog-login-inputBox">
+                <div className="golog-inputGroup">
                   <Input
                     id="golog-username"
                     value={username}
@@ -599,10 +599,10 @@ function LoginScreen({ initialError = "" }: { initialError?: string }) {
                     aria-label="Username"
                     disabled={starting}
                   />
-                  <span>Username</span>
+                  <Label htmlFor="golog-username" className="golog-inputGroup-label">Username</Label>
                 </div>
 
-                <div className="golog-login-inputBox">
+                <div className="golog-inputGroup">
                   <Input
                     id="golog-password"
                     type={showPassword ? "text" : "password"}
@@ -614,7 +614,7 @@ function LoginScreen({ initialError = "" }: { initialError?: string }) {
                     className="pr-11"
                     disabled={starting}
                   />
-                  <span>Password</span>
+                  <Label htmlFor="golog-password" className="golog-inputGroup-label">Password</Label>
                   <button
                     type="button"
                     aria-label={showPassword ? "Sembunyikan password" : "Tampilkan password"}
