@@ -742,3 +742,88 @@
   color: #315563;
   cursor: pointer;
 }
+
+
+/* Unified input groups — adapted from the supplied Uiverse reference.
+   Responsive to Golog.Irin forms; 190px is treated as a visual reference,
+   while application fields expand to the available width. */
+.golog-inputGroup {
+  position: relative;
+  width: 100%;
+  margin: .5rem 0;
+  max-width: 100%;
+}
+.golog-inputGroup > [data-slot="input"],
+.golog-inputGroup > textarea,
+.golog-inputGroup > select {
+  width: 100%;
+  min-height: 44px;
+  font-size: 15px;
+  padding: .72em 1em;
+  outline: none;
+  border: 2px solid #C8D9DE;
+  background-color: rgba(255,255,255,.35);
+  border-radius: 20px;
+  color: #07304A;
+  box-shadow: none;
+  transition: all .25s ease;
+}
+.golog-inputGroup > [data-slot="input"]::placeholder,
+.golog-inputGroup > textarea::placeholder {
+  color: transparent;
+}
+.golog-inputGroup > [data-slot="input"]:focus,
+.golog-inputGroup > textarea:focus,
+.golog-inputGroup > select:focus,
+.golog-inputGroup:focus-within > [data-slot="input"],
+.golog-inputGroup:focus-within > textarea,
+.golog-inputGroup:focus-within > select {
+  border-color: #0091B9;
+  background-color: rgba(255,255,255,.78);
+  box-shadow: 0 0 0 3px rgba(0,145,185,.10);
+}
+.golog-inputGroup-label {
+  font-size: 13px !important;
+  position: absolute;
+  z-index: 2;
+  left: 0;
+  top: 50%;
+  padding: .72em 1em;
+  margin-left: .2em;
+  transform: translateY(-50%);
+  pointer-events: none;
+  color: #55727C !important;
+  font-weight: 500 !important;
+  letter-spacing: .01em;
+  transition: all .25s ease;
+  background: transparent;
+  border-radius: 10px;
+}
+.golog-inputGroup:focus-within .golog-inputGroup-label,
+.golog-inputGroup.is-filled .golog-inputGroup-label {
+  transform: translateY(-50%) translateX(14px) scale(.86);
+  margin: 0;
+  padding: .22em .6em;
+  background-color: #E8F7F9;
+  color: #007B9D !important;
+  font-weight: 700 !important;
+  box-shadow: 0 0 0 1px rgba(156,206,216,.55);
+}
+/* Keep narrow operational controls compact where the existing layout calls for it. */
+.golog-inputGroup > .w-40 {
+  width: 10rem;
+}
+@media (max-width: 640px) {
+  .golog-inputGroup > .w-40 {
+    width: 100%;
+  }
+}
+/* Date and number controls inherit the same shape but retain native affordances. */
+.golog-inputGroup > input[type="date"],
+.golog-inputGroup > input[type="number"] {
+  min-height: 44px;
+}
+/* Login password visibility button stays above the floating label. */
+.golog-inputGroup > button {
+  z-index: 3;
+}
