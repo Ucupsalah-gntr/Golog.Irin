@@ -17,6 +17,7 @@ import {
   getRoomStockRows,
   getStockQty,
   getStockRows,
+  getStockRowsForWarehouse,
   writeAudit,
   items,
   requestDayLocks,
@@ -620,6 +621,49 @@ export const appRouter = router({
       const db = await getDb(); if (!db) return [];
       return db.select({ adjustment: stockAdjustments, item: items, room: rooms }).from(stockAdjustments).leftJoin(items, eq(stockAdjustments.itemId, items.id)).leftJoin(rooms, eq(stockAdjustments.roomId, rooms.id)).orderBy(desc(stockAdjustments.createdAt)).limit(100);
     }),
+    stocktakeBase: adminProcedure.query(async () => {
+      const db = await getDb();
+      if (!db) return { warehouses: [], stock: [] };
+
+      const activeWarehouses = await db
+        .select({
+          id: warehouses.id,
+          code: warehouses.code,
+          name: warehouses.name,
+          kind: warehouses.kind,
+        })
+        .from(warehouses)
+        .where(eq(warehouses.active, true))
+        .orderBy(warehouses.name);
+
+      return {
+        warehouses: activeWarehouses,
+        stock: activeWarehouses.length
+          ? await getStockRowsForWarehouse(activeWarehouses[0].id)
+          : [],
+      };
+    }),
+    stocktakeStock: adminProcedure.input(
+      z.object({ warehouseId: z.number().int().positive() }),
+    ).query(async ({ input }) => {
+      const db = await getDb();
+      if (!db) return [];
+
+      const warehouseRows = await db
+        .select({ id: warehouses.id })
+        .from(warehouses)
+        .where(and(eq(warehouses.id, input.warehouseId), eq(warehouses.active, true)))
+        .limit(1);
+
+      if (!warehouseRows[0]) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Gudang sumber tidak ditemukan atau sudah tidak aktif.",
+        });
+      }
+
+      return getStockRowsForWarehouse(input.warehouseId);
+    }),
     applyAdjustment: adminProcedure.input(z.object({ itemId: z.number().int(), roomId: z.number().int().nullable().optional(), adjustmentType: z.enum(["add", "subtract"]), quantity: z.number().int().positive(), physicalQty: z.number().int().min(0), reasonType: z.enum(["forgotten_entry", "holiday_pickup", "damaged", "expired", "emergency", "stocktake", "other"]), reason: z.string().min(10), incidentDate: z.coerce.date() })).mutation(async ({ input, ctx }) => {
       const db = await getDb(); if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database belum tersedia." });
 
@@ -664,6 +708,7 @@ export const appRouter = router({
       return { adjustmentId, adjustmentNo, systemQty, physicalQty: input.physicalQty, difference, finalQty: input.physicalQty };
     }),
     applyBulkStocktake: adminProcedure.input(z.object({
+      warehouseId: z.number().int().positive(),
       lines: z.array(z.object({
         itemId: z.number().int().positive(),
         physicalQty: z.number().int().min(0),
@@ -676,6 +721,20 @@ export const appRouter = router({
         throw new TRPCError({
           code: "INTERNAL_SERVER_ERROR",
           message: "Database belum tersedia.",
+        });
+      }
+
+      const warehouseRows = await db
+        .select({ id: warehouses.id, name: warehouses.name })
+        .from(warehouses)
+        .where(and(eq(warehouses.id, input.warehouseId), eq(warehouses.active, true)))
+        .limit(1);
+
+      const warehouse = warehouseRows[0];
+      if (!warehouse) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Gudang sumber tidak ditemukan atau sudah tidak aktif.",
         });
       }
 
@@ -721,6 +780,7 @@ export const appRouter = router({
             .where(and(
               eq(stockMovements.itemId, line.itemId),
               isNull(stockMovements.roomId),
+              eq(stockMovements.sourceWarehouseId, input.warehouseId),
             ));
 
           const systemQty = Number(stockRows[0]?.quantity ?? 0);
@@ -766,6 +826,7 @@ export const appRouter = router({
             itemId: line.itemId,
             movementType: "adjustment",
             quantity: difference,
+            sourceWarehouseId: input.warehouseId,
             roomId: null,
             adjustmentId,
             createdBy: ctx.user.id,
@@ -791,14 +852,16 @@ export const appRouter = router({
         "bulk_apply",
         "stocktake",
         null,
-        { itemCount: input.lines.length },
+        { warehouseId: input.warehouseId, warehouseName: warehouse.name, itemCount: input.lines.length },
         {
+          warehouseId: input.warehouseId,
+          warehouseName: warehouse.name,
           itemCount: input.lines.length,
           adjusted: applied.length,
           noDifference: input.lines.length - applied.length,
           adjustments: applied,
         },
-        "Stock opname gudang pusat diproses sekaligus",
+        `Stock opname ${warehouse.name} diproses sekaligus`,
       );
 
       const increase = applied
