@@ -195,7 +195,7 @@ export default function UiLab() {
                 <button
                   key={item.label}
                   type="button"
-                  onClick={() => item.id !== ("stock" as Screen) && go(item.id)}
+                  onClick={() => item.id !== ("stock" as Screen) && go(item.id as Screen)}
                   className={`flex w-full items-center gap-3 rounded-2xl px-3.5 py-3 text-sm font-medium transition ${selected ? "bg-[#E8F7F9] text-[#007B9D]" : "text-slate-500 hover:bg-slate-50 hover:text-[#07304A]"}`}
                 >
                   <Icon size={18} />
@@ -280,7 +280,7 @@ export default function UiLab() {
                       Buka antrean permintaan
                     </Button>
                   ) : (
-                    <Button className="h-12 rounded-2xl bg-[#FF6500] px-5 shadow-[0_8px_24px_rgba(255,101,0,0.18)] hover:bg-[#E95A00)" onClick={() => go("requests")}>
+                    <Button className="h-12 rounded-2xl bg-[#FF6500] px-5 shadow-[0_8px_24px_rgba(255,101,0,0.18)] hover:bg-[#E95A00]" onClick={() => go("requests")}>
                       <ClipboardList className="mr-2 h-4 w-4" />
                       Buat permintaan
                     </Button>
@@ -409,7 +409,7 @@ export default function UiLab() {
                       <input className="h-11 w-full rounded-2xl border border-slate-200 bg-white pl-10 pr-4 text-sm outline-none focus:border-[#0091B9] sm:w-64" placeholder="Cari nomor permintaan" />
                     </div>
                     {!admin && (
-                      <Button className="h-11 rounded-2xl bg-[#FF6500] px-4 hover:bg-[#E95A00)" onClick={() => setShowDetail(true)}>
+                      <Button className="h-11 rounded-2xl bg-[#FF6500] px-4 hover:bg-[#E95A00]" onClick={() => setShowDetail(true)}>
                         <ClipboardList className="mr-2 h-4 w-4" />
                         Buat permintaan
                       </Button>
@@ -510,7 +510,7 @@ export default function UiLab() {
                     <p className="text-xs text-white/60">Total item diminta</p>
                     <p className="text-lg font-bold">9 unit</p>
                   </div>
-                  <Button className="rounded-xl bg-[#FF6500] hover:bg-[#E95A00)" onClick={() => setShowDetail(false)}>
+                  <Button className="rounded-xl bg-[#FF6500] hover:bg-[#E95A00]" onClick={() => setShowDetail(false)}>
                     Lanjut review
                     <ArrowRight className="ml-2 h-4 w-4" />
                   </Button>
