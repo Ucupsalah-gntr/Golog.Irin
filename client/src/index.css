@@ -563,3 +563,82 @@
 .golog-app [class*="text-[#0091B9]"] { color: var(--golog-teal) !important; }
 .golog-app [class*="text-[#FF6500]"] { color: #D94A1A !important; }
 .golog-app [class*="text-[#FFD500]"] { color: #8A6800 !important; }
+
+
+/* Stock opname checkbox experiment — inspired by the supplied Uiverse flip checkbox,
+   adapted to Golog.Irin's teal/navy system. */
+.golog-checkbox {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: .6rem;
+}
+.golog-checkbox input[type="checkbox"] {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+.golog-checkbox .cbx {
+  perspective: 20px;
+  display: inline-block;
+  border: 2px solid #9CCED8;
+  background: #E8F7F9;
+  border-radius: 7px;
+  transform: translate3d(0, 0, 0);
+  cursor: pointer;
+  transition: all .3s ease;
+}
+.golog-checkbox .cbx:hover {
+  border-color: #0091B9;
+}
+.golog-checkbox .flip {
+  display: block;
+  width: 22px;
+  height: 22px;
+  position: relative;
+  transform-style: preserve-3d;
+  transition: transform .4s ease;
+}
+.golog-checkbox .front,
+.golog-checkbox .back {
+  backface-visibility: hidden;
+  position: absolute;
+  inset: 0;
+  width: 22px;
+  height: 22px;
+  border-radius: 4px;
+}
+.golog-checkbox .front {
+  background: #FFFFFF;
+}
+.golog-checkbox .back {
+  transform: rotateY(180deg);
+  display: grid;
+  place-items: center;
+  background: #0091B9;
+  color: #FFFFFF;
+  box-shadow: 0 0 0 1px #0091B9;
+}
+.golog-checkbox .back svg {
+  width: 14px;
+  height: 14px;
+}
+.golog-checkbox .back svg path {
+  stroke: #FFFFFF;
+  stroke-width: 2.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.golog-checkbox input[type="checkbox"]:checked + .cbx {
+  border-color: #0091B9;
+}
+.golog-checkbox input[type="checkbox"]:checked + .cbx .flip {
+  transform: rotateY(180deg);
+}
+.golog-checkbox-label {
+  font-size: .72rem;
+  line-height: 1.2;
+  font-weight: 700;
+  color: #315563;
+  cursor: pointer;
+}
