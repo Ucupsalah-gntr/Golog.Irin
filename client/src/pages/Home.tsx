@@ -159,11 +159,22 @@ export default function Home() {
     },
   });
   const verifyRequest = trpc.requests.verify.useMutation({
-    onSuccess: () => {
-      toast.success("Permintaan disetujui dan stok dipindahkan ke ruangan");
+    onSuccess: (result) => {
+      const message =
+        result.status === "rejected"
+          ? "Permintaan ditolak."
+          : result.status === "partial"
+            ? "Permintaan disetujui sebagian dan stok yang disetujui dipindahkan ke ruangan."
+            : "Permintaan disetujui dan stok dipindahkan ke ruangan.";
+      toast.success(message);
       requests.refetch();
       dashboard.refetch();
       utils.catalog.all.invalidate();
+    },
+    onError: (error) => {
+      toast.error(error instanceof Error ? error.message : "Verifikasi permintaan gagal. Silakan coba lagi.");
+      requests.refetch();
+      dashboard.refetch();
     },
   });
   const createInbound = trpc.inbound.create.useMutation({ onSuccess: () => { toast.success("Barang masuk tersimpan"); dashboard.refetch(); utils.catalog.all.invalidate(); } });
@@ -191,6 +202,20 @@ export default function Home() {
   const roomAccessErrorMessage = roomAccess.error?.message || "Akses ruangan gagal dimuat.";
   const effectiveRooms = isAdmin ? rooms : accessibleRooms;
   const selectedRoomName = effectiveRooms.find((room: any) => room.id === selectedRoom)?.name;
+  const dataLoadError =
+    catalog.isError
+      ? "Data master barang/ruangan gagal dimuat."
+      : requests.isError
+        ? "Data permintaan gagal dimuat."
+        : dashboard.isError
+          ? "Data stok gagal dimuat."
+          : !isAdmin && roomAccess.isError
+            ? "Akses ruangan gagal dimuat."
+            : isAdmin && active === "reports" && monthlyReport.isError
+              ? "Laporan gagal dimuat."
+              : isAdmin && active === "room-demand" && roomDemand.isError
+                ? "Analisis pola ruangan gagal dimuat."
+                : null;
 
   const notificationStorageKey = user?.id ? `gologirin-notifications-read:${user.id}` : null;
 
@@ -404,6 +429,17 @@ export default function Home() {
               {unreadNotificationCount > 0 && <span className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-[#FF6500] ring-2 ring-[#FFFFFF]" />}
             </button><button title="Refresh" onClick={refreshAll} className="rounded-xl border border-[#9CCED8] bg-[#FFFFFF] p-2.5 text-slate-500 hover:text-teal-700"><RefreshCw size={17} /></button><div className="hidden rounded-xl border border-[#9CCED8] bg-[#FFFFFF] px-3 py-2 text-right sm:block"><p className="text-xs font-semibold">{user?.name || "Akun aktif"}</p><p className="text-[11px] text-slate-500">{isAdmin ? "Kepala gudang" : "Petugas"}</p></div></div></header>
           <div className={`golog-page mx-auto max-w-[1500px] space-y-6 ${active === "overview" ? "p-0 pb-28 md:p-8 md:pb-8" : "p-5 md:p-8"}`}>
+            {dataLoadError && (
+              <div className="mx-5 flex flex-col gap-3 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-4 text-rose-900 md:mx-0 md:flex-row md:items-center md:justify-between">
+                <div>
+                  <p className="font-semibold">Sebagian data belum tersedia</p>
+                  <p className="mt-1 text-sm text-rose-700">{dataLoadError} Coba segarkan halaman sebelum mengambil keputusan stok atau permintaan.</p>
+                </div>
+                <Button type="button" variant="outline" onClick={refreshAll} className="shrink-0 border-rose-300 bg-white text-rose-800 hover:bg-rose-100">
+                  <RefreshCw size={16} className="mr-2" />Coba lagi
+                </Button>
+              </div>
+            )}
             {active === "overview" && <Overview dashboard={dashboard.data} isAdmin={isAdmin} onGo={go} report={isAdmin ? monthlyReport.data : null} requests={requests.data ?? []} userName={user?.name || user?.username || "Kepala Gudang"} unreadNotificationCount={unreadNotificationCount} onOpenNotifications={() => setNotificationOpen(true)} />}
             {active === "stock" && <StockView stock={stock} isAdmin={isAdmin} items={items} warehouses={warehouses} onCreateItem={(input: any) => createItem.mutate(input)} busy={createItem.isPending} onImport={(rows: any[]) => importItems.mutate({ rows })} importBusy={importItems.isPending} focusItemId={notificationTarget?.nav === "stock" ? notificationTarget.itemId : undefined} />}
             {active === "inbound" && <InboundView items={items} warehouses={warehouses} onSubmit={(input: any) => createInbound.mutate(input)} busy={createInbound.isPending} />}
@@ -1884,9 +1920,11 @@ function RequestsView({ requests, rooms, items, warehouses, isAdmin, currentUser
     window.requestAnimationFrame(() => element?.scrollIntoView({ behavior: "smooth", block: "center" }));
   }, [focusRequestId]);
 
-  const roomRequests = selectedRoom
-    ? requests.filter((row: any) => Number(row.request.roomId) === Number(selectedRoom))
-    : [];
+  const roomRequests = isAdmin
+    ? requests
+    : selectedRoom
+      ? requests.filter((row: any) => Number(row.request.roomId) === Number(selectedRoom))
+      : [];
 
   const filtered = filter === "all"
     ? roomRequests
