@@ -15,6 +15,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import {
   Activity,
+  AlertTriangle,
   ArrowDownToLine,
   ArrowUpFromLine,
   BarChart3,
@@ -159,11 +160,19 @@ export default function Home() {
     },
   });
   const verifyRequest = trpc.requests.verify.useMutation({
-    onSuccess: () => {
-      toast.success("Permintaan disetujui dan stok dipindahkan ke ruangan");
+    onSuccess: (result) => {
+      const messages = {
+        approved: "Permintaan disetujui dan stok dipindahkan ke ruangan.",
+        partial: "Permintaan disetujui sebagian dan stok yang disetujui dipindahkan ke ruangan.",
+        rejected: "Permintaan ditolak. Tidak ada stok yang dipindahkan.",
+      } as const;
+      toast.success(messages[result.status] ?? "Verifikasi permintaan berhasil.");
       requests.refetch();
       dashboard.refetch();
       utils.catalog.all.invalidate();
+    },
+    onError: (error) => {
+      toast.error(error instanceof Error ? error.message : "Verifikasi permintaan gagal. Coba lagi.");
     },
   });
   const createInbound = trpc.inbound.create.useMutation({ onSuccess: () => { toast.success("Barang masuk tersimpan"); dashboard.refetch(); utils.catalog.all.invalidate(); } });
@@ -404,6 +413,16 @@ export default function Home() {
               {unreadNotificationCount > 0 && <span className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-[#FF6500] ring-2 ring-[#FFFFFF]" />}
             </button><button title="Refresh" onClick={refreshAll} className="rounded-xl border border-[#9CCED8] bg-[#FFFFFF] p-2.5 text-slate-500 hover:text-teal-700"><RefreshCw size={17} /></button><div className="hidden rounded-xl border border-[#9CCED8] bg-[#FFFFFF] px-3 py-2 text-right sm:block"><p className="text-xs font-semibold">{user?.name || "Akun aktif"}</p><p className="text-[11px] text-slate-500">{isAdmin ? "Kepala gudang" : "Petugas"}</p></div></div></header>
           <div className={`golog-page mx-auto max-w-[1500px] space-y-6 ${active === "overview" ? "p-0 pb-28 md:p-8 md:pb-8" : "p-5 md:p-8"}`}>
+            {(catalog.isError || dashboard.isError || requests.isError) && (
+              <DataLoadErrorBanner
+                sources={[
+                  catalog.isError ? "master barang" : null,
+                  dashboard.isError ? "stok dan ringkasan" : null,
+                  requests.isError ? "permintaan" : null,
+                ].filter(Boolean) as string[]}
+                onRetry={refreshAll}
+              />
+            )}
             {active === "overview" && <Overview dashboard={dashboard.data} isAdmin={isAdmin} onGo={go} report={isAdmin ? monthlyReport.data : null} requests={requests.data ?? []} userName={user?.name || user?.username || "Kepala Gudang"} unreadNotificationCount={unreadNotificationCount} onOpenNotifications={() => setNotificationOpen(true)} />}
             {active === "stock" && <StockView stock={stock} isAdmin={isAdmin} items={items} warehouses={warehouses} onCreateItem={(input: any) => createItem.mutate(input)} busy={createItem.isPending} onImport={(rows: any[]) => importItems.mutate({ rows })} importBusy={importItems.isPending} focusItemId={notificationTarget?.nav === "stock" ? notificationTarget.itemId : undefined} />}
             {active === "inbound" && <InboundView items={items} warehouses={warehouses} onSubmit={(input: any) => createInbound.mutate(input)} busy={createInbound.isPending} />}
@@ -1572,7 +1591,7 @@ function MobileUserOverview({
             <button type="button" onClick={() => onGo("requests")} className="relative -mt-9 grid h-16 w-16 place-items-center rounded-full border-4 border-[#FFFFFF] bg-[#0091B9] text-white shadow-[0_12px_28px_rgba(13,184,137,0.35)]" aria-label="Ajukan Permintaan"><Truck size={25} /></button>
           </div>
           <button type="button" onClick={() => onGo("requests")} className="flex flex-col items-center gap-1 text-[10px] font-semibold text-slate-400"><ClipboardList size={19} />Riwayat</button>
-          <button type="button" onClick={() => onGo("requests")} className="flex flex-col items-center gap-1 text-[10px] font-semibold text-slate-400"><Bell size={19} />Status</button>
+          <button type="button" onClick={() => onOpenNotifications ? onOpenNotifications() : onGo("requests")} className="flex flex-col items-center gap-1 text-[10px] font-semibold text-slate-400"><Bell size={19} />Status</button>
         </div>
       </nav>
     </div>
@@ -1884,9 +1903,11 @@ function RequestsView({ requests, rooms, items, warehouses, isAdmin, currentUser
     window.requestAnimationFrame(() => element?.scrollIntoView({ behavior: "smooth", block: "center" }));
   }, [focusRequestId]);
 
-  const roomRequests = selectedRoom
-    ? requests.filter((row: any) => Number(row.request.roomId) === Number(selectedRoom))
-    : [];
+  const roomRequests = isAdmin
+    ? requests
+    : selectedRoom
+      ? requests.filter((row: any) => Number(row.request.roomId) === Number(selectedRoom))
+      : [];
 
   const filtered = filter === "all"
     ? roomRequests
@@ -1979,7 +2000,7 @@ function RequestsView({ requests, rooms, items, warehouses, isAdmin, currentUser
           lines: approvalLines.map(({ lineId, approvedQty }: any) => ({ lineId, approvedQty })),
         });
       } catch {
-        // Keep the queue visible for retry when verification fails.
+        // verifyRequest already shows the server error; keep the queue visible for retry.
       }
     })();
   }
@@ -2065,7 +2086,7 @@ function RequestsView({ requests, rooms, items, warehouses, isAdmin, currentUser
                       try {
                         await onVerify({ requestId: row.request.id, status: "rejected" });
                       } catch {
-                        // Keep the queue visible for retry.
+                        // verifyRequest already shows the server error; keep the queue visible for retry.
                       }
                     })();
                   }} disabled={busy}>Tolak</Button>
@@ -2784,6 +2805,23 @@ function ReportsView({ report, month, onMonthChange }: any) {
   </div>;
 }
 
+function DataLoadErrorBanner({ sources, onRetry }: { sources: string[]; onRetry: () => void }) {
+  const sourceLabel = sources.length > 1 ? sources.slice(0, -1).join(", ") + " dan " + sources[sources.length - 1] : sources[0] || "data aplikasi";
+  return (
+    <div role="alert" className="flex flex-col gap-3 rounded-2xl border-2 border-[#FFD1C2] bg-[#FFF4F0] px-4 py-3 text-[#7C301D] shadow-sm sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex min-w-0 items-start gap-3">
+        <AlertTriangle size={19} className="mt-0.5 shrink-0 text-[#D94A1A]" />
+        <div className="min-w-0">
+          <p className="font-semibold">Data gagal dimuat</p>
+          <p className="mt-0.5 text-sm leading-5">Sistem belum dapat memuat {sourceLabel}. Jangan anggap data kosong sebagai kondisi normal; coba muat ulang.</p>
+        </div>
+      </div>
+      <Button type="button" variant="outline" size="sm" onClick={onRetry} className="shrink-0 border-[#D94A1A]/30 bg-white text-[#7C301D] hover:bg-[#FFF8F5]">
+        <RefreshCw size={14} className="mr-2" />Coba lagi
+      </Button>
+    </div>
+  );
+}
 function Field({ label, children }: { label: string; children: React.ReactNode }) { return <div className="space-y-2"><Label className="text-xs font-semibold text-slate-600">{label}</Label>{children}</div>; }
 function EmptyState({ title, text }: { title: string; text: string }) { return <div className="grid place-items-center px-5 py-14 text-center"><div className="grid h-12 w-12 place-items-center rounded-2xl bg-slate-100 text-slate-400"><ClipboardList size={20} /></div><p className="mt-4 font-medium">{title}</p><p className="mt-1 max-w-sm text-sm text-slate-500">{text}</p></div>; }
 
