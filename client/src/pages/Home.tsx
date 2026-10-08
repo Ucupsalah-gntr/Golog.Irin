@@ -1591,7 +1591,7 @@ function MobileUserOverview({
             <button type="button" onClick={() => onGo("requests")} className="relative -mt-9 grid h-16 w-16 place-items-center rounded-full border-4 border-[#FFFFFF] bg-[#0091B9] text-white shadow-[0_12px_28px_rgba(13,184,137,0.35)]" aria-label="Ajukan Permintaan"><Truck size={25} /></button>
           </div>
           <button type="button" onClick={() => onGo("requests")} className="flex flex-col items-center gap-1 text-[10px] font-semibold text-slate-400"><ClipboardList size={19} />Riwayat</button>
-          <button type="button" onClick={() => onOpenNotifications?.() ?? onGo("requests")} className="flex flex-col items-center gap-1 text-[10px] font-semibold text-slate-400"><Bell size={19} />Status</button>
+          <button type="button" onClick={() => onOpenNotifications ? onOpenNotifications() : onGo("requests")} className="flex flex-col items-center gap-1 text-[10px] font-semibold text-slate-400"><Bell size={19} />Status</button>
         </div>
       </nav>
     </div>
