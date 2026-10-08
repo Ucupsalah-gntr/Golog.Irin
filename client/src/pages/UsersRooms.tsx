@@ -96,7 +96,7 @@ export default function UsersRooms() {
 
         <Card className="border-amber-200 bg-amber-50/70">
           <CardContent className="p-5 text-sm leading-6 text-amber-900">
-            <strong>Catatan tahap ini:</strong> pengaturan ruangan baru menentukan data penugasan akun. Validasi backend agar petugas hanya dapat membuat, melihat, dan menerima permintaan untuk ruangannya akan diaktifkan pada tahap 3C-3.
+            <strong>Catatan:</strong> akses ruangan tersimpan per akun dan digunakan oleh backend untuk membatasi permintaan petugas ke ruangan yang ditugaskan. Perubahan akses berlaku setelah akun memuat ulang sesi kerja.
           </CardContent>
         </Card>
       </main>
