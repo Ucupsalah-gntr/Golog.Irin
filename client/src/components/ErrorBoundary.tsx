@@ -31,13 +31,11 @@ class ErrorBoundary extends Component<Props, State> {
               className="text-destructive mb-6 flex-shrink-0"
             />
 
-            <h2 className="text-xl mb-4">An unexpected error occurred.</h2>
-
-            <div className="p-4 w-full rounded bg-muted overflow-auto mb-6">
-              <pre className="text-sm text-muted-foreground whitespace-break-spaces">
-                {this.state.error?.stack}
-              </pre>
-            </div>
+            <h2 className="text-xl mb-3 text-center">Terjadi gangguan pada halaman.</h2>
+            <p className="mb-6 max-w-lg text-center text-sm leading-6 text-muted-foreground">
+              Halaman mengalami kendala yang tidak terduga. Muat ulang halaman dan coba lagi.
+              Detail teknis tidak ditampilkan kepada pengguna.
+            </p>
 
             <button
               onClick={() => window.location.reload()}
