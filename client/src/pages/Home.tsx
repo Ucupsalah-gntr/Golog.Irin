@@ -440,7 +440,7 @@ export default function Home() {
                 </Button>
               </div>
             )}
-            {active === "overview" && <Overview dashboard={dashboard.data} isAdmin={isAdmin} onGo={go} report={isAdmin ? monthlyReport.data : null} requests={requests.data ?? []} userName={user?.name || user?.username || "Kepala Gudang"} unreadNotificationCount={unreadNotificationCount} onOpenNotifications={() => setNotificationOpen(true)} />}
+            {active === "overview" && <Overview dashboard={dashboard.data} isAdmin={isAdmin} onGo={go} report={isAdmin ? monthlyReport.data : null} requests={requests.data ?? []} userName={user?.name || user?.username || "Kepala Gudang"} unreadNotificationCount={unreadNotificationCount} onOpenNotifications={() => setNotificationOpen(true)} selectedRoom={selectedRoom} accessibleRooms={accessibleRooms} onRoomChange={setSelectedRoom} />}
             {active === "stock" && <StockView stock={stock} isAdmin={isAdmin} items={items} warehouses={warehouses} onCreateItem={(input: any) => createItem.mutate(input)} busy={createItem.isPending} onImport={(rows: any[]) => importItems.mutate({ rows })} importBusy={importItems.isPending} focusItemId={notificationTarget?.nav === "stock" ? notificationTarget.itemId : undefined} />}
             {active === "inbound" && <InboundView items={items} warehouses={warehouses} onSubmit={(input: any) => createInbound.mutate(input)} busy={createInbound.isPending} />}
             {active === "requests" && <RequestsView requests={requests.data ?? []} rooms={rooms} items={items} warehouses={warehouses} isAdmin={isAdmin} currentUserId={currentUser.data?.id} todayRoomLocks={todayRoomLocks.data ?? []} selectedRoom={selectedRoom} selectedRoomName={selectedRoomName} setSelectedRoom={setSelectedRoom} accessibleRooms={accessibleRooms} roomAccessLoading={roomAccess.isLoading} roomAccessError={roomAccessErrorMessage} onRetryRoomAccess={() => roomAccess.refetch()} lines={requestLines} setLines={setRequestLines} total={requestTotal} onCreate={(input: any) => createRequest.mutateAsync(input)} onVerify={(input: any) => verifyRequest.mutateAsync(input)} busy={createRequest.isPending || verifyRequest.isPending} focusRequestId={notificationTarget?.nav === "requests" ? notificationTarget.requestId : undefined} />}
@@ -1086,6 +1086,9 @@ function Overview({
   userName = "Pengguna",
   unreadNotificationCount = 0,
   onOpenNotifications,
+  selectedRoom = null,
+  accessibleRooms = [],
+  onRoomChange,
 }: {
   dashboard: any;
   isAdmin: boolean;
@@ -1095,6 +1098,9 @@ function Overview({
   userName?: string;
   unreadNotificationCount?: number;
   onOpenNotifications?: () => void;
+  selectedRoom?: number | null;
+  accessibleRooms?: any[];
+  onRoomChange?: (roomId: number) => void;
 }) {
   const stats = dashboard?.stats ?? { items: 0, lowStock: 0, pending: 0, todayIn: 0 };
   const roomName = dashboard?.roomName;
@@ -1143,7 +1149,7 @@ function Overview({
 
   return <>
     <div className="md:hidden">
-      <MobileUserOverview dashboard={dashboard} requests={requests} userName={userName} roomName={roomName} onGo={onGo} unreadNotificationCount={unreadNotificationCount} onOpenNotifications={onOpenNotifications} />
+      <MobileUserOverview dashboard={dashboard} requests={requests} userName={userName} roomName={roomName} onGo={onGo} unreadNotificationCount={unreadNotificationCount} onOpenNotifications={onOpenNotifications} selectedRoom={selectedRoom} accessibleRooms={accessibleRooms} onRoomChange={onRoomChange} />
     </div>
     <div className="hidden md:block space-y-6">
       <Card className="border-slate-200/80 shadow-sm">
@@ -1446,6 +1452,9 @@ function MobileUserOverview({
   onGo,
   unreadNotificationCount = 0,
   onOpenNotifications,
+  selectedRoom = null,
+  accessibleRooms = [],
+  onRoomChange,
 }: {
   dashboard: any;
   requests: any[];
@@ -1454,6 +1463,9 @@ function MobileUserOverview({
   onGo: (key: NavKey) => void;
   unreadNotificationCount?: number;
   onOpenNotifications?: () => void;
+  selectedRoom?: number | null;
+  accessibleRooms?: any[];
+  onRoomChange?: (roomId: number) => void;
 }) {
   const stats = dashboard?.stats ?? { items: 0, lowStock: 0, pending: 0, todayIn: 0 };
   const pendingRequests = requests.filter((row) => row?.request?.status === "submitted");
@@ -1469,6 +1481,18 @@ function MobileUserOverview({
               <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">Welcome back,</p>
               <p className="truncate text-[18px] font-semibold tracking-tight text-[#07304A]">{userName}</p>
               <p className="truncate text-[11px] text-slate-400">{roomName || "Ruangan belum dipilih"}</p>
+              {accessibleRooms.length > 1 && (
+                <select
+                  aria-label="Pilih ruangan aktif"
+                  value={selectedRoom ?? ""}
+                  onChange={(event) => onRoomChange?.(Number(event.target.value))}
+                  className="mt-2 max-w-[220px] rounded-lg border border-[#9CCED8] bg-white px-2 py-1.5 text-xs font-semibold text-[#07304A] outline-none"
+                >
+                  {accessibleRooms.map((room: any) => (
+                    <option key={room.id} value={room.id}>{room.name}</option>
+                  ))}
+                </select>
+              )}
             </div>
           </div>
           <button type="button" onClick={() => onOpenNotifications?.()} className="relative grid h-11 w-11 shrink-0 place-items-center rounded-full bg-[#FFFFFF] text-[#07304A] shadow-sm ring-1 ring-[#9CCED8]" aria-label="Notifikasi">
@@ -1608,7 +1632,11 @@ function MobileUserOverview({
             <button type="button" onClick={() => onGo("requests")} className="relative -mt-9 grid h-16 w-16 place-items-center rounded-full border-4 border-[#FFFFFF] bg-[#0091B9] text-white shadow-[0_12px_28px_rgba(13,184,137,0.35)]" aria-label="Ajukan Permintaan"><Truck size={25} /></button>
           </div>
           <button type="button" onClick={() => onGo("requests")} className="flex flex-col items-center gap-1 text-[10px] font-semibold text-slate-400"><ClipboardList size={19} />Riwayat</button>
-          <button type="button" onClick={() => onGo("requests")} className="flex flex-col items-center gap-1 text-[10px] font-semibold text-slate-400"><Bell size={19} />Status</button>
+          <button type="button" onClick={() => onOpenNotifications?.()} className="relative flex flex-col items-center gap-1 text-[10px] font-semibold text-slate-400">
+            <Bell size={19} />
+            {unreadNotificationCount > 0 && <span className="absolute right-5 top-0 h-2 w-2 rounded-full bg-[#FF6500] ring-2 ring-white" />}
+            Notifikasi
+          </button>
         </div>
       </nav>
     </div>
