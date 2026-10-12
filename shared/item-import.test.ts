@@ -10,6 +10,7 @@ describe("master item import validation", () => {
       Kategori: "Alat kesehatan",
       "Kode Gudang Sumber": "farmasi",
       "Stok Minimum": 10,
+      "Stok Awal": 24,
     }]);
     expect(result.errors).toHaveLength(0);
     expect(result.rows[0]).toMatchObject({
@@ -19,6 +20,7 @@ describe("master item import validation", () => {
       category: "Alat kesehatan",
       sourceWarehouseCode: "FARMASI",
       minStock: 10,
+      initialStockQty: 24,
     });
   });
 
@@ -74,6 +76,17 @@ describe("master item import validation", () => {
     });
   });
 
+
+
+  it("defaults blank opening stock to zero and rejects a positive opening stock without a source warehouse", () => {
+    const blank = validateItemImport([{ SKU: "FAR-001", Nama: "Sarung tangan", Satuan: "box", "Stok Awal": "" }]);
+    expect(blank.errors).toHaveLength(0);
+    expect(blank.rows[0]?.initialStockQty).toBe(0);
+
+    const missingWarehouse = validateItemImport([{ SKU: "FAR-002", Nama: "Masker medis", Satuan: "box", "Stok Awal": 12 }]);
+    expect(missingWarehouse.errors.some((error) => error.field === "sourceWarehouseCode")).toBe(true);
+  });
+
   it("rejects files larger than the server's 5,000-row limit", () => {
     const row = { SKU: "FAR-001", Nama: "Barang contoh", Satuan: "box", Minimum: 0 };
     const result = validateItemImport(Array.from({ length: 5001 }, () => row));
@@ -85,6 +98,8 @@ describe("master item import validation", () => {
   it("provides a header-only template so example items cannot be imported accidentally", () => {
     const template = importTemplateCsv();
     expect(template).toContain("Kode Gudang Sumber");
+    expect(template).toContain("Stok Minimum");
+    expect(template).toContain("Stok Awal");
     expect(template).not.toContain("Contoh item");
     expect(template.trim().split(/\r?\n/)).toHaveLength(1);
   });
