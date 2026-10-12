@@ -36,6 +36,7 @@ const aliases: Record<string, keyof Omit<ImportItemRow, "rowNumber">> = {
   gudangsumber: "sourceWarehouseCode",
   sumbergudang: "sourceWarehouseCode",
   kodegudang: "sourceWarehouseCode",
+  kodegudangsumber: "sourceWarehouseCode",
   minstok: "minStock",
   stokminimum: "minStock",
   minimum: "minStock",
