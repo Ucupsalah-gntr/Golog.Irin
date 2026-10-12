@@ -424,7 +424,8 @@ export default function Home() {
             {currentUser.isError && (
               <div role="alert" className="rounded-2xl border border-[#F4BE70] bg-[#FFF7E8] p-4 text-sm text-[#7A4310]">
                 <p className="font-semibold">Hak akses server belum dapat diverifikasi.</p>
-                <p className="mt-1 leading-6">Menu admin ditahan sampai profil akun berhasil dibaca oleh API. Coba muat ulang; bila berlanjut, periksa koneksi autentikasi deployment ini.</p>
+                <p className="mt-1 leading-6">Menu admin ditahan sampai profil akun berhasil dibaca oleh API. Coba muat ulang; bila berlanjut, periksa koneksi autentikasi dan database deployment ini.</p>
+                <p className="mt-2 rounded-lg border border-[#F4BE70]/70 bg-white/80 px-3 py-2 text-xs leading-5"><strong>Respons API:</strong> {currentUser.error?.message || "Tidak ada detail error."}{currentUser.error?.data?.code ? ` · ${currentUser.error.data.code}` : ""}</p>
                 <Button variant="outline" size="sm" className="mt-3" onClick={() => currentUser.refetch()}>Coba verifikasi lagi</Button>
               </div>
             )}
