@@ -73,4 +73,12 @@ describe("master item import validation", () => {
       sourceWarehouseCode: undefined,
     });
   });
+
+  it("rejects files larger than the server's 5,000-row limit", () => {
+    const row = { SKU: "FAR-001", Nama: "Barang contoh", Satuan: "box", Minimum: 0 };
+    const result = validateItemImport(Array.from({ length: 5001 }, () => row));
+    expect(result.rows).toHaveLength(0);
+    expect(result.errors[0]?.field).toBe("file");
+    expect(result.errors[0]?.message).toContain("batas impor adalah 5.000");
+  });
 });
