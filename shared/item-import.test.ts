@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { validateItemImport } from "./item-import";
+import { importTemplateCsv, validateItemImport } from "./item-import";
 
 describe("master item import validation", () => {
   it("normalizes aliases and reads every field in the bundled CSV template", () => {
@@ -80,5 +80,12 @@ describe("master item import validation", () => {
     expect(result.rows).toHaveLength(0);
     expect(result.errors[0]?.field).toBe("file");
     expect(result.errors[0]?.message).toContain("batas impor adalah 5.000");
+  });
+
+  it("provides a header-only template so example items cannot be imported accidentally", () => {
+    const template = importTemplateCsv();
+    expect(template).toContain("Kode Gudang Sumber");
+    expect(template).not.toContain("Contoh item");
+    expect(template.trim().split(/\r?\n/)).toHaveLength(1);
   });
 });
