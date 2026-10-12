@@ -61,18 +61,23 @@ export async function createContext(
       return { req: opts.req, res: opts.res, user: null };
     }
 
-    // The API key used to validate a user JWT is server configuration.
-    // Prefer the server-side value so a stale/mismatched browser build cannot
-    // make production authentication depend on an old client key.
+    // Prefer the server-configured publishable key. If Preview has no server
+    // key or it is stale, retry with the app's public publishable key sent by
+    // the browser. A key is never sufficient by itself: the bearer token is
+    // still validated by Supabase and role privileges still come from our DB.
     const requestSupabaseKey = opts.req.get("x-supabase-apikey")?.trim() || "";
-    const supabaseKey = ENV.supabasePublishableKey || requestSupabaseKey;
+    const candidateKeys = Array.from(new Set([ENV.supabasePublishableKey, requestSupabaseKey].filter(Boolean)));
 
-    if (!ENV.supabaseUrl || !supabaseKey) {
+    if (!ENV.supabaseUrl || !candidateKeys.length) {
       console.warn("[Auth] Supabase server environment is not configured.");
       return { req: opts.req, res: opts.res, user: null };
     }
 
-    const authUser = await getSupabaseAuthUser(token, supabaseKey);
+    let authUser: SupabaseAuthUser | null = null;
+    for (const key of candidateKeys) {
+      authUser = await getSupabaseAuthUser(token, key);
+      if (authUser) break;
+    }
     if (!authUser) {
       return { req: opts.req, res: opts.res, user: null };
     }
