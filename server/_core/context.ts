@@ -56,6 +56,7 @@ export async function createContext(
 ): Promise<TrpcContext> {
   let user: User | null = null;
   let authFailureReason: string | null = null;
+  let authStage: "token" | "supabase" | "database" = "token";
 
   try {
     const token = getBearerToken(opts.req.get("authorization"));
@@ -63,6 +64,7 @@ export async function createContext(
       return { req: opts.req, res: opts.res, user: null, authFailureReason: "missing_authorization" };
     }
 
+    authStage = "supabase";
     // Prefer the server-configured publishable key. If Preview has no server
     // key or it is stale, retry with the app's public publishable key sent by
     // the browser. A key is never sufficient by itself: the bearer token is
@@ -99,6 +101,12 @@ export async function createContext(
       username,
     });
 
+    if (!ENV.databaseUrl) {
+      console.warn("[Auth] DATABASE_URL is not configured for this deployment.");
+      return { req: opts.req, res: opts.res, user: null, authFailureReason: "database_config_missing" };
+    }
+
+    authStage = "database";
     user = (await getUserByAuthUserId(authUser.id)) ?? null;
 
     if (!user) {
@@ -138,9 +146,9 @@ export async function createContext(
       }) ?? user;
     }
   } catch (error) {
-    console.warn("[Auth] Supabase authentication failed:", error);
+    console.warn("[Auth] Authentication context failed at stage:", authStage, error);
     user = null;
-    authFailureReason = "auth_context_exception";
+    authFailureReason = authStage === "database" ? "database_lookup_failed" : "auth_context_exception";
   }
 
   return {
