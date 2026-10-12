@@ -1708,6 +1708,60 @@ function StockView({ stock, isAdmin, items, warehouses, onCreateItem, busy, onIm
                     <div className="golog-panel-soft rounded-xl p-3"><p className="text-xs text-[#55727C]">SKU duplikat</p><p className="mt-1 text-lg font-semibold">{preview.duplicateSkus.length}</p></div>
                   </div>
 
+                  <div className="overflow-hidden rounded-xl border border-[#9CCED8] bg-white">
+                    <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[#D5E8ED] bg-[#F4FAFC] px-4 py-3">
+                      <div>
+                        <p className="text-sm font-semibold text-[#07304A]">Pratinjau isi file</p>
+                        <p className="text-xs text-[#55727C]">Periksa data sebelum impor. Baris berwarna merah muda memiliki error validasi.</p>
+                      </div>
+                      <span className="rounded-full border border-[#9CCED8] bg-white px-3 py-1 text-xs font-medium text-[#315563]">{preview.rows.length} baris</span>
+                    </div>
+                    {preview.rows.length > 0 ? (
+                      <div className="max-h-[440px] overflow-auto">
+                        <table className="w-full min-w-[980px] text-left text-sm">
+                          <thead className="sticky top-0 z-10 bg-[#E6F4F7] text-[11px] uppercase tracking-wider text-[#315563] shadow-sm">
+                            <tr>
+                              <th className="whitespace-nowrap px-3 py-3">Baris</th>
+                              <th className="whitespace-nowrap px-3 py-3">SKU</th>
+                              <th className="min-w-[220px] px-3 py-3">Nama barang</th>
+                              <th className="whitespace-nowrap px-3 py-3">Satuan</th>
+                              <th className="whitespace-nowrap px-3 py-3">Gudang sumber</th>
+                              <th className="whitespace-nowrap px-3 py-3 text-right">Stok minimum</th>
+                              <th className="whitespace-nowrap px-3 py-3 text-right">Stok awal</th>
+                              <th className="min-w-[190px] px-3 py-3">Validasi baris</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-[#E4EEF1]">
+                            {preview.rows.map((row) => {
+                              const rowErrors = preview.errors.filter((error) => error.rowNumber === row.rowNumber);
+                              const warehouseLabel = warehouses.find((warehouse: any) => String(warehouse.code ?? "").toUpperCase() === String(row.sourceWarehouseCode ?? "").toUpperCase())?.name;
+                              return (
+                                <tr key={row.rowNumber} className={rowErrors.length ? "bg-[#FFF0EC]" : "bg-white"}>
+                                  <td className="whitespace-nowrap px-3 py-3 text-xs text-[#55727C]">{row.rowNumber}</td>
+                                  <td className="whitespace-nowrap px-3 py-3 font-medium text-[#07304A]">{row.sku || <span className="text-[#D94A1A]">— kosong —</span>}</td>
+                                  <td className="px-3 py-3">{row.name || <span className="text-[#D94A1A]">— kosong —</span>}</td>
+                                  <td className="whitespace-nowrap px-3 py-3">{row.unit || <span className="font-semibold text-[#D94A1A]">— kosong —</span>}</td>
+                                  <td className="whitespace-nowrap px-3 py-3">
+                                    {row.sourceWarehouseCode ? <span>{warehouseLabel ? <span className="block">{warehouseLabel}</span> : null}<span className="text-xs text-[#55727C]">{row.sourceWarehouseCode}</span></span> : <span className={row.initialStockQty > 0 ? "font-semibold text-[#D94A1A]" : "text-[#94A3B8]"}>{row.initialStockQty > 0 ? "Wajib diisi" : "—"}</span>}
+                                  </td>
+                                  <td className="whitespace-nowrap px-3 py-3 text-right tabular-nums">{formatNumber(row.minStock)}</td>
+                                  <td className="whitespace-nowrap px-3 py-3 text-right font-semibold tabular-nums">{formatNumber(row.initialStockQty)}</td>
+                                  <td className="px-3 py-3 text-xs leading-5">
+                                    {rowErrors.length
+                                      ? rowErrors.map((error, index) => <p key={index} className="text-[#D94A1A]">{error.field}: {error.message}</p>)
+                                      : <span className="text-emerald-700">Siap</span>}
+                                  </td>
+                                </tr>
+                              );
+                            })}
+                          </tbody>
+                        </table>
+                      </div>
+                    ) : (
+                      <div className="px-4 py-6 text-sm text-[#55727C]">Belum ada baris yang dapat ditampilkan. Periksa apakah file memiliki header dan data pada sheet pertama.</div>
+                    )}
+                  </div>
+
                   {preview.errors.length > 0 && (
                     <div className="rounded-xl border border-[#FFD1C2] bg-[#f8e3de] p-3 text-sm text-[#D94A1A]">
                       {preview.errors.slice(0, 8).map((error, i) => <p key={i}>Baris {error.rowNumber} · {error.field}: {error.message}</p>)}
