@@ -415,7 +415,7 @@ export default function Home() {
             </button><button title="Refresh" onClick={refreshAll} className="rounded-xl border border-[#9CCED8] bg-[#FFFFFF] p-2.5 text-slate-500 hover:text-teal-700"><RefreshCw size={17} /></button><div className="hidden rounded-xl border border-[#9CCED8] bg-[#FFFFFF] px-3 py-2 text-right sm:block"><p className="text-xs font-semibold">{user?.name || "Akun aktif"}</p><p className="text-[11px] text-slate-500">{isAdmin ? "Kepala gudang" : "Petugas"}</p></div></div></header>
           <div className={`golog-page mx-auto max-w-[1500px] space-y-6 ${active === "overview" ? "p-0 pb-28 md:p-8 md:pb-8" : "p-5 md:p-8"}`}>
             {active === "overview" && <Overview dashboard={dashboard.data} isAdmin={isAdmin} onGo={go} report={isAdmin ? monthlyReport.data : null} requests={requests.data ?? []} userName={user?.name || user?.username || "Kepala Gudang"} unreadNotificationCount={unreadNotificationCount} onOpenNotifications={() => setNotificationOpen(true)} />}
-            {active === "stock" && <StockView stock={stock} isAdmin={isAdmin} items={items} warehouses={warehouses} onCreateItem={(input: any) => createItem.mutate(input)} busy={createItem.isPending} onImport={(rows: any[]) => importItems.mutate({ rows })} importBusy={importItems.isPending} focusItemId={notificationTarget?.nav === "stock" ? notificationTarget.itemId : undefined} />}
+            {active === "stock" && <StockView stock={stock} isAdmin={isAdmin} items={items} warehouses={warehouses} onCreateItem={(input: any) => createItem.mutate(input)} busy={createItem.isPending} onImport={(rows: any[]) => importItems.mutateAsync({ rows })} importBusy={importItems.isPending} focusItemId={notificationTarget?.nav === "stock" ? notificationTarget.itemId : undefined} />}
             {active === "inbound" && <InboundView items={items} warehouses={warehouses} onSubmit={(input: any) => createInbound.mutate(input)} busy={createInbound.isPending} />}
             {active === "requests" && <RequestsView requests={requests.data ?? []} rooms={rooms} items={items} warehouses={warehouses} isAdmin={isAdmin} currentUserId={currentUser.data?.id} todayRoomLocks={todayRoomLocks.data ?? []} selectedRoom={selectedRoom} selectedRoomName={selectedRoomName} setSelectedRoom={setSelectedRoom} accessibleRooms={accessibleRooms} roomAccessLoading={roomAccess.isLoading} roomAccessError={roomAccessErrorMessage} onRetryRoomAccess={() => roomAccess.refetch()} lines={requestLines} setLines={setRequestLines} total={requestTotal} onCreate={(input: any) => createRequest.mutateAsync(input)} onVerify={(input: any) => verifyRequest.mutateAsync(input)} busy={createRequest.isPending || verifyRequest.isPending} focusRequestId={notificationTarget?.nav === "requests" ? notificationTarget.requestId : undefined} />}
             {active === "adjustments" && <AdjustmentsView adjustments={adjustments.data ?? []} items={items} rooms={rooms} onSubmit={(input: any) => createAdjustment.mutate(input)} busy={createAdjustment.isPending} />}
@@ -1685,7 +1685,7 @@ function StockView({ stock, isAdmin, items, warehouses, onCreateItem, busy, onIm
               <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                 <div>
                   <p className="font-semibold text-[#07304A]">Impor master barang</p>
-                  <p className="mt-1 text-xs leading-5 text-[#315563]">Upload .xlsx, .xls, atau .csv. Data diperiksa dahulu dan tidak akan disimpan jika masih ada error.</p>
+                  <p className="mt-1 text-xs leading-5 text-[#315563]">Upload .xlsx, .xls, atau .csv. SKU baru akan ditambahkan dan SKU yang sudah ada akan diperbarui. Seluruh impor dibatalkan jika masih ada error.</p>
                 </div>
                 <Button variant="outline" size="sm" onClick={downloadTemplate}>Unduh template CSV</Button>
               </div>
@@ -1713,7 +1713,18 @@ function StockView({ stock, isAdmin, items, warehouses, onCreateItem, busy, onIm
                   {canImport && (
                     <div className="flex flex-col gap-3 rounded-xl border border-[#FFD500] bg-[#E6F4F7] p-3 sm:flex-row sm:items-center sm:justify-between">
                       <p className="text-sm text-[#004E9B]">Semua {preview.rows.length} baris lolos validasi dan siap diimpor.</p>
-                      <Button disabled={importBusy} onClick={() => onImport(preview.rows)}>{importBusy ? "Mengimpor…" : "Impor ke master barang"}</Button>
+                      <Button disabled={importBusy} onClick={() => {
+                        void (async () => {
+                          try {
+                            await onImport(preview.rows);
+                            setPreview(null);
+                            setFileName("");
+                            setShowImport(false);
+                          } catch {
+                            // Parent mutation displays the server error; keep preview available for retry.
+                          }
+                        })();
+                      }}>{importBusy ? "Mengimpor…" : "Impor ke master barang"}</Button>
                     </div>
                   )}
                 </div>
