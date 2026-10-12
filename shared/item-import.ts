@@ -103,5 +103,6 @@ export function validateItemImport(inputRows: Array<Record<string, unknown>>): I
 }
 
 export function importTemplateCsv() {
-  return "SKU,Nama Barang,Satuan,Kategori,Kode Gudang Sumber,Stok Minimum\nFAR-001,Contoh item,box,Alat kesehatan,FARMASI,10\n";
+  // Header-only template avoids accidentally importing a sample item as live inventory.
+  return "SKU,Nama Barang,Satuan,Kategori,Kode Gudang Sumber,Stok Minimum\n";
 }
