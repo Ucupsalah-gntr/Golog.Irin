@@ -179,7 +179,17 @@ export default function Home() {
     },
   });
   const createItem = trpc.catalog.createItem.useMutation({ onSuccess: () => { toast.success("Master barang dibuat"); utils.catalog.all.invalidate(); } });
-  const importItems = trpc.catalog.importItems.useMutation({ onSuccess: (result) => { toast.success(`Impor selesai: ${result.created} baru, ${result.updated} diperbarui`); utils.catalog.all.invalidate(); setActive("stock"); } });
+  const importItems = trpc.catalog.importItems.useMutation({
+    onSuccess: (result) => {
+      toast.success(`Impor selesai: ${result.created} baru, ${result.updated} diperbarui.`);
+      utils.catalog.all.invalidate();
+      dashboard.refetch();
+      setActive("stock");
+    },
+    onError: (error) => {
+      toast.error(error instanceof Error ? error.message : "Impor gagal. Periksa file lalu coba lagi.");
+    },
+  });
 
   const rooms = catalog.data?.rooms ?? [];
   const items = catalog.data?.items ?? [];
