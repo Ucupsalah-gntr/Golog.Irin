@@ -2,10 +2,24 @@ import { describe, expect, it } from "vitest";
 import { validateItemImport } from "./item-import";
 
 describe("master item import validation", () => {
-  it("normalizes aliases and numeric minimum stock", () => {
-    const result = validateItemImport([{ Kode: "far-001", "Nama Barang": "Sarung tangan", Satuan: "box", "Stok Minimum": 10 }]);
+  it("normalizes aliases and reads every field in the bundled CSV template", () => {
+    const result = validateItemImport([{
+      SKU: "far-001",
+      "Nama Barang": "Sarung tangan",
+      Satuan: "box",
+      Kategori: "Alat kesehatan",
+      "Kode Gudang Sumber": "farmasi",
+      "Stok Minimum": 10,
+    }]);
     expect(result.errors).toHaveLength(0);
-    expect(result.rows[0]).toMatchObject({ sku: "FAR-001", name: "Sarung tangan", unit: "box", minStock: 10 });
+    expect(result.rows[0]).toMatchObject({
+      sku: "FAR-001",
+      name: "Sarung tangan",
+      unit: "box",
+      category: "Alat kesehatan",
+      sourceWarehouseCode: "FARMASI",
+      minStock: 10,
+    });
   });
 
   it("rejects missing required columns", () => {
