@@ -7,6 +7,7 @@ export type TrpcContext = {
   req: CreateExpressContextOptions["req"];
   res: CreateExpressContextOptions["res"];
   user: User | null;
+  authFailureReason: string | null;
 };
 
 function getBearerToken(authorization: string | undefined) {
@@ -32,7 +33,7 @@ function usernameFromAuthUser(user: SupabaseAuthUser) {
   return at > 0 ? email.slice(0, at) : "";
 }
 
-async function getSupabaseAuthUser(accessToken: string, supabaseKey: string): Promise<SupabaseAuthUser | null> {
+async function getSupabaseAuthUser(accessToken: string, supabaseKey: string): Promise<{ user: SupabaseAuthUser | null; status: number }> {
   const response = await fetch(`${ENV.supabaseUrl}/auth/v1/user`, {
     method: "GET",
     headers: {
@@ -43,22 +44,23 @@ async function getSupabaseAuthUser(accessToken: string, supabaseKey: string): Pr
 
   if (!response.ok) {
     console.warn("[Auth] Supabase /auth/v1/user returned", response.status);
-    return null;
+    return { user: null, status: response.status };
   }
 
   const authUser = (await response.json()) as SupabaseAuthUser;
-  return authUser?.id ? authUser : null;
+  return { user: authUser?.id ? authUser : null, status: response.status };
 }
 
 export async function createContext(
   opts: CreateExpressContextOptions,
 ): Promise<TrpcContext> {
   let user: User | null = null;
+  let authFailureReason: string | null = null;
 
   try {
     const token = getBearerToken(opts.req.get("authorization"));
     if (!token) {
-      return { req: opts.req, res: opts.res, user: null };
+      return { req: opts.req, res: opts.res, user: null, authFailureReason: "missing_authorization" };
     }
 
     // Prefer the server-configured publishable key. If Preview has no server
@@ -70,22 +72,26 @@ export async function createContext(
 
     if (!ENV.supabaseUrl || !candidateKeys.length) {
       console.warn("[Auth] Supabase server environment is not configured.");
-      return { req: opts.req, res: opts.res, user: null };
+      return { req: opts.req, res: opts.res, user: null, authFailureReason: "supabase_config_missing" };
     }
 
     let authUser: SupabaseAuthUser | null = null;
+    let authHttpStatus: number | null = null;
     for (const key of candidateKeys) {
-      authUser = await getSupabaseAuthUser(token, key);
+      const result = await getSupabaseAuthUser(token, key);
+      authUser = result.user;
+      authHttpStatus = result.status;
       if (authUser) break;
     }
     if (!authUser) {
-      return { req: opts.req, res: opts.res, user: null };
+      authFailureReason = authHttpStatus ? `supabase_token_rejected_http_${authHttpStatus}` : "supabase_auth_validation_failed";
+      return { req: opts.req, res: opts.res, user: null, authFailureReason };
     }
 
     const username = usernameFromAuthUser(authUser);
     if (!username) {
       console.warn("[Auth] Supabase user has no username/email identity.");
-      return { req: opts.req, res: opts.res, user: null };
+      return { req: opts.req, res: opts.res, user: null, authFailureReason: "supabase_identity_missing" };
     }
 
     console.info("[Auth] Auth user validated:", {
@@ -116,6 +122,7 @@ export async function createContext(
         authUserId: authUser.id,
         username,
       });
+      authFailureReason = "local_profile_not_found";
     }
 
     if (user) {
@@ -133,11 +140,13 @@ export async function createContext(
   } catch (error) {
     console.warn("[Auth] Supabase authentication failed:", error);
     user = null;
+    authFailureReason = "auth_context_exception";
   }
 
   return {
     req: opts.req,
     res: opts.res,
     user,
+    authFailureReason: user ? null : authFailureReason ?? "auth_user_unavailable",
   };
 }
