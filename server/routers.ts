@@ -198,7 +198,8 @@ export const appRouter = router({
             .select({ id: items.id, active: items.active, sku: items.sku })
             .from(items)
             .where(sql`lower(${items.sku}) = ${row.sku.toLowerCase()}`)
-            .limit(2);
+            .limit(2)
+            .for("update");
 
           if (existing.length > 1) {
             throw new TRPCError({
