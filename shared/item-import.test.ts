@@ -22,4 +22,41 @@ describe("master item import validation", () => {
     expect(result.errors.some((error) => error.field === "sku" && error.message.includes("duplikat"))).toBe(true);
     expect(result.errors.some((error) => error.field === "minStock")).toBe(true);
   });
+
+  it("rejects values that the import API would refuse", () => {
+    const result = validateItemImport([{
+      SKU: "FAR-001",
+      Nama: "A",
+      Satuan: "u".repeat(33),
+      Kategori: "k".repeat(101),
+      "Kode Gudang Sumber": "g".repeat(33),
+      Minimum: 0,
+    }]);
+
+    expect(result.errors.some((error) => error.field === "name" && error.message.includes("minimal 2"))).toBe(true);
+    expect(result.errors.some((error) => error.field === "unit" && error.message.includes("maksimal 32"))).toBe(true);
+    expect(result.errors.some((error) => error.field === "category" && error.message.includes("maksimal 100"))).toBe(true);
+    expect(result.errors.some((error) => error.field === "sourceWarehouseCode" && error.message.includes("maksimal 32"))).toBe(true);
+  });
+
+  it("accepts a minimum stock of zero and trims optional columns", () => {
+    const result = validateItemImport([{
+      SKU: " far-001 ",
+      "Nama Barang": "Sarung tangan",
+      Satuan: " box ",
+      Kategori: " ",
+      "Kode Gudang Sumber": " ",
+      "Stok Minimum": 0,
+    }]);
+
+    expect(result.errors).toHaveLength(0);
+    expect(result.rows[0]).toMatchObject({
+      sku: "FAR-001",
+      name: "Sarung tangan",
+      unit: "box",
+      minStock: 0,
+      category: undefined,
+      sourceWarehouseCode: undefined,
+    });
+  });
 });
