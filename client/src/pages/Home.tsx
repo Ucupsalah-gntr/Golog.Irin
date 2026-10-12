@@ -182,7 +182,7 @@ export default function Home() {
   const importItems = trpc.catalog.importItems.useMutation({
     onSuccess: (result) => {
       const openingSummary = result.stockInitialized > 0
-        ? ` ${result.stockInitialized} barang mendapat stok awal total ${formatNumber(result.initialStockQtyTotal)} unit.`
+        ? ` Stok awal dicatat untuk ${result.stockInitialized} barang (akumulasi kuantitas ${formatNumber(result.initialStockQtyTotal)}, mengikuti satuan tiap barang).`
         : "";
       toast.success(`Impor selesai: ${result.created} baru, ${result.updated} diperbarui.${openingSummary}`);
       utils.catalog.all.invalidate();
@@ -1717,7 +1717,7 @@ function StockView({ stock, isAdmin, items, warehouses, onCreateItem, busy, onIm
 
                   {canImport && (
                     <div className="flex flex-col gap-3 rounded-xl border border-[#FFD500] bg-[#E6F4F7] p-3 sm:flex-row sm:items-center sm:justify-between">
-                      <p className="text-sm text-[#004E9B]">Semua {preview.rows.length} baris lolos validasi. {openingStockRows} barang memiliki Stok Awal, total {formatNumber(openingStockTotal)} unit.</p>
+                      <p className="text-sm text-[#004E9B]">Semua {preview.rows.length} baris lolos validasi. {openingStockRows} barang memiliki Stok Awal; akumulasi kuantitas {formatNumber(openingStockTotal)} (mengikuti satuan tiap barang).</p>
                       <Button disabled={importBusy} onClick={() => {
                         void (async () => {
                           try {
