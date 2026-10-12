@@ -134,18 +134,18 @@ export default function Home() {
   const utils = trpc.useUtils();
   const catalog = trpc.catalog.all.useQuery(undefined, { enabled: isAuthenticated });
   const currentUser = trpc.auth.me.useQuery(undefined, { enabled: isAuthenticated });
-  const roomAccess = trpc.system.users.myRooms.useQuery(undefined, { enabled: isAuthenticated && user?.role !== "admin" });
+  const roomAccess = trpc.system.users.myRooms.useQuery(undefined, { enabled: isAuthenticated && currentUser.data?.role === "user" });
   const dashboard = trpc.dashboard.summary.useQuery({ roomId: selectedRoom }, { enabled: isAuthenticated });
   const requests = trpc.requests.list.useQuery({}, { enabled: isAuthenticated });
   const todayRoomLocks = trpc.requests.todayLocks.useQuery(undefined, { enabled: isAuthenticated });
-  const adjustments = trpc.adjustments.list.useQuery(undefined, { enabled: isAuthenticated && user?.role === "admin" });
+  const adjustments = trpc.adjustments.list.useQuery(undefined, { enabled: isAuthenticated && currentUser.data?.role === "admin" });
   const monthlyReport = trpc.reports.monthly.useQuery(
     { month: reportMonth },
-    { enabled: isAuthenticated && user?.role === "admin" && (active === "reports" || active === "overview") },
+    { enabled: isAuthenticated && currentUser.data?.role === "admin" && (active === "reports" || active === "overview") },
   );
   const roomDemand = trpc.analytics.roomDemand.useQuery(
     { days: roomDemandDays },
-    { enabled: isAuthenticated && user?.role === "admin" && active === "room-demand" },
+    { enabled: isAuthenticated && currentUser.data?.role === "admin" && active === "room-demand" },
   );
   const createRequest = trpc.requests.create.useMutation({
     onSuccess: () => {
@@ -198,7 +198,11 @@ export default function Home() {
   const items = catalog.data?.items ?? [];
   const warehouses = catalog.data?.warehouses ?? [];
   const stock = dashboard.data?.stock ?? [];
-  const isAdmin = user?.role === "admin";
+  // The server-side profile is the source of truth for privileges. Supabase
+  // browser metadata is only a display hint and must never unlock admin UI.
+  const apiRole = currentUser.data?.role ?? null;
+  const isAdmin = apiRole === "admin";
+  const roleMismatch = Boolean(user && apiRole && user.role !== apiRole);
   const visibleNav = nav.filter((item) => !item.adminOnly || isAdmin);
   const accessibleRooms = roomAccess.data?.map((row: any) => row.room) ?? [];
   const roomAccessErrorMessage = roomAccess.error?.message || "Akses ruangan gagal dimuat.";
@@ -417,6 +421,20 @@ export default function Home() {
               {unreadNotificationCount > 0 && <span className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-[#FF6500] ring-2 ring-[#FFFFFF]" />}
             </button><button title="Refresh" onClick={refreshAll} className="rounded-xl border border-[#9CCED8] bg-[#FFFFFF] p-2.5 text-slate-500 hover:text-teal-700"><RefreshCw size={17} /></button><div className="hidden rounded-xl border border-[#9CCED8] bg-[#FFFFFF] px-3 py-2 text-right sm:block"><p className="text-xs font-semibold">{user?.name || "Akun aktif"}</p><p className="text-[11px] text-slate-500">{isAdmin ? "Kepala gudang" : "Petugas"}</p></div></div></header>
           <div className={`golog-page mx-auto max-w-[1500px] space-y-6 ${active === "overview" ? "p-0 pb-28 md:p-8 md:pb-8" : "p-5 md:p-8"}`}>
+            {currentUser.isError && (
+              <div role="alert" className="rounded-2xl border border-[#F4BE70] bg-[#FFF7E8] p-4 text-sm text-[#7A4310]">
+                <p className="font-semibold">Hak akses server belum dapat diverifikasi.</p>
+                <p className="mt-1 leading-6">Menu admin ditahan sampai profil akun berhasil dibaca oleh API. Coba muat ulang; bila berlanjut, periksa koneksi autentikasi deployment ini.</p>
+                <Button variant="outline" size="sm" className="mt-3" onClick={() => currentUser.refetch()}>Coba verifikasi lagi</Button>
+              </div>
+            )}
+            {roleMismatch && (
+              <div role="alert" className="rounded-2xl border border-[#F4BE70] bg-[#FFF7E8] p-4 text-sm text-[#7A4310]">
+                <p className="font-semibold">Perbedaan role browser dan server terdeteksi.</p>
+                <p className="mt-1 leading-6">Browser menandai akun sebagai <strong>{user?.role}</strong>, tetapi API Golog.Irin membaca <strong>{apiRole}</strong>. Demi keamanan, akses admin mengikuti role dari API. Impor tidak akan berjalan sampai profil dan konfigurasi Supabase/database pada deployment Preview cocok.</p>
+                <p className="mt-1 text-xs">Periksa pengaturan environment Preview dan role pada tabel public.users; jangan memperbaiki ini dengan mengubah metadata role di browser.</p>
+              </div>
+            )}
             {active === "overview" && <Overview dashboard={dashboard.data} isAdmin={isAdmin} onGo={go} report={isAdmin ? monthlyReport.data : null} requests={requests.data ?? []} userName={user?.name || user?.username || "Kepala Gudang"} unreadNotificationCount={unreadNotificationCount} onOpenNotifications={() => setNotificationOpen(true)} />}
             {active === "stock" && <StockView stock={stock} isAdmin={isAdmin} items={items} warehouses={warehouses} onCreateItem={(input: any) => createItem.mutate(input)} busy={createItem.isPending} onImport={(rows: any[]) => importItems.mutateAsync({ rows })} importBusy={importItems.isPending} focusItemId={notificationTarget?.nav === "stock" ? notificationTarget.itemId : undefined} />}
             {active === "inbound" && <InboundView items={items} warehouses={warehouses} onSubmit={(input: any) => createInbound.mutate(input)} busy={createInbound.isPending} />}
