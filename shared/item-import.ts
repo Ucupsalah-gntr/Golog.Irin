@@ -55,6 +55,13 @@ export function validateItemImport(inputRows: Array<Record<string, unknown>>): I
   const rows: ImportItemRow[] = [];
   const seen = new Map<string, number>();
   if (!inputRows.length) return { rows, errors: [{ rowNumber: 1, field: "file", message: "File tidak memiliki baris data." }], duplicateSkus: [] };
+  if (inputRows.length > 5000) {
+    return {
+      rows,
+      errors: [{ rowNumber: 5002, field: "file", message: `File berisi ${inputRows.length.toLocaleString("id-ID")} baris data; batas impor adalah 5.000 baris.` }],
+      duplicateSkus: [],
+    };
+  }
 
   const headers = Object.keys(inputRows[0] ?? {});
   const mappedHeaders = new Map(headers.map((header) => [header, aliases[key(header)]]));
