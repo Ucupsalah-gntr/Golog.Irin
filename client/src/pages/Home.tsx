@@ -181,7 +181,10 @@ export default function Home() {
   const createItem = trpc.catalog.createItem.useMutation({ onSuccess: () => { toast.success("Master barang dibuat"); utils.catalog.all.invalidate(); } });
   const importItems = trpc.catalog.importItems.useMutation({
     onSuccess: (result) => {
-      toast.success(`Impor selesai: ${result.created} baru, ${result.updated} diperbarui.`);
+      const openingSummary = result.stockInitialized > 0
+        ? ` ${result.stockInitialized} barang mendapat stok awal total ${formatNumber(result.initialStockQtyTotal)} unit.`
+        : "";
+      toast.success(`Impor selesai: ${result.created} baru, ${result.updated} diperbarui.${openingSummary}`);
       utils.catalog.all.invalidate();
       dashboard.refetch();
       setActive("stock");
@@ -1631,7 +1634,7 @@ function StockView({ stock, isAdmin, items, warehouses, onCreateItem, busy, onIm
     const url = URL.createObjectURL(blob);
     const anchor = document.createElement("a");
     anchor.href = url;
-    anchor.download = "template-master-barang.csv";
+    anchor.download = "template-barang-stok-awal.csv";
     anchor.click();
     URL.revokeObjectURL(url);
   }
@@ -1648,6 +1651,8 @@ function StockView({ stock, isAdmin, items, warehouses, onCreateItem, busy, onIm
   const lowCount = rows.filter((row: any) => Number(row.movementQty) <= Number(row.minStock)).length;
   const safeCount = Math.max(0, rows.length - lowCount);
   const canImport = Boolean(preview && preview.rows.length && preview.errors.length === 0);
+  const openingStockRows = preview?.rows.filter((row) => row.initialStockQty > 0).length ?? 0;
+  const openingStockTotal = preview?.rows.reduce((sum, row) => sum + row.initialStockQty, 0) ?? 0;
 
   return (
     <div className="space-y-5">
@@ -1684,10 +1689,10 @@ function StockView({ stock, isAdmin, items, warehouses, onCreateItem, busy, onIm
             <div className="mb-6 rounded-2xl border-2 border-[#9CCED8] bg-[#F4FAFC]/45 p-5 shadow-[inset_0_0_0_2px_rgba(255,250,240,0.55)]">
               <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                 <div>
-                  <p className="font-semibold text-[#07304A]">Impor master barang</p>
-                  <p className="mt-1 text-xs leading-5 text-[#315563]">Upload .xlsx, .xls, atau .csv. SKU baru akan ditambahkan dan SKU yang sudah ada akan diperbarui. Seluruh impor dibatalkan jika masih ada error.</p>
+                  <p className="font-semibold text-[#07304A]">Impor barang & stok awal</p>
+                  <p className="mt-1 text-xs leading-5 text-[#315563]">Upload .xlsx, .xls, atau .csv. SKU baru ditambahkan dan SKU yang sudah ada diperbarui. Kolom Stok Awal mencatat saldo pembuka di gudang sumber sebagai mutasi masuk. Jika SKU sudah punya riwayat mutasi, isi Stok Awal 0 atau kosong agar saldo tidak tergandakan. Seluruh impor dibatalkan jika ada error.</p>
                 </div>
-                <Button variant="outline" size="sm" onClick={downloadTemplate}>Unduh template CSV</Button>
+                <Button variant="outline" size="sm" onClick={downloadTemplate}>Unduh template CSV + stok awal</Button>
               </div>
 
               <div className="mt-4 rounded-xl border border-[#9CCED8] bg-[#FFFFFF] p-3">
@@ -1712,7 +1717,7 @@ function StockView({ stock, isAdmin, items, warehouses, onCreateItem, busy, onIm
 
                   {canImport && (
                     <div className="flex flex-col gap-3 rounded-xl border border-[#FFD500] bg-[#E6F4F7] p-3 sm:flex-row sm:items-center sm:justify-between">
-                      <p className="text-sm text-[#004E9B]">Semua {preview.rows.length} baris lolos validasi dan siap diimpor.</p>
+                      <p className="text-sm text-[#004E9B]">Semua {preview.rows.length} baris lolos validasi. {openingStockRows} barang memiliki Stok Awal, total {formatNumber(openingStockTotal)} unit.</p>
                       <Button disabled={importBusy} onClick={() => {
                         void (async () => {
                           try {
@@ -1724,7 +1729,7 @@ function StockView({ stock, isAdmin, items, warehouses, onCreateItem, busy, onIm
                             // Parent mutation displays the server error; keep preview available for retry.
                           }
                         })();
-                      }}>{importBusy ? "Mengimpor…" : "Impor ke master barang"}</Button>
+                      }}>{importBusy ? "Mengimpor…" : "Impor barang + stok awal"}</Button>
                     </div>
                   )}
                 </div>
