@@ -77,8 +77,12 @@ export function validateItemImport(inputRows: Array<Record<string, unknown>>): I
     if (!sku) errors.push({ rowNumber, field: "sku", message: "SKU wajib diisi." });
     else if (sku.length > 64) errors.push({ rowNumber, field: "sku", message: "SKU maksimal 64 karakter." });
     if (!name) errors.push({ rowNumber, field: "name", message: "Nama barang wajib diisi." });
+    else if (name.length < 2) errors.push({ rowNumber, field: "name", message: "Nama barang minimal 2 karakter." });
     else if (name.length > 180) errors.push({ rowNumber, field: "name", message: "Nama barang maksimal 180 karakter." });
     if (!unit) errors.push({ rowNumber, field: "unit", message: "Satuan wajib diisi." });
+    else if (unit.length > 32) errors.push({ rowNumber, field: "unit", message: "Satuan maksimal 32 karakter." });
+    if (category && category.length > 100) errors.push({ rowNumber, field: "category", message: "Kategori maksimal 100 karakter." });
+    if (sourceWarehouseCode && sourceWarehouseCode.length > 32) errors.push({ rowNumber, field: "sourceWarehouseCode", message: "Kode gudang sumber maksimal 32 karakter." });
     if (!Number.isInteger(minStock) || minStock < 0) errors.push({ rowNumber, field: "minStock", message: "Stok minimum harus bilangan bulat 0 atau lebih." });
     if (sku && seen.has(sku)) errors.push({ rowNumber, field: "sku", message: `SKU duplikat dengan baris ${seen.get(sku)}.` });
     if (sku && !seen.has(sku)) seen.set(sku, rowNumber);
