@@ -1,3 +1,9 @@
+export function isValidDateKey(dateKey: string): boolean {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(dateKey)) return false;
+  const parsed = new Date(`${dateKey}T00:00:00.000Z`);
+  return !Number.isNaN(parsed.getTime()) && parsed.toISOString().slice(0, 10) === dateKey;
+}
+
 export function getJakartaDateKey(now = new Date()): string {
   return new Intl.DateTimeFormat("en-CA", {
     timeZone: "Asia/Jakarta",
@@ -13,7 +19,7 @@ export function canReuseRequestDayLock(requesterId: number, currentUserId: numbe
 
 
 export function addJakartaDays(dateKey: string, days: number): string {
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(dateKey) || !Number.isInteger(days)) {
+  if (!isValidDateKey(dateKey) || !Number.isInteger(days)) {
     throw new Error("Invalid Jakarta date");
   }
   const [year, month, day] = dateKey.split("-").map(Number);
@@ -27,5 +33,8 @@ export function addJakartaDays(dateKey: string, days: number): string {
 }
 
 export function isRequestDateWithinWindow(requestDate: string, today = getJakartaDateKey(), maxDaysAhead = 7): boolean {
+  if (!isValidDateKey(requestDate) || !isValidDateKey(today) || !Number.isInteger(maxDaysAhead) || maxDaysAhead < 0) {
+    return false;
+  }
   return requestDate >= today && requestDate <= addJakartaDays(today, maxDaysAhead);
 }
