@@ -425,10 +425,21 @@ export const appRouter = router({
           .where(eq(requestItems.requestId, input.requestId));
 
         if (input.status === "rejected") {
+          const verifiedAt = new Date();
           await tx
             .update(requests)
-            .set({ status: "rejected", verifiedAt: new Date() })
+            .set({ status: "rejected", verifiedAt })
             .where(eq(requests.id, input.requestId));
+
+          await tx.insert(auditLogs).values({
+            actorId: ctx.user.id,
+            action: "verify",
+            entityType: "request",
+            entityId: input.requestId,
+            beforeData: request,
+            afterData: { status: "rejected", lines: [], transferred: [] },
+            notes: "Permintaan ditolak kepala gudang",
+          });
 
           return {
             request,
@@ -603,37 +614,33 @@ export const appRouter = router({
         }
 
         const nextStatus = input.status === "partial" ? "partial" : "approved";
+        const verifiedAt = new Date();
         await tx
           .update(requests)
-          .set({ status: nextStatus, verifiedAt: new Date() })
+          .set({ status: nextStatus, verifiedAt })
           .where(eq(requests.id, input.requestId));
+
+        const verifiedLines = currentLines.map((line) => ({
+          lineId: line.id,
+          approvedQty: approvalByLineId.get(line.id) ?? 0,
+        }));
+        await tx.insert(auditLogs).values({
+          actorId: ctx.user.id,
+          action: "verify",
+          entityType: "request",
+          entityId: input.requestId,
+          beforeData: request,
+          afterData: { status: nextStatus, lines: verifiedLines, transferred },
+          notes: "Permintaan disetujui dan stok Gudang Pusat dipindahkan otomatis ke ruangan",
+        });
 
         return {
           request,
           status: nextStatus,
-          lines: currentLines.map((line) => ({
-            lineId: line.id,
-            approvedQty: approvalByLineId.get(line.id) ?? 0,
-          })),
+          lines: verifiedLines,
           transferred,
         };
       });
-
-      await writeAudit(
-        ctx.user.id,
-        "verify",
-        "request",
-        input.requestId,
-        result.request,
-        {
-          status: result.status,
-          lines: result.lines,
-          transferred: result.transferred,
-        },
-        result.status === "rejected"
-          ? "Permintaan ditolak kepala gudang"
-          : "Permintaan disetujui dan stok Gudang Pusat dipindahkan otomatis ke ruangan",
-      );
 
       return {
         success: true,
