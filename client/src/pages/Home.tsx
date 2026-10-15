@@ -134,7 +134,7 @@ export default function Home() {
   const utils = trpc.useUtils();
   const catalog = trpc.catalog.all.useQuery(undefined, { enabled: isAuthenticated });
   const currentUser = trpc.auth.me.useQuery(undefined, { enabled: isAuthenticated });
-  const roomAccess = trpc.system.users.myRooms.useQuery(undefined, { enabled: isAuthenticated && user?.role !== "admin" });
+  const roomAccess = trpc.system.users.myRooms.useQuery(undefined, { enabled: isAuthenticated && Boolean(currentUser.data) && currentUser.data?.role !== "admin" });
   const dashboard = trpc.dashboard.summary.useQuery({ roomId: selectedRoom }, { enabled: isAuthenticated });
   const requests = trpc.requests.list.useQuery({}, { enabled: isAuthenticated });
   const todayRoomLocks = trpc.requests.todayLocks.useQuery(undefined, { enabled: isAuthenticated });
@@ -185,7 +185,7 @@ export default function Home() {
   const items = catalog.data?.items ?? [];
   const warehouses = catalog.data?.warehouses ?? [];
   const stock = dashboard.data?.stock ?? [];
-  const isAdmin = user?.role === "admin";
+  const isAdmin = currentUser.data?.role === "admin";
   const visibleNav = nav.filter((item) => !item.adminOnly || isAdmin);
   const accessibleRooms = roomAccess.data?.map((row: any) => row.room) ?? [];
   const roomAccessErrorMessage = roomAccess.error?.message || "Akses ruangan gagal dimuat.";
@@ -368,6 +368,8 @@ export default function Home() {
 
   if (loading) return <div className="min-h-screen grid place-items-center bg-[#f4f7f6]"><div className="text-center"><Activity className="mx-auto mb-3 animate-pulse text-teal-600" /><p className="text-sm text-slate-500">Menyiapkan ruang kerja…</p></div></div>;
   if (!isAuthenticated) return <LoginScreen />;
+  if (currentUser.isLoading) return <div className="min-h-screen grid place-items-center bg-[#f4f7f6]"><div className="text-center"><Activity className="mx-auto mb-3 animate-pulse text-teal-600" /><p className="text-sm text-slate-500">Memverifikasi profil dan hak akses…</p></div></div>;
+  if (currentUser.isError || !currentUser.data) return <div className="min-h-screen grid place-items-center bg-[#f4f7f6] p-6"><div className="max-w-lg rounded-2xl border border-amber-200 bg-white p-6 text-center shadow-sm"><ShieldCheck className="mx-auto mb-3 text-amber-600" size={28} /><h1 className="text-lg font-semibold text-slate-900">Profil aplikasi belum dapat diverifikasi</h1><p className="mt-2 text-sm leading-6 text-slate-600">Sesi Supabase aktif, tetapi profil database atau konfigurasi server belum siap. Fitur dibatasi sampai profil berhasil diverifikasi. Periksa konfigurasi DATABASE_URL dan koneksi database, lalu coba masuk kembali.</p><button type="button" onClick={() => void logout()} className="mt-5 rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white">Keluar</button></div></div>;
 
   function refreshAll() {
     dashboard.refetch();
