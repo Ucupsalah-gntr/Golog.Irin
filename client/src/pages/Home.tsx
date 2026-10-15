@@ -1592,49 +1592,14 @@ function MobileUserOverview({
   );
 }
 
-function inferStockCategory(value: unknown): string {
-  const name = String(value ?? "").normalize("NFKD").toLowerCase().replace(/[\\u0300-\\u036f]/g, " ").replace(/[^a-z0-9]+/g, " ").trim();
-  const has = (...terms: string[]) => terms.some((term) => name.includes(term));
-
-  if (has("sarung tangan", "handscoon", "handcoon", "glove", "masker", "gown", "hazmat", "apron", "face shield", "faceshield", "goggle", "shoe cover", "penutup kepala", "n95", "respirator", "pelindung wajah")) {
-    return "APD & Sarung Tangan";
-  }
-  if (has("infus", "iv catheter", "iv cannula", "iv line", "abocath", "venflon", "three way", "3 way", "extension tube", "infusion set", "blood transfusion set", "transfusion set", "needleless connector", "heparin cap", "stopcock", "cvc", "central venous", "arterial line")) {
-    return "Infus & Akses Vaskular";
-  }
-  if (has("spuit", "syringe", "jarum suntik", "jarum injeksi", "needle", "insulin syringe", "syringe gas darah", "gas darah syringe")) {
-    return "Spuit & Jarum";
-  }
-  if (has("endotracheal", "ett", "tracheostomy", "trakeostomi", "kanul nasal", "nasal cannula", "oxygen mask", "masker oksigen", "nebul", "ambu", "breathing circuit", "ventilator circuit", "hfnc", "cpap", "bipap", "filter ventilator", "suction catheter", "suction", "catheter mount", "hme", "oropharyngeal airway", "nasopharyngeal airway", "laryngeal mask", "lma", "oksigen")) {
-    return "Pernapasan & Suction";
-  }
-  if (has("kateter", "catheter", "foley", "urine bag", "urin bag", "urimeter", "nephrostomy", "drainase", "drainage", "chest tube", "thoracic tube", "ngt", "nasogastric", "sonde", "feeding tube", "colostomy", "stoma")) {
-    return "Kateter, Sonde & Drainase";
-  }
-  if (has("kasa", "gauze", "dressing", "verban", "perban", "bandage", "plester", "adhesive", "wound", "tegaderm", "hypafix", "underpad")) {
-    return "Perawatan Luka & Balutan";
-  }
-  if (has("alkohol", "alcohol swab", "povidone", "iodine", "chlorhexidine", "chlorhex", "disinfektan", "desinfektan", "antiseptik", "antiseptic", "handrub", "hand rub", "hand sanitizer", "ethanol", "hydrogen peroxide", "h2o2")) {
-    return "Antiseptik & Disinfektan";
-  }
-  if (has("vacutainer", "specimen", "spesimen", "tabung darah", "blood collection", "edta", "serum", "pot dahak", "urine container", "container sample", "swab", "test strip", "strip gula", "glucose strip", "lancet", "ecg electrode", "electrode", "gas darah")) {
-    return "Laboratorium & Pemeriksaan";
-  }
-  if (has("underpad", "linen", "tissue", "tisu", "handuk", "lap ", "wipes", "wipe ", "popok", "diaper", "sprei", "bed cover", "kantong sampah", "limbah medis", "yellow bag", "red bag", "biohazard", "masker bedah bekas")) {
-    return "Kebersihan, Linen & Limbah";
-  }
-  return "Lainnya / Perlu ditinjau";
-}
-
 function StockView({ stock, isAdmin, items, warehouses, onCreateItem, busy, onImport, importBusy, focusItemId }: any) {
   const [show, setShow] = useState(false);
   const [showImport, setShowImport] = useState(false);
   const [expanded, setExpanded] = useState<number | null>(null);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<"all" | "safe" | "low" | "empty">("all");
-  const [categoryFilter, setCategoryFilter] = useState("all");
   const [warehouseFilter, setWarehouseFilter] = useState("all");
-  const [sortBy, setSortBy] = useState<"name" | "stock-asc" | "stock-desc" | "category">("name");
+  const [sortBy, setSortBy] = useState<"name" | "warehouse" | "stock-asc" | "stock-desc">("name");
   const [visibleCount, setVisibleCount] = useState(50);
   const [form, setForm] = useState({ sku: "", name: "", unit: "box", category: "", sourceWarehouseId: "", minStock: "0" });
   const [preview, setPreview] = useState<ImportPreview | null>(null);
@@ -1677,11 +1642,6 @@ function StockView({ stock, isAdmin, items, warehouses, onCreateItem, busy, onIm
     () => new Map<number, any>((Array.isArray(warehouses) ? warehouses : []).map((warehouse: any) => [Number(warehouse.id), warehouse])),
     [warehouses],
   );
-  const categories = useMemo(
-    () => Array.from(new Set(rows.map((row: any) => inferStockCategory(row.name))))
-      .sort((a, b) => a.localeCompare(b, "id")),
-    [rows],
-  );
   const sourceWarehouses = useMemo(
     () => (Array.isArray(warehouses) ? warehouses : [])
       .filter((warehouse: any) => warehouse.kind === "source")
@@ -1696,7 +1656,6 @@ function StockView({ stock, isAdmin, items, warehouses, onCreateItem, busy, onIm
     const sourceItem = itemById.get(Number(row.itemId));
     const sourceWarehouseId = sourceItem?.sourceWarehouseId == null ? null : Number(sourceItem.sourceWarehouseId);
     const sourceWarehouse = sourceWarehouseId == null ? undefined : warehouseById.get(sourceWarehouseId);
-    const category = inferStockCategory(row.name);
     const isEmpty = quantity <= 0;
     const isLow = quantity > 0 && quantity <= minimum;
     const isSafe = quantity > minimum;
@@ -1705,17 +1664,15 @@ function StockView({ stock, isAdmin, items, warehouses, onCreateItem, busy, onIm
       || (statusFilter === "safe" && isSafe)
       || (statusFilter === "low" && isLow)
       || (statusFilter === "empty" && isEmpty);
-    const matchesCategory = categoryFilter === "all" || category === categoryFilter;
     const matchesWarehouse = !isAdmin || warehouseFilter === "all"
       || (warehouseFilter === "unassigned" && sourceWarehouseId === null)
       || (sourceWarehouseId !== null && String(sourceWarehouseId) === warehouseFilter);
     const searchable = [
-      row.name, row.sku, category, row.unit,
-      sourceWarehouse?.name, sourceWarehouse?.code,
+      row.name, row.sku, row.unit, sourceWarehouse?.name, sourceWarehouse?.code,
     ].some((value) => String(value ?? "").toLowerCase().includes(normalizedSearch));
 
-    return matchesStatus && matchesCategory && matchesWarehouse && (!normalizedSearch || searchable);
-  }), [rows, itemById, warehouseById, normalizedSearch, statusFilter, categoryFilter, warehouseFilter, isAdmin]);
+    return matchesStatus && matchesWarehouse && (!normalizedSearch || searchable);
+  }), [rows, itemById, warehouseById, normalizedSearch, statusFilter, warehouseFilter, isAdmin]);
 
   const sortedFiltered = useMemo(() => [...filtered].sort((a: any, b: any) => {
     if (sortBy === "stock-asc") {
@@ -1724,15 +1681,19 @@ function StockView({ stock, isAdmin, items, warehouses, onCreateItem, busy, onIm
     } else if (sortBy === "stock-desc") {
       const diff = Number(b.movementQty) - Number(a.movementQty);
       if (diff !== 0) return diff;
-    } else if (sortBy === "category") {
-      const categoryDiff = inferStockCategory(a.name).localeCompare(inferStockCategory(b.name), "id");
-      if (categoryDiff !== 0) return categoryDiff;
+    } else if (sortBy === "warehouse") {
+      const aItem = itemById.get(Number(a.itemId));
+      const bItem = itemById.get(Number(b.itemId));
+      const aWarehouse = aItem?.sourceWarehouseId == null ? "zzz" : String(warehouseById.get(Number(aItem.sourceWarehouseId))?.name ?? "zzz");
+      const bWarehouse = bItem?.sourceWarehouseId == null ? "zzz" : String(warehouseById.get(Number(bItem.sourceWarehouseId))?.name ?? "zzz");
+      const warehouseDiff = aWarehouse.localeCompare(bWarehouse, "id");
+      if (warehouseDiff !== 0) return warehouseDiff;
     }
     return String(a.name ?? "").localeCompare(String(b.name ?? ""), "id");
-  }), [filtered, sortBy]);
+  }), [filtered, sortBy, itemById, warehouseById]);
 
   const visibleRows = sortedFiltered.slice(0, visibleCount);
-  const hasActiveFilters = Boolean(normalizedSearch) || statusFilter !== "all" || categoryFilter !== "all"
+  const hasActiveFilters = Boolean(normalizedSearch) || statusFilter !== "all"
     || warehouseFilter !== "all" || sortBy !== "name";
   const lowCount = rows.filter((row: any) => Number(row.movementQty) > 0 && Number(row.movementQty) <= Number(row.minStock)).length;
   const emptyCount = rows.filter((row: any) => Number(row.movementQty) <= 0).length;
@@ -1743,7 +1704,7 @@ function StockView({ stock, isAdmin, items, warehouses, onCreateItem, busy, onIm
 
   useEffect(() => {
     setVisibleCount(50);
-  }, [search, statusFilter, categoryFilter, warehouseFilter, sortBy]);
+  }, [search, statusFilter, warehouseFilter, sortBy]);
 
   useEffect(() => {
     if (!focusItemId) return;
@@ -1894,49 +1855,39 @@ function StockView({ stock, isAdmin, items, warehouses, onCreateItem, busy, onIm
                 <Input
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
-                  placeholder="Cari nama, SKU, kategori, atau gudang…"
+                  placeholder="Cari nama barang, SKU, atau gudang sumber…"
                   className="h-11 border-[#9CCED8] bg-white pl-10"
                   aria-label="Cari stok"
                 />
               </div>
-              <div className="flex flex-wrap items-center gap-2">
-                <label className="sr-only" htmlFor="stock-category-filter">Kategori</label>
-                <select id="stock-category-filter" value={categoryFilter} onChange={(e) => setCategoryFilter(e.target.value)} className="h-11 min-w-36 flex-1 rounded-lg border border-[#9CCED8] bg-white px-3 text-sm text-[#07304A] sm:flex-none">
-                  <option value="all">Semua kategori otomatis</option>
-                  {categories.map((category) => <option key={category} value={category}>{category}</option>)}
-                </select>
-                {isAdmin && (
-                  <>
-                    <label className="sr-only" htmlFor="stock-warehouse-filter">Gudang sumber</label>
-                    <select id="stock-warehouse-filter" value={warehouseFilter} onChange={(e) => setWarehouseFilter(e.target.value)} className="h-11 min-w-40 flex-1 rounded-lg border border-[#9CCED8] bg-white px-3 text-sm text-[#07304A] sm:flex-none">
-                      <option value="all">Semua gudang sumber</option>
-                      {sourceWarehouses.map((warehouse: any) => <option key={warehouse.id} value={String(warehouse.id)}>{warehouse.name}</option>)}
-                      <option value="unassigned">Belum ditetapkan</option>
-                    </select>
-                  </>
-                )}
-                <label className="sr-only" htmlFor="stock-sort-filter">Urutan</label>
-                <select id="stock-sort-filter" value={sortBy} onChange={(e) => setSortBy(e.target.value as typeof sortBy)} className="h-11 min-w-36 flex-1 rounded-lg border border-[#9CCED8] bg-white px-3 text-sm text-[#07304A] sm:flex-none">
-                  <option value="name">Nama A–Z</option>
-                  <option value="category">Kategori A–Z</option>
-                  <option value="stock-asc">Stok terendah</option>
-                  <option value="stock-desc">Stok tertinggi</option>
-                </select>
-              </div>
+              {isAdmin && (
+                <div className="flex flex-wrap items-center gap-2">
+                  <label className="sr-only" htmlFor="stock-warehouse-filter">Gudang sumber</label>
+                  <select id="stock-warehouse-filter" value={warehouseFilter} onChange={(e) => setWarehouseFilter(e.target.value)} className="h-11 min-w-40 flex-1 rounded-lg border border-[#9CCED8] bg-white px-3 text-sm text-[#07304A] sm:flex-none">
+                    <option value="all">Semua gudang sumber</option>
+                    {sourceWarehouses.map((warehouse: any) => <option key={warehouse.id} value={String(warehouse.id)}>{warehouse.name}</option>)}
+                    <option value="unassigned">Belum ditetapkan</option>
+                  </select>
+                  <label className="sr-only" htmlFor="stock-sort-filter">Urutan</label>
+                  <select id="stock-sort-filter" value={sortBy} onChange={(e) => setSortBy(e.target.value as typeof sortBy)} className="h-11 min-w-36 flex-1 rounded-lg border border-[#9CCED8] bg-white px-3 text-sm text-[#07304A] sm:flex-none">
+                    <option value="name">Nama A–Z</option>
+                    <option value="warehouse">Gudang sumber A–Z</option>
+                    <option value="stock-asc">Stok terendah</option>
+                    <option value="stock-desc">Stok tertinggi</option>
+                  </select>
+                </div>
+              )}
             </div>
             <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
               <p className="text-xs text-[#315563]">
                 Menampilkan <strong>{formatNumber(Math.min(visibleCount, sortedFiltered.length))}</strong> dari <strong>{formatNumber(sortedFiltered.length)}</strong> hasil, total {formatNumber(rows.length)} barang.
               </p>
               {hasActiveFilters && (
-                <button type="button" onClick={() => { setSearch(""); setStatusFilter("all"); setCategoryFilter("all"); setWarehouseFilter("all"); setSortBy("name"); }} className="rounded-lg px-2 py-1 text-xs font-semibold text-[#004E9B] hover:bg-white">
+                <button type="button" onClick={() => { setSearch(""); setStatusFilter("all"); setWarehouseFilter("all"); setSortBy("name"); }} className="rounded-lg px-2 py-1 text-xs font-semibold text-[#004E9B] hover:bg-white">
                   Reset filter
                 </button>
               )}
             </div>
-            <p className="mt-2 text-[11px] leading-5 text-[#55727C]">
-              Kategori dibuat otomatis dari nama barang untuk membantu pencarian, tanpa mengubah data master. Barang yang belum cocok masuk ke “Lainnya / Perlu ditinjau”.
-            </p>
           </div>
 
           <div className="mt-4 space-y-2">
@@ -1945,7 +1896,9 @@ function StockView({ stock, isAdmin, items, warehouses, onCreateItem, busy, onIm
               const open = expanded === Number(row.itemId);
               const stockQty = Number(row.movementQty);
               const minQty = Number(row.minStock);
-              const category = inferStockCategory(row.name);
+              const sourceItem = itemById.get(Number(row.itemId));
+              const sourceWarehouse = sourceItem?.sourceWarehouseId == null ? undefined : warehouseById.get(Number(sourceItem.sourceWarehouseId));
+              const sourceWarehouseLabel = sourceWarehouse?.name ?? "Belum ditetapkan";
               const coverage = minQty > 0 ? Math.min(100, Math.max(0, (stockQty / minQty) * 100)) : stockQty > 0 ? 100 : 0;
 
               return (
@@ -1966,7 +1919,8 @@ function StockView({ stock, isAdmin, items, warehouses, onCreateItem, busy, onIm
                           {low ? "Perlu cek" : "Aman"}
                         </Badge>
                       </div>
-                      <p className="mt-1 truncate text-xs text-[#55727C]">{row.sku} · {category} · {row.unit}</p>
+                      <p className="mt-1 truncate text-xs text-[#55727C]">{row.sku} · {row.unit}</p>
+                      <p className="mt-1 truncate text-xs font-semibold text-[#087E8B]">Gudang sumber: {sourceWarehouseLabel}</p>
                       <div className="mt-3 h-1.5 w-full max-w-md overflow-hidden rounded-full bg-[#dfd1a7]">
                         <div className={`h-full rounded-full ${low ? "bg-[#FF6500]" : "bg-[#0091B9]"}`} style={{ width: `${coverage}%` }} />
                       </div>
@@ -1998,7 +1952,7 @@ function StockView({ stock, isAdmin, items, warehouses, onCreateItem, busy, onIm
                         </div>
                       </div>
                       <div className="mt-3 flex flex-col gap-2 text-xs text-[#315563] sm:flex-row sm:items-center sm:justify-between">
-                        <span>{isAdmin ? "Lokasi: Gudang Pusat" : "Lokasi: Ruangan aktif"}</span>
+                        <span>Gudang sumber: <strong>{sourceWarehouseLabel}</strong>{sourceWarehouse?.code ? ` · ${sourceWarehouse.code}` : ""}</span>
                         <span>Saldo diperbarui dari pergerakan stok.</span>
                       </div>
                     </div>
@@ -2010,7 +1964,7 @@ function StockView({ stock, isAdmin, items, warehouses, onCreateItem, busy, onIm
             {!sortedFiltered.length && (
               <Card className="border border-[#9CCED8] shadow-sm">
                 <CardContent>
-                  <EmptyState title={rows.length ? "Barang tidak ditemukan" : "Master barang masih kosong"} text={rows.length ? "Coba ubah kata pencarian, kategori, gudang sumber, atau reset filter." : isAdmin ? "Tambahkan master barang terlebih dahulu." : "Belum ada data stok."} />
+                  <EmptyState title={rows.length ? "Barang tidak ditemukan" : "Master barang masih kosong"} text={rows.length ? "Coba ubah kata pencarian, pilih gudang sumber lain, atau reset filter." : isAdmin ? "Tambahkan master barang terlebih dahulu." : "Belum ada data stok."} />
                 </CardContent>
               </Card>
             )}
