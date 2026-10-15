@@ -1704,7 +1704,7 @@ function StockView({ stock, isAdmin, items, warehouses, onCreateItem, busy, onIm
               <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                 <div>
                   <p className="font-semibold text-[#07304A]">Impor barang & stok awal</p>
-                  <p className="mt-1 text-xs leading-5 text-[#315563]">Upload .xlsx, .xls, atau .csv. SKU baru ditambahkan dan SKU yang sudah ada diperbarui. Kolom Stok Awal mencatat saldo pembuka di gudang sumber sebagai mutasi masuk. Jika SKU sudah punya riwayat mutasi, isi Stok Awal 0 atau kosong agar saldo tidak tergandakan. Seluruh impor dibatalkan jika ada error.</p>
+                  <p className="mt-1 text-xs leading-5 text-[#315563]">Upload .xlsx, .xls, atau .csv. SKU baru ditambahkan dan SKU yang sudah ada diperbarui. Kolom Stok Awal mencatat saldo pembuka di gudang sumber sebagai mutasi masuk. Jika SKU sudah punya riwayat mutasi, isi Stok Awal 0 atau kosong agar saldo tidak tergandakan. Kode gudang sumber yang kosong mempertahankan penetapan SKU lama; SKU baru akan belum memiliki sumber. Seluruh impor dibatalkan jika ada error.</p>
                 </div>
                 <Button variant="outline" size="sm" onClick={downloadTemplate}>Unduh template CSV + stok awal</Button>
               </div>
