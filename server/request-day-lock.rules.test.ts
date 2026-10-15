@@ -24,4 +24,8 @@ describe("daily room requester rules", () => {
     expect(isRequestDateWithinWindow("2026-02-29", "2026-02-27")).toBe(false);
     expect(() => addJakartaDays("2026-10-32", 1)).toThrow("Invalid Jakarta date");
   });
+
+  it("accepts a real leap day", () => {
+    expect(isRequestDateWithinWindow("2028-02-29", "2028-02-28")).toBe(true);
+  });
 });
