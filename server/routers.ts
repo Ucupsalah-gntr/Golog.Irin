@@ -356,18 +356,18 @@ export const appRouter = router({
           input.lines.map((line) => ({ requestId, itemId: line.itemId, requestedQty: line.requestedQty }))
         );
 
+        await tx.insert(auditLogs).values({
+          actorId: ctx.user.id,
+          action: "create",
+          entityType: "request",
+          entityId: requestId,
+          beforeData: null,
+          afterData: requestAuditInput,
+          notes: `Permintaan ${requestNo} diajukan`,
+        });
+
         return { requestId, requestNo };
       });
-
-      await writeAudit(
-        ctx.user.id,
-        "create",
-        "request",
-        result.requestId,
-        null,
-        requestAuditInput,
-        `Permintaan ${result.requestNo} diajukan`
-      );
 
       return result;
     }),
