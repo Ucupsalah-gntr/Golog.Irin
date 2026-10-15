@@ -115,13 +115,45 @@ export const appRouter = router({
         })),
       };
     }),
-    createItem: adminProcedure.input(z.object({ sku: z.string().min(1), name: z.string().min(2), unit: z.string().min(1), category: z.string().optional(), sourceWarehouseId: z.number().nullable().optional(), minStock: z.number().int().min(0).default(0) })).mutation(async ({ input, ctx }) => {
-      const db = await getDb(); if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database belum tersedia." });
-      const inserted = await db.insert(items).values(input).returning({ id: items.id });
-      const id = inserted[0]?.id;
-      if (!id) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Barang gagal disimpan." });
-      await writeAudit(ctx.user.id, "create", "item", id, null, input, "Master barang dibuat");
-      return { id };
+    createItem: adminProcedure.input(z.object({
+      sku: z.string().trim().min(1).max(64).transform((value) => value.toUpperCase()),
+      name: z.string().trim().min(2).max(180),
+      unit: z.string().trim().min(1).max(32),
+      category: z.string().trim().max(100).optional(),
+      sourceWarehouseId: z.number().int().positive().nullable().optional(),
+      minStock: z.number().int().min(0).default(0),
+    })).mutation(async ({ input, ctx }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database belum tersedia." });
+
+      return db.transaction(async (tx) => {
+        const sourceWarehouseId = input.sourceWarehouseId ?? null;
+        if (sourceWarehouseId !== null) {
+          const sourceRows = await tx.select({ id: warehouses.id }).from(warehouses)
+            .where(and(
+              eq(warehouses.id, sourceWarehouseId),
+              eq(warehouses.active, true),
+              eq(warehouses.kind, "source"),
+            )).limit(1);
+          if (!sourceRows[0]) throw new TRPCError({ code: "BAD_REQUEST", message: "Pilih gudang sumber yang aktif; Gudang Logistik IR bukan gudang sumber barang." });
+        }
+
+        const values = { ...input, sourceWarehouseId, category: input.category || null };
+        const inserted = await tx.insert(items).values(values).returning({ id: items.id });
+        const id = inserted[0]?.id;
+        if (!id) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Barang gagal disimpan." });
+
+        await tx.insert(auditLogs).values({
+          actorId: ctx.user.id,
+          action: "create",
+          entityType: "item",
+          entityId: id,
+          beforeData: null,
+          afterData: values,
+          notes: "Master barang dibuat",
+        });
+        return { id };
+      });
     }),
     importItems: adminProcedure.input(z.object({
       rows: z.array(z.object({
