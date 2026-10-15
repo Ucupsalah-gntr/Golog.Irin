@@ -9,13 +9,15 @@ import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 
 export default function UsersRooms() {
-  const { user, loading, isAuthenticated } = useAuth();
+  const { loading, isAuthenticated } = useAuth();
+  const currentUser = trpc.auth.me.useQuery(undefined, { enabled: isAuthenticated });
   const [draftRooms, setDraftRooms] = useState<Record<number, number[]>>({});
+  const isAdmin = currentUser.data?.role === "admin";
   const users = trpc.system.users.list.useQuery(undefined, {
-    enabled: isAuthenticated && user?.role === "admin",
+    enabled: isAuthenticated && isAdmin,
   });
   const catalog = trpc.catalog.all.useQuery(undefined, {
-    enabled: isAuthenticated && user?.role === "admin",
+    enabled: isAuthenticated && isAdmin,
   });
   const assignRooms = trpc.system.users.assignRooms.useMutation({
     onSuccess: (_, input) => {
@@ -35,7 +37,15 @@ export default function UsersRooms() {
     return <div className="min-h-screen grid place-items-center bg-[#f4f7f6] p-6"><Card className="max-w-md"><CardContent className="p-8 text-center"><p className="text-lg font-semibold">Belum masuk</p><p className="mt-2 text-sm text-slate-500">Silakan masuk ke Gudang IR terlebih dahulu.</p><a href="/" className="mt-6 inline-flex rounded-xl bg-[#102a2b] px-4 py-2 text-sm font-medium text-white">Kembali ke login</a></CardContent></Card></div>;
   }
 
-  if (user?.role !== "admin") {
+  if (currentUser.isLoading) {
+    return <div className="min-h-screen grid place-items-center bg-[#f4f7f6]"><p className="text-sm text-slate-500">Memverifikasi hak akses…</p></div>;
+  }
+
+  if (currentUser.isError || !currentUser.data) {
+    return <div className="min-h-screen grid place-items-center bg-[#f4f7f6] p-6"><Card className="max-w-md"><CardContent className="p-8 text-center"><ShieldCheck className="mx-auto mb-4 text-amber-600" size={30} /><p className="text-lg font-semibold">Profil aplikasi belum dapat diverifikasi</p><p className="mt-2 text-sm text-slate-500">Periksa koneksi database dan konfigurasi server, lalu muat ulang halaman.</p><Link href="/"><Button className="mt-6 rounded-xl bg-[#102a2b]">Kembali</Button></Link></CardContent></Card></div>;
+  }
+
+  if (!isAdmin) {
     return <div className="min-h-screen grid place-items-center bg-[#f4f7f6] p-6"><Card className="max-w-md"><CardContent className="p-8 text-center"><ShieldCheck className="mx-auto mb-4 text-rose-500" size={30} /><p className="text-lg font-semibold">Akses khusus kepala gudang</p><p className="mt-2 text-sm text-slate-500">Halaman pengaturan akun dan ruangan hanya dapat dibuka oleh admin.</p><Link href="/"><Button className="mt-6 rounded-xl bg-[#102a2b]">Kembali</Button></Link></CardContent></Card></div>;
   }
 
@@ -96,7 +106,7 @@ export default function UsersRooms() {
 
         <Card className="border-amber-200 bg-amber-50/70">
           <CardContent className="p-5 text-sm leading-6 text-amber-900">
-            <strong>Catatan tahap ini:</strong> pengaturan ruangan baru menentukan data penugasan akun. Validasi backend agar petugas hanya dapat membuat, melihat, dan menerima permintaan untuk ruangannya akan diaktifkan pada tahap 3C-3.
+            <strong>Catatan:</strong> backend memvalidasi akses ruangan saat petugas mengajukan permintaan. Perubahan akses perlu diuji bersama akun petugas terkait.
           </CardContent>
         </Card>
       </main>

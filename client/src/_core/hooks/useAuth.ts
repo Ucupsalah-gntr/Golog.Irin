@@ -27,9 +27,9 @@ function buildAppUser(authUser: SupabaseUser): AppUser {
     (email.includes("@") ? email.split("@")[0] : email) ||
     "user";
 
-  const metadataRole = metadata.role;
-  const role: "user" | "admin" =
-    metadataRole === "admin" || username === "admin" ? "admin" : "user";
+  // This is only a local session identity hint. Authorization and the
+  // application's admin UI must use the server-verified profile from auth.me.
+  const role: "user" | "admin" = "user";
 
   const metadataId = Number(metadata.app_user_id ?? metadata.user_id ?? 0);
 

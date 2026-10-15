@@ -14,7 +14,8 @@ const requireUser = t.middleware(async opts => {
   const { ctx, next } = opts;
 
   if (!ctx.user) {
-    throw new TRPCError({ code: "UNAUTHORIZED", message: UNAUTHED_ERR_MSG });
+    const diagnostic = ctx.authFailureReason ? ` [${ctx.authFailureReason}]` : "";
+    throw new TRPCError({ code: "UNAUTHORIZED", message: `${UNAUTHED_ERR_MSG}${diagnostic}` });
   }
 
   return next({

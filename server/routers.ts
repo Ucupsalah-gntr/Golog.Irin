@@ -15,9 +15,8 @@ import {
   getMonthlyReportData,
   getRoomDemandPatterns,
   getRoomStockRows,
-  getStockQty,
+  auditLogs,
   getStockRows,
-  writeAudit,
   items,
   requestDayLocks,
   requestItems,
@@ -115,50 +114,221 @@ export const appRouter = router({
         })),
       };
     }),
-    createItem: adminProcedure.input(z.object({ sku: z.string().min(1), name: z.string().min(2), unit: z.string().min(1), category: z.string().optional(), sourceWarehouseId: z.number().nullable().optional(), minStock: z.number().int().min(0).default(0) })).mutation(async ({ input, ctx }) => {
-      const db = await getDb(); if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database belum tersedia." });
-      const inserted = await db.insert(items).values(input).returning({ id: items.id });
-      const id = inserted[0]?.id;
-      if (!id) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Barang gagal disimpan." });
-      await writeAudit(ctx.user.id, "create", "item", id, null, input, "Master barang dibuat");
-      return { id };
+    createItem: adminProcedure.input(z.object({
+      sku: z.string().trim().min(1).max(64).transform((value) => value.toUpperCase()),
+      name: z.string().trim().min(2).max(180),
+      unit: z.string().trim().min(1).max(32),
+      category: z.string().trim().max(100).optional(),
+      sourceWarehouseId: z.number().int().positive().nullable().optional(),
+      minStock: z.number().int().min(0).default(0),
+    })).mutation(async ({ input, ctx }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database belum tersedia." });
+
+      return db.transaction(async (tx) => {
+        // SKU uniqueness is case-insensitive for inventory purposes, even though
+        // the historical PostgreSQL unique index is case-sensitive.
+        const duplicateSku = await tx.select({ id: items.id, sku: items.sku }).from(items)
+          .where(sql`lower(${items.sku}) = ${input.sku.toLowerCase()}`)
+          .limit(1)
+          .for("update");
+        if (duplicateSku[0]) {
+          throw new TRPCError({
+            code: "CONFLICT",
+            message: `SKU "${input.sku}" sudah ada pada master barang sebagai "${duplicateSku[0].sku}". Gunakan SKU baru atau perbarui item yang ada.`,
+          });
+        }
+
+        const sourceWarehouseId = input.sourceWarehouseId ?? null;
+        if (sourceWarehouseId !== null) {
+          const sourceRows = await tx.select({ id: warehouses.id }).from(warehouses)
+            .where(and(
+              eq(warehouses.id, sourceWarehouseId),
+              eq(warehouses.active, true),
+              eq(warehouses.kind, "source"),
+            )).limit(1);
+          if (!sourceRows[0]) throw new TRPCError({ code: "BAD_REQUEST", message: "Pilih gudang sumber yang aktif; Gudang Logistik IR bukan gudang sumber barang." });
+        }
+
+        const values = { ...input, sourceWarehouseId, category: input.category || null };
+        const inserted = await tx.insert(items).values(values).returning({ id: items.id });
+        const id = inserted[0]?.id;
+        if (!id) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Barang gagal disimpan." });
+
+        await tx.insert(auditLogs).values({
+          actorId: ctx.user.id,
+          action: "create",
+          entityType: "item",
+          entityId: id,
+          beforeData: null,
+          afterData: values,
+          notes: "Master barang dibuat",
+        });
+        return { id };
+      });
     }),
     importItems: adminProcedure.input(z.object({
       rows: z.array(z.object({
         rowNumber: z.number().int().positive(),
-        sku: z.string().min(1).max(64),
-        name: z.string().min(2).max(180),
-        unit: z.string().min(1).max(32),
-        category: z.string().max(100).optional(),
-        sourceWarehouseCode: z.string().max(32).optional(),
+        sku: z.string().trim().min(1).max(64),
+        name: z.string().trim().min(2).max(180),
+        unit: z.string().trim().min(1).max(32),
+        category: z.string().trim().max(100).optional(),
+        sourceWarehouseCode: z.string().trim().max(32).optional(),
         minStock: z.number().int().min(0),
+        initialStockQty: z.number().int().min(0).default(0),
       })).min(1).max(5000),
     })).mutation(async ({ input, ctx }) => {
       const db = await getDb();
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database belum tersedia." });
-      const sourceWarehouses = await db.select().from(warehouses).where(eq(warehouses.active, true));
-      const warehouseByCode = new Map(sourceWarehouses.map((warehouse) => [warehouse.code.toUpperCase(), warehouse.id]));
-      const unknownWarehouses = Array.from(new Set(input.rows.map((row) => row.sourceWarehouseCode).filter((code): code is string => Boolean(code && !warehouseByCode.has(code.toUpperCase())))));
-      if (unknownWarehouses.length) throw new TRPCError({ code: "BAD_REQUEST", message: `Kode gudang tidak ditemukan: ${unknownWarehouses.join(", ")}.` });
+
+      // Normalize on the server too: UI validation is helpful feedback, not a trust boundary.
+      const normalizedRows: ImportItemRow[] = input.rows.map((row) => ({
+        ...row,
+        sku: row.sku.trim().toUpperCase(),
+        name: row.name.trim(),
+        unit: row.unit.trim(),
+        category: row.category?.trim() || undefined,
+        sourceWarehouseCode: row.sourceWarehouseCode?.trim().toUpperCase() || undefined,
+        initialStockQty: row.initialStockQty ?? 0,
+      }));
+
+      const rowBySku = new Map<string, number>();
+      for (const row of normalizedRows) {
+        if (!row.sku) {
+          throw new TRPCError({ code: "BAD_REQUEST", message: `SKU wajib diisi pada baris ${row.rowNumber}.` });
+        }
+        const previousRow = rowBySku.get(row.sku);
+        if (previousRow !== undefined) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: `SKU duplikat "${row.sku}" pada baris ${previousRow} dan ${row.rowNumber}. Perbaiki file lalu impor kembali.`,
+          });
+        }
+        rowBySku.set(row.sku, row.rowNumber);
+      }
+
+      const activeWarehouses = await db.select().from(warehouses).where(eq(warehouses.active, true));
+      const warehouseDetailsByCode = new Map(activeWarehouses.map((warehouse) => [warehouse.code.toUpperCase(), warehouse]));
+      const warehouseByCode = new Map(activeWarehouses.map((warehouse) => [warehouse.code.toUpperCase(), warehouse.id]));
+      const unknownWarehouses = Array.from(new Set(
+        normalizedRows
+          .map((row) => row.sourceWarehouseCode)
+          .filter((code): code is string => Boolean(code && !warehouseByCode.has(code))),
+      ));
+      if (unknownWarehouses.length) {
+        throw new TRPCError({ code: "BAD_REQUEST", message: `Kode gudang tidak ditemukan atau tidak aktif: ${unknownWarehouses.join(", ")}.` });
+      }
+      const missingOpeningWarehouse = normalizedRows.find((row) => row.initialStockQty > 0 && !row.sourceWarehouseCode);
+      if (missingOpeningWarehouse) {
+        throw new TRPCError({ code: "BAD_REQUEST", message: `Kolom Gudang sumber wajib diisi untuk Stok Awal pada baris ${missingOpeningWarehouse.rowNumber} (SKU ${missingOpeningWarehouse.sku}).` });
+      }
+      const invalidSourceWarehouse = normalizedRows.find((row) =>
+        row.sourceWarehouseCode && warehouseDetailsByCode.get(row.sourceWarehouseCode)?.kind !== "source"
+      );
+      if (invalidSourceWarehouse) {
+        throw new TRPCError({ code: "BAD_REQUEST", message: `Kode gudang sumber pada baris ${invalidSourceWarehouse.rowNumber} harus menunjuk ke gudang sumber aktif, bukan Gudang Logistik IR.` });
+      }
 
       let created = 0;
       let updated = 0;
+      let stockInitialized = 0;
+      let initialStockQtyTotal = 0;
       await db.transaction(async (tx) => {
-        for (const row of input.rows as ImportItemRow[]) {
-          const sourceWarehouseId = row.sourceWarehouseCode ? warehouseByCode.get(row.sourceWarehouseCode.toUpperCase()) ?? null : null;
-          const existing = await tx.select({ id: items.id }).from(items).where(eq(items.sku, row.sku)).limit(1);
-          const values = { sku: row.sku, name: row.name, unit: row.unit, category: row.category || null, sourceWarehouseId, minStock: row.minStock };
+        for (const row of normalizedRows) {
+          // Match case-insensitively to avoid creating FAR-001 beside an older far-001.
+          const existing = await tx
+            .select({ id: items.id, active: items.active, sku: items.sku, sourceWarehouseId: items.sourceWarehouseId })
+            .from(items)
+            .where(sql`lower(${items.sku}) = ${row.sku.toLowerCase()}`)
+            .limit(2)
+            .for("update");
+
+          if (existing.length > 1) {
+            throw new TRPCError({
+              code: "CONFLICT",
+              message: `SKU "${row.sku}" memiliki lebih dari satu varian huruf besar/kecil di master barang. Selesaikan duplikasi tersebut sebelum impor.`,
+            });
+          }
+          if (existing[0] && !existing[0].active) {
+            throw new TRPCError({
+              code: "BAD_REQUEST",
+              message: `SKU "${row.sku}" sudah tidak aktif. Impor dihentikan agar barang nonaktif tidak tampak berhasil diperbarui tetapi tetap tersembunyi.`,
+            });
+          }
+          if (existing[0] && row.initialStockQty > 0) {
+            const priorMovements = await tx
+              .select({ id: stockMovements.id })
+              .from(stockMovements)
+              .where(eq(stockMovements.itemId, existing[0].id))
+              .limit(1);
+            if (priorMovements.length > 0) {
+              throw new TRPCError({
+                code: "CONFLICT",
+                message: `Stok Awal untuk SKU "${row.sku}" tidak ditambahkan karena barang sudah memiliki riwayat mutasi. Kosongkan kolom Stok Awal untuk SKU ini lalu impor ulang, atau catat penambahan lewat menu Barang Masuk.`,
+              });
+            }
+          }
+
+          // A blank source warehouse preserves the mapping of an existing SKU;
+          // newly created SKUs without a mapping remain unassigned.
+          const sourceWarehouseId = row.sourceWarehouseCode
+            ? warehouseByCode.get(row.sourceWarehouseCode) ?? null
+            : existing[0]?.sourceWarehouseId ?? null;
+          const values = {
+            sku: row.sku,
+            name: row.name,
+            unit: row.unit,
+            category: row.category || null,
+            sourceWarehouseId,
+            minStock: row.minStock,
+          };
+          let itemId: number;
           if (existing[0]) {
             await tx.update(items).set(values).where(eq(items.id, existing[0].id));
+            itemId = existing[0].id;
             updated++;
           } else {
-            await tx.insert(items).values(values);
+            const inserted = await tx.insert(items).values(values).returning({ id: items.id });
+            if (!inserted[0]?.id) {
+              throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: `Barang SKU "${row.sku}" gagal disimpan.` });
+            }
+            itemId = inserted[0].id;
             created++;
           }
+
+          if (row.initialStockQty > 0) {
+            await tx.insert(stockMovements).values({
+              itemId,
+              movementType: "in",
+              quantity: row.initialStockQty,
+              sourceWarehouseId: sourceWarehouseId ?? undefined,
+              roomId: null,
+              createdBy: ctx.user.id,
+              occurredAt: new Date(),
+              notes: `Stok awal impor · ${row.sourceWarehouseCode} · SKU ${row.sku}`,
+            });
+            stockInitialized++;
+            initialStockQtyTotal += row.initialStockQty;
+          }
         }
+        await tx.insert(auditLogs).values({
+          actorId: ctx.user.id,
+          action: "import",
+          entityType: "items",
+          entityId: null,
+          beforeData: null,
+          afterData: {
+            rowCount: normalizedRows.length,
+            created,
+            updated,
+            stockInitialized,
+            initialStockQtyTotal,
+          },
+          notes: "Impor master barang beserta saldo stok awal",
+        });
       });
-      await writeAudit(ctx.user.id, "import", "items", null, null, { rowCount: input.rows.length, created, updated }, "Impor master barang dari Excel");
-      return { created, updated, total: input.rows.length };
+      return { created, updated, total: normalizedRows.length, stockInitialized, initialStockQtyTotal };
     }),
   }),
   dashboard: router({
@@ -190,18 +360,44 @@ export const appRouter = router({
   }),
   inbound: router({
     create: adminProcedure.input(z.object({ itemId: z.number().int(), quantity: z.number().int().positive(), sourceWarehouseId: z.number().int(), occurredAt: z.coerce.date().optional(), notes: z.string().max(500).optional() })).mutation(async ({ input, ctx }) => {
-      const db = await getDb(); if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database belum tersedia." });
-      const itemRows = await db.select({ id: items.id }).from(items).where(and(eq(items.id, input.itemId), eq(items.active, true))).limit(1);
-      if (!itemRows[0]) throw new TRPCError({ code: "BAD_REQUEST", message: "Barang tidak ditemukan atau sudah tidak aktif." });
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database belum tersedia." });
 
-      const warehouseRows = await db.select({ id: warehouses.id }).from(warehouses).where(and(eq(warehouses.id, input.sourceWarehouseId), eq(warehouses.active, true))).limit(1);
-      if (!warehouseRows[0]) throw new TRPCError({ code: "BAD_REQUEST", message: "Gudang sumber tidak ditemukan atau sudah tidak aktif." });
+      return db.transaction(async (tx) => {
+        // Share the item-row lock with stocktake/adjustment/approval operations.
+        const itemRows = await tx.select({ id: items.id }).from(items)
+          .where(and(eq(items.id, input.itemId), eq(items.active, true))).limit(1).for("update");
+        if (!itemRows[0]) throw new TRPCError({ code: "BAD_REQUEST", message: "Barang tidak ditemukan atau sudah tidak aktif." });
 
-      const result = await db.insert(stockMovements).values({ ...input, movementType: "in", createdBy: ctx.user.id, occurredAt: input.occurredAt ?? new Date() }).returning({ id: stockMovements.id });
-      const id = result[0]?.id;
-      if (!id) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Barang masuk gagal disimpan." });
-      await writeAudit(ctx.user.id, "create", "stock_movement", id, null, input, "Barang masuk dicatat");
-      return { id };
+        const warehouseRows = await tx.select({ id: warehouses.id }).from(warehouses)
+          .where(and(eq(warehouses.id, input.sourceWarehouseId), eq(warehouses.active, true), eq(warehouses.kind, "source"))).limit(1);
+        if (!warehouseRows[0]) throw new TRPCError({ code: "BAD_REQUEST", message: "Gudang sumber tidak ditemukan/tidak aktif atau bukan gudang sumber." });
+
+        const occurredAt = input.occurredAt ?? new Date();
+        const result = await tx.insert(stockMovements).values({
+          itemId: input.itemId,
+          quantity: input.quantity,
+          sourceWarehouseId: input.sourceWarehouseId,
+          occurredAt,
+          notes: input.notes,
+          movementType: "in",
+          createdBy: ctx.user.id,
+          roomId: null,
+        }).returning({ id: stockMovements.id });
+        const id = result[0]?.id;
+        if (!id) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Barang masuk gagal disimpan." });
+
+        await tx.insert(auditLogs).values({
+          actorId: ctx.user.id,
+          action: "create",
+          entityType: "stock_movement",
+          entityId: id,
+          beforeData: null,
+          afterData: { ...input, occurredAt, movementType: "in" },
+          notes: "Barang masuk dicatat",
+        });
+        return { id };
+      });
     }),
   }),
   requests: router({
@@ -329,18 +525,18 @@ export const appRouter = router({
           input.lines.map((line) => ({ requestId, itemId: line.itemId, requestedQty: line.requestedQty }))
         );
 
+        await tx.insert(auditLogs).values({
+          actorId: ctx.user.id,
+          action: "create",
+          entityType: "request",
+          entityId: requestId,
+          beforeData: null,
+          afterData: requestAuditInput,
+          notes: `Permintaan ${requestNo} diajukan`,
+        });
+
         return { requestId, requestNo };
       });
-
-      await writeAudit(
-        ctx.user.id,
-        "create",
-        "request",
-        result.requestId,
-        null,
-        requestAuditInput,
-        `Permintaan ${result.requestNo} diajukan`
-      );
 
       return result;
     }),
@@ -398,10 +594,21 @@ export const appRouter = router({
           .where(eq(requestItems.requestId, input.requestId));
 
         if (input.status === "rejected") {
+          const verifiedAt = new Date();
           await tx
             .update(requests)
-            .set({ status: "rejected", verifiedAt: new Date() })
+            .set({ status: "rejected", verifiedAt })
             .where(eq(requests.id, input.requestId));
+
+          await tx.insert(auditLogs).values({
+            actorId: ctx.user.id,
+            action: "verify",
+            entityType: "request",
+            entityId: input.requestId,
+            beforeData: request,
+            afterData: { status: "rejected", lines: [], transferred: [] },
+            notes: "Permintaan ditolak kepala gudang",
+          });
 
           return {
             request,
@@ -576,37 +783,33 @@ export const appRouter = router({
         }
 
         const nextStatus = input.status === "partial" ? "partial" : "approved";
+        const verifiedAt = new Date();
         await tx
           .update(requests)
-          .set({ status: nextStatus, verifiedAt: new Date() })
+          .set({ status: nextStatus, verifiedAt })
           .where(eq(requests.id, input.requestId));
+
+        const verifiedLines = currentLines.map((line) => ({
+          lineId: line.id,
+          approvedQty: approvalByLineId.get(line.id) ?? 0,
+        }));
+        await tx.insert(auditLogs).values({
+          actorId: ctx.user.id,
+          action: "verify",
+          entityType: "request",
+          entityId: input.requestId,
+          beforeData: request,
+          afterData: { status: nextStatus, lines: verifiedLines, transferred },
+          notes: "Permintaan disetujui dan stok Gudang Pusat dipindahkan otomatis ke ruangan",
+        });
 
         return {
           request,
           status: nextStatus,
-          lines: currentLines.map((line) => ({
-            lineId: line.id,
-            approvedQty: approvalByLineId.get(line.id) ?? 0,
-          })),
+          lines: verifiedLines,
           transferred,
         };
       });
-
-      await writeAudit(
-        ctx.user.id,
-        "verify",
-        "request",
-        input.requestId,
-        result.request,
-        {
-          status: result.status,
-          lines: result.lines,
-          transferred: result.transferred,
-        },
-        result.status === "rejected"
-          ? "Permintaan ditolak kepala gudang"
-          : "Permintaan disetujui dan stok Gudang Pusat dipindahkan otomatis ke ruangan",
-      );
 
       return {
         success: true,
@@ -621,18 +824,8 @@ export const appRouter = router({
       return db.select({ adjustment: stockAdjustments, item: items, room: rooms }).from(stockAdjustments).leftJoin(items, eq(stockAdjustments.itemId, items.id)).leftJoin(rooms, eq(stockAdjustments.roomId, rooms.id)).orderBy(desc(stockAdjustments.createdAt)).limit(100);
     }),
     applyAdjustment: adminProcedure.input(z.object({ itemId: z.number().int(), roomId: z.number().int().nullable().optional(), adjustmentType: z.enum(["add", "subtract"]), quantity: z.number().int().positive(), physicalQty: z.number().int().min(0), reasonType: z.enum(["forgotten_entry", "holiday_pickup", "damaged", "expired", "emergency", "stocktake", "other"]), reason: z.string().min(10), incidentDate: z.coerce.date() })).mutation(async ({ input, ctx }) => {
-      const db = await getDb(); if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database belum tersedia." });
-
-      // Rekonsiliasi ditentukan dari hasil stok fisik, bukan dari direction/quantity
-      // yang dikirim UI. Dengan begitu systemQty=135 dan physicalQty=130 selalu
-      // menghasilkan movement -5, sedangkan 80 -> 84 menghasilkan +4.
-      const itemRows = await db.select({ id: items.id }).from(items).where(and(eq(items.id, input.itemId), eq(items.active, true))).limit(1);
-      if (!itemRows[0]) throw new TRPCError({ code: "BAD_REQUEST", message: "Barang tidak ditemukan atau sudah tidak aktif." });
-
-      if (input.roomId !== null && input.roomId !== undefined) {
-        const roomRows = await db.select({ id: rooms.id }).from(rooms).where(and(eq(rooms.id, input.roomId), eq(rooms.active, true))).limit(1);
-        if (!roomRows[0]) throw new TRPCError({ code: "BAD_REQUEST", message: "Ruangan tidak ditemukan atau sedang tidak aktif." });
-      }
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database belum tersedia." });
 
       if (input.reasonType === "stocktake" && input.roomId !== null && input.roomId !== undefined) {
         throw new TRPCError({
@@ -641,27 +834,86 @@ export const appRouter = router({
         });
       }
 
-      const systemQty = await getStockQty(input.itemId, input.roomId ?? null);
-      let difference: number;
-      try {
-        difference = calculateStockDifference(systemQty, input.physicalQty);
-      } catch {
-        throw new TRPCError({ code: "BAD_REQUEST", message: "Jumlah stok sistem/fisik tidak valid." });
-      }
+      // Serialize stock-changing operations on the item row, then write the
+      // adjustment, movement, and audit record in one transaction.
+      return db.transaction(async (tx) => {
+        const itemRows = await tx
+          .select({ id: items.id })
+          .from(items)
+          .where(and(eq(items.id, input.itemId), eq(items.active, true)))
+          .limit(1)
+          .for("update");
+        if (!itemRows[0]) throw new TRPCError({ code: "BAD_REQUEST", message: "Barang tidak ditemukan atau sudah tidak aktif." });
 
-      if (difference === 0) {
-        throw new TRPCError({ code: "BAD_REQUEST", message: "Stok fisik sama dengan stok sistem. Tidak ada penyesuaian yang perlu diterapkan." });
-      }
+        const roomId = input.roomId ?? null;
+        if (roomId !== null) {
+          const roomRows = await tx.select({ id: rooms.id }).from(rooms)
+            .where(and(eq(rooms.id, roomId), eq(rooms.active, true))).limit(1);
+          if (!roomRows[0]) throw new TRPCError({ code: "BAD_REQUEST", message: "Ruangan tidak ditemukan atau sedang tidak aktif." });
+        }
 
-      const adjustmentType = difference > 0 ? "add" : "subtract";
-      const quantity = Math.abs(difference);
-      const adjustmentNo = nowNo("ADJ");
-      const inserted = await db.insert(stockAdjustments).values({ ...input, adjustmentType, quantity, adjustmentNo, systemQty, status: "applied", createdBy: ctx.user.id, verifiedBy: ctx.user.id, appliedAt: new Date() }).returning({ id: stockAdjustments.id });
-      const adjustmentId = inserted[0]?.id;
-      if (!adjustmentId) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Penyesuaian stok gagal disimpan." });
-      await db.insert(stockMovements).values({ itemId: input.itemId, movementType: "adjustment", quantity: difference, roomId: input.roomId, adjustmentId, createdBy: ctx.user.id, notes: input.reason, occurredAt: input.incidentDate });
-      await writeAudit(ctx.user.id, "apply", "stock_adjustment", adjustmentId, { systemQty }, { ...input, adjustmentNo, adjustmentType, quantity, difference, finalQty: input.physicalQty, status: "applied", verifiedBy: ctx.user.id }, "Rekonsiliasi stok berdasarkan hasil fisik");
-      return { adjustmentId, adjustmentNo, systemQty, physicalQty: input.physicalQty, difference, finalQty: input.physicalQty };
+        const stockRows = await tx
+          .select({ qty: sql<number>`COALESCE(SUM(${stockMovements.quantity}), 0)` })
+          .from(stockMovements)
+          .where(and(eq(stockMovements.itemId, input.itemId), roomId === null ? isNull(stockMovements.roomId) : eq(stockMovements.roomId, roomId)));
+        const systemQty = Number(stockRows[0]?.qty ?? 0);
+
+        let difference: number;
+        try {
+          difference = calculateStockDifference(systemQty, input.physicalQty);
+        } catch {
+          throw new TRPCError({ code: "BAD_REQUEST", message: "Jumlah stok sistem/fisik tidak valid." });
+        }
+        if (difference === 0) {
+          throw new TRPCError({ code: "BAD_REQUEST", message: "Stok fisik sama dengan stok sistem. Tidak ada penyesuaian yang perlu diterapkan." });
+        }
+
+        const adjustmentType = difference > 0 ? "add" : "subtract";
+        const quantity = Math.abs(difference);
+        const adjustmentNo = nowNo("ADJ");
+        const appliedAt = new Date();
+        const inserted = await tx.insert(stockAdjustments).values({
+          itemId: input.itemId,
+          roomId,
+          adjustmentType,
+          quantity,
+          systemQty,
+          physicalQty: input.physicalQty,
+          reasonType: input.reasonType,
+          reason: input.reason,
+          incidentDate: input.incidentDate,
+          adjustmentNo,
+          status: "applied",
+          createdBy: ctx.user.id,
+          verifiedBy: ctx.user.id,
+          appliedAt,
+        }).returning({ id: stockAdjustments.id });
+        const adjustmentId = inserted[0]?.id;
+        if (!adjustmentId) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Penyesuaian stok gagal disimpan." });
+
+        await tx.insert(stockMovements).values({
+          itemId: input.itemId,
+          movementType: "adjustment",
+          quantity: difference,
+          roomId,
+          adjustmentId,
+          createdBy: ctx.user.id,
+          notes: input.reason,
+          occurredAt: input.incidentDate,
+        });
+
+        await tx.insert(auditLogs).values({
+          actorId: ctx.user.id,
+          action: "apply",
+          entityType: "stock_adjustment",
+          entityId: adjustmentId,
+          beforeData: { systemQty },
+          afterData: { ...input, roomId, adjustmentNo, adjustmentType, quantity, difference, finalQty: input.physicalQty, status: "applied", verifiedBy: ctx.user.id },
+          notes: "Rekonsiliasi stok berdasarkan hasil fisik",
+        });
+
+        return { adjustmentId, adjustmentNo, systemQty, physicalQty: input.physicalQty, difference, finalQty: input.physicalQty };
+      });
     }),
     applyBulkStocktake: adminProcedure.input(z.object({
       lines: z.array(z.object({
@@ -783,23 +1035,23 @@ export const appRouter = router({
           });
         }
 
+        await tx.insert(auditLogs).values({
+          actorId: ctx.user.id,
+          action: "bulk_apply",
+          entityType: "stocktake",
+          entityId: null,
+          beforeData: { itemCount: input.lines.length },
+          afterData: {
+            itemCount: input.lines.length,
+            adjusted: results.length,
+            noDifference: input.lines.length - results.length,
+            adjustments: results,
+          },
+          notes: "Stock opname gudang pusat diproses sekaligus",
+        });
+
         return results;
       });
-
-      await writeAudit(
-        ctx.user.id,
-        "bulk_apply",
-        "stocktake",
-        null,
-        { itemCount: input.lines.length },
-        {
-          itemCount: input.lines.length,
-          adjusted: applied.length,
-          noDifference: input.lines.length - applied.length,
-          adjustments: applied,
-        },
-        "Stock opname gudang pusat diproses sekaligus",
-      );
 
       const increase = applied
         .filter((row) => row.difference > 0)

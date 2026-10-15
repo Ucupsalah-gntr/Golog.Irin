@@ -134,18 +134,18 @@ export default function Home() {
   const utils = trpc.useUtils();
   const catalog = trpc.catalog.all.useQuery(undefined, { enabled: isAuthenticated });
   const currentUser = trpc.auth.me.useQuery(undefined, { enabled: isAuthenticated });
-  const roomAccess = trpc.system.users.myRooms.useQuery(undefined, { enabled: isAuthenticated && user?.role !== "admin" });
+  const roomAccess = trpc.system.users.myRooms.useQuery(undefined, { enabled: isAuthenticated && currentUser.data?.role === "user" });
   const dashboard = trpc.dashboard.summary.useQuery({ roomId: selectedRoom }, { enabled: isAuthenticated });
   const requests = trpc.requests.list.useQuery({}, { enabled: isAuthenticated });
   const todayRoomLocks = trpc.requests.todayLocks.useQuery(undefined, { enabled: isAuthenticated });
-  const adjustments = trpc.adjustments.list.useQuery(undefined, { enabled: isAuthenticated && user?.role === "admin" });
+  const adjustments = trpc.adjustments.list.useQuery(undefined, { enabled: isAuthenticated && currentUser.data?.role === "admin" });
   const monthlyReport = trpc.reports.monthly.useQuery(
     { month: reportMonth },
-    { enabled: isAuthenticated && user?.role === "admin" && (active === "reports" || active === "overview") },
+    { enabled: isAuthenticated && currentUser.data?.role === "admin" && (active === "reports" || active === "overview") },
   );
   const roomDemand = trpc.analytics.roomDemand.useQuery(
     { days: roomDemandDays },
-    { enabled: isAuthenticated && user?.role === "admin" && active === "room-demand" },
+    { enabled: isAuthenticated && currentUser.data?.role === "admin" && active === "room-demand" },
   );
   const createRequest = trpc.requests.create.useMutation({
     onSuccess: () => {
@@ -179,13 +179,29 @@ export default function Home() {
     },
   });
   const createItem = trpc.catalog.createItem.useMutation({ onSuccess: () => { toast.success("Master barang dibuat"); utils.catalog.all.invalidate(); } });
-  const importItems = trpc.catalog.importItems.useMutation({ onSuccess: (result) => { toast.success(`Impor selesai: ${result.created} baru, ${result.updated} diperbarui`); utils.catalog.all.invalidate(); setActive("stock"); } });
+  const importItems = trpc.catalog.importItems.useMutation({
+    onSuccess: (result) => {
+      const openingSummary = result.stockInitialized > 0
+        ? ` Stok awal dicatat untuk ${result.stockInitialized} barang (akumulasi kuantitas ${formatNumber(result.initialStockQtyTotal)}, mengikuti satuan tiap barang).`
+        : "";
+      toast.success(`Impor selesai: ${result.created} baru, ${result.updated} diperbarui.${openingSummary}`);
+      utils.catalog.all.invalidate();
+      dashboard.refetch();
+      setActive("stock");
+    },
+    onError: (error) => {
+      toast.error(error instanceof Error ? error.message : "Impor gagal. Periksa file lalu coba lagi.");
+    },
+  });
 
   const rooms = catalog.data?.rooms ?? [];
   const items = catalog.data?.items ?? [];
   const warehouses = catalog.data?.warehouses ?? [];
   const stock = dashboard.data?.stock ?? [];
-  const isAdmin = user?.role === "admin";
+  // The server-side profile is the source of truth for privileges. Supabase
+  // browser metadata is only a display hint and must never unlock admin UI.
+  const apiRole = currentUser.data?.role ?? null;
+  const isAdmin = apiRole === "admin";
   const visibleNav = nav.filter((item) => !item.adminOnly || isAdmin);
   const accessibleRooms = roomAccess.data?.map((row: any) => row.room) ?? [];
   const roomAccessErrorMessage = roomAccess.error?.message || "Akses ruangan gagal dimuat.";
@@ -368,6 +384,8 @@ export default function Home() {
 
   if (loading) return <div className="min-h-screen grid place-items-center bg-[#f4f7f6]"><div className="text-center"><Activity className="mx-auto mb-3 animate-pulse text-teal-600" /><p className="text-sm text-slate-500">Menyiapkan ruang kerja…</p></div></div>;
   if (!isAuthenticated) return <LoginScreen />;
+  if (currentUser.isLoading) return <div className="min-h-screen grid place-items-center bg-[#f4f7f6]"><div className="text-center"><Activity className="mx-auto mb-3 animate-pulse text-teal-600" /><p className="text-sm text-slate-500">Memverifikasi profil dan hak akses…</p></div></div>;
+  if (currentUser.isError || !currentUser.data) return <div className="min-h-screen grid place-items-center bg-[#f4f7f6] p-6"><div className="max-w-lg rounded-2xl border border-amber-200 bg-white p-6 text-center shadow-sm"><ShieldCheck className="mx-auto mb-3 text-amber-600" size={28} /><h1 className="text-lg font-semibold text-slate-900">Profil aplikasi belum dapat diverifikasi</h1><p className="mt-2 text-sm leading-6 text-slate-600">Sesi Supabase aktif, tetapi profil database atau konfigurasi server belum siap. Fitur dibatasi sampai profil berhasil diverifikasi.</p><p className="mt-3 rounded-lg border border-amber-100 bg-amber-50 p-3 text-left text-xs leading-5 text-amber-900">Periksa DATABASE_URL, konfigurasi Supabase, dan keberadaan profil pengguna pada environment deployment ini.</p><div className="mt-4 flex justify-center gap-2"><Button variant="outline" onClick={() => window.location.reload()}>Muat ulang</Button><Button onClick={() => void logout()}>Keluar</Button></div></div></div>;
 
   function refreshAll() {
     dashboard.refetch();
@@ -404,8 +422,9 @@ export default function Home() {
               {unreadNotificationCount > 0 && <span className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-[#FF6500] ring-2 ring-[#FFFFFF]" />}
             </button><button title="Refresh" onClick={refreshAll} className="rounded-xl border border-[#9CCED8] bg-[#FFFFFF] p-2.5 text-slate-500 hover:text-teal-700"><RefreshCw size={17} /></button><div className="hidden rounded-xl border border-[#9CCED8] bg-[#FFFFFF] px-3 py-2 text-right sm:block"><p className="text-xs font-semibold">{user?.name || "Akun aktif"}</p><p className="text-[11px] text-slate-500">{isAdmin ? "Kepala gudang" : "Petugas"}</p></div></div></header>
           <div className={`golog-page mx-auto max-w-[1500px] space-y-6 ${active === "overview" ? "p-0 pb-28 md:p-8 md:pb-8" : "p-5 md:p-8"}`}>
+
             {active === "overview" && <Overview dashboard={dashboard.data} isAdmin={isAdmin} onGo={go} report={isAdmin ? monthlyReport.data : null} requests={requests.data ?? []} userName={user?.name || user?.username || "Kepala Gudang"} unreadNotificationCount={unreadNotificationCount} onOpenNotifications={() => setNotificationOpen(true)} />}
-            {active === "stock" && <StockView stock={stock} isAdmin={isAdmin} items={items} warehouses={warehouses} onCreateItem={(input: any) => createItem.mutate(input)} busy={createItem.isPending} onImport={(rows: any[]) => importItems.mutate({ rows })} importBusy={importItems.isPending} focusItemId={notificationTarget?.nav === "stock" ? notificationTarget.itemId : undefined} />}
+            {active === "stock" && <StockView stock={stock} isAdmin={isAdmin} items={items} warehouses={warehouses} onCreateItem={(input: any) => createItem.mutate(input)} busy={createItem.isPending} onImport={(rows: any[]) => importItems.mutateAsync({ rows })} importBusy={importItems.isPending} focusItemId={notificationTarget?.nav === "stock" ? notificationTarget.itemId : undefined} />}
             {active === "inbound" && <InboundView items={items} warehouses={warehouses} onSubmit={(input: any) => createInbound.mutate(input)} busy={createInbound.isPending} />}
             {active === "requests" && <RequestsView requests={requests.data ?? []} rooms={rooms} items={items} warehouses={warehouses} isAdmin={isAdmin} currentUserId={currentUser.data?.id} todayRoomLocks={todayRoomLocks.data ?? []} selectedRoom={selectedRoom} selectedRoomName={selectedRoomName} setSelectedRoom={setSelectedRoom} accessibleRooms={accessibleRooms} roomAccessLoading={roomAccess.isLoading} roomAccessError={roomAccessErrorMessage} onRetryRoomAccess={() => roomAccess.refetch()} lines={requestLines} setLines={setRequestLines} total={requestTotal} onCreate={(input: any) => createRequest.mutateAsync(input)} onVerify={(input: any) => verifyRequest.mutateAsync(input)} busy={createRequest.isPending || verifyRequest.isPending} focusRequestId={notificationTarget?.nav === "requests" ? notificationTarget.requestId : undefined} />}
             {active === "adjustments" && <AdjustmentsView adjustments={adjustments.data ?? []} items={items} rooms={rooms} onSubmit={(input: any) => createAdjustment.mutate(input)} busy={createAdjustment.isPending} />}
@@ -1621,7 +1640,7 @@ function StockView({ stock, isAdmin, items, warehouses, onCreateItem, busy, onIm
     const url = URL.createObjectURL(blob);
     const anchor = document.createElement("a");
     anchor.href = url;
-    anchor.download = "template-master-barang.csv";
+    anchor.download = "template-barang-stok-awal.csv";
     anchor.click();
     URL.revokeObjectURL(url);
   }
@@ -1638,6 +1657,8 @@ function StockView({ stock, isAdmin, items, warehouses, onCreateItem, busy, onIm
   const lowCount = rows.filter((row: any) => Number(row.movementQty) <= Number(row.minStock)).length;
   const safeCount = Math.max(0, rows.length - lowCount);
   const canImport = Boolean(preview && preview.rows.length && preview.errors.length === 0);
+  const openingStockRows = preview?.rows.filter((row) => row.initialStockQty > 0).length ?? 0;
+  const openingStockTotal = preview?.rows.reduce((sum, row) => sum + row.initialStockQty, 0) ?? 0;
 
   return (
     <div className="space-y-5">
@@ -1674,10 +1695,10 @@ function StockView({ stock, isAdmin, items, warehouses, onCreateItem, busy, onIm
             <div className="mb-6 rounded-2xl border-2 border-[#9CCED8] bg-[#F4FAFC]/45 p-5 shadow-[inset_0_0_0_2px_rgba(255,250,240,0.55)]">
               <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                 <div>
-                  <p className="font-semibold text-[#07304A]">Impor master barang</p>
-                  <p className="mt-1 text-xs leading-5 text-[#315563]">Upload .xlsx, .xls, atau .csv. Data diperiksa dahulu dan tidak akan disimpan jika masih ada error.</p>
+                  <p className="font-semibold text-[#07304A]">Impor barang & stok awal</p>
+                  <p className="mt-1 text-xs leading-5 text-[#315563]">Upload .xlsx, .xls, atau .csv. SKU baru ditambahkan dan SKU yang sudah ada diperbarui. Kolom Stok Awal mencatat saldo pembuka di gudang sumber sebagai mutasi masuk. Jika SKU sudah punya riwayat mutasi, isi Stok Awal 0 atau kosong agar saldo tidak tergandakan. Kode gudang sumber yang kosong mempertahankan penetapan SKU lama; SKU baru akan belum memiliki sumber. Seluruh impor dibatalkan jika ada error.</p>
                 </div>
-                <Button variant="outline" size="sm" onClick={downloadTemplate}>Unduh template CSV</Button>
+                <Button variant="outline" size="sm" onClick={downloadTemplate}>Unduh template CSV + stok awal</Button>
               </div>
 
               <div className="mt-4 rounded-xl border border-[#9CCED8] bg-[#FFFFFF] p-3">
@@ -1693,6 +1714,60 @@ function StockView({ stock, isAdmin, items, warehouses, onCreateItem, busy, onIm
                     <div className="golog-panel-soft rounded-xl p-3"><p className="text-xs text-[#55727C]">SKU duplikat</p><p className="mt-1 text-lg font-semibold">{preview.duplicateSkus.length}</p></div>
                   </div>
 
+                  <div className="overflow-hidden rounded-xl border border-[#9CCED8] bg-white">
+                    <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[#D5E8ED] bg-[#F4FAFC] px-4 py-3">
+                      <div>
+                        <p className="text-sm font-semibold text-[#07304A]">Pratinjau isi file</p>
+                        <p className="text-xs text-[#55727C]">Periksa data sebelum impor. Baris berwarna merah muda memiliki error validasi.</p>
+                      </div>
+                      <span className="rounded-full border border-[#9CCED8] bg-white px-3 py-1 text-xs font-medium text-[#315563]">{preview.rows.length} baris</span>
+                    </div>
+                    {preview.rows.length > 0 ? (
+                      <div className="max-h-[440px] overflow-auto">
+                        <table className="w-full min-w-[980px] text-left text-sm">
+                          <thead className="sticky top-0 z-10 bg-[#E6F4F7] text-[11px] uppercase tracking-wider text-[#315563] shadow-sm">
+                            <tr>
+                              <th className="whitespace-nowrap px-3 py-3">Baris</th>
+                              <th className="whitespace-nowrap px-3 py-3">SKU</th>
+                              <th className="min-w-[220px] px-3 py-3">Nama barang</th>
+                              <th className="whitespace-nowrap px-3 py-3">Satuan</th>
+                              <th className="whitespace-nowrap px-3 py-3">Gudang sumber</th>
+                              <th className="whitespace-nowrap px-3 py-3 text-right">Stok minimum</th>
+                              <th className="whitespace-nowrap px-3 py-3 text-right">Stok awal</th>
+                              <th className="min-w-[190px] px-3 py-3">Validasi baris</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-[#E4EEF1]">
+                            {preview.rows.map((row) => {
+                              const rowErrors = preview.errors.filter((error) => error.rowNumber === row.rowNumber);
+                              const warehouseLabel = warehouses.find((warehouse: any) => String(warehouse.code ?? "").toUpperCase() === String(row.sourceWarehouseCode ?? "").toUpperCase())?.name;
+                              return (
+                                <tr key={row.rowNumber} className={rowErrors.length ? "bg-[#FFF0EC]" : "bg-white"}>
+                                  <td className="whitespace-nowrap px-3 py-3 text-xs text-[#55727C]">{row.rowNumber}</td>
+                                  <td className="whitespace-nowrap px-3 py-3 font-medium text-[#07304A]">{row.sku || <span className="text-[#D94A1A]">— kosong —</span>}</td>
+                                  <td className="px-3 py-3">{row.name || <span className="text-[#D94A1A]">— kosong —</span>}</td>
+                                  <td className="whitespace-nowrap px-3 py-3">{row.unit || <span className="font-semibold text-[#D94A1A]">— kosong —</span>}</td>
+                                  <td className="whitespace-nowrap px-3 py-3">
+                                    {row.sourceWarehouseCode ? <span>{warehouseLabel ? <span className="block">{warehouseLabel}</span> : null}<span className="text-xs text-[#55727C]">{row.sourceWarehouseCode}</span></span> : <span className={row.initialStockQty > 0 ? "font-semibold text-[#D94A1A]" : "text-[#94A3B8]"}>{row.initialStockQty > 0 ? "Wajib diisi" : "—"}</span>}
+                                  </td>
+                                  <td className="whitespace-nowrap px-3 py-3 text-right tabular-nums">{formatNumber(row.minStock)}</td>
+                                  <td className="whitespace-nowrap px-3 py-3 text-right font-semibold tabular-nums">{formatNumber(row.initialStockQty)}</td>
+                                  <td className="px-3 py-3 text-xs leading-5">
+                                    {rowErrors.length
+                                      ? rowErrors.map((error, index) => <p key={index} className="text-[#D94A1A]">{error.field}: {error.message}</p>)
+                                      : <span className="text-emerald-700">Siap</span>}
+                                  </td>
+                                </tr>
+                              );
+                            })}
+                          </tbody>
+                        </table>
+                      </div>
+                    ) : (
+                      <div className="px-4 py-6 text-sm text-[#55727C]">Belum ada baris yang dapat ditampilkan. Periksa apakah file memiliki header dan data pada sheet pertama.</div>
+                    )}
+                  </div>
+
                   {preview.errors.length > 0 && (
                     <div className="rounded-xl border border-[#FFD1C2] bg-[#f8e3de] p-3 text-sm text-[#D94A1A]">
                       {preview.errors.slice(0, 8).map((error, i) => <p key={i}>Baris {error.rowNumber} · {error.field}: {error.message}</p>)}
@@ -1702,8 +1777,19 @@ function StockView({ stock, isAdmin, items, warehouses, onCreateItem, busy, onIm
 
                   {canImport && (
                     <div className="flex flex-col gap-3 rounded-xl border border-[#FFD500] bg-[#E6F4F7] p-3 sm:flex-row sm:items-center sm:justify-between">
-                      <p className="text-sm text-[#004E9B]">Semua {preview.rows.length} baris lolos validasi dan siap diimpor.</p>
-                      <Button disabled={importBusy} onClick={() => onImport(preview.rows)}>{importBusy ? "Mengimpor…" : "Impor ke master barang"}</Button>
+                      <p className="text-sm text-[#004E9B]">Semua {preview.rows.length} baris lolos validasi. {openingStockRows} barang memiliki Stok Awal; akumulasi kuantitas {formatNumber(openingStockTotal)} (mengikuti satuan tiap barang).</p>
+                      <Button disabled={importBusy} onClick={() => {
+                        void (async () => {
+                          try {
+                            await onImport(preview.rows);
+                            setPreview(null);
+                            setFileName("");
+                            setShowImport(false);
+                          } catch {
+                            // Parent mutation displays the server error; keep preview available for retry.
+                          }
+                        })();
+                      }}>{importBusy ? "Mengimpor…" : "Impor barang + stok awal"}</Button>
                     </div>
                   )}
                 </div>
