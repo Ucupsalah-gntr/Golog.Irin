@@ -126,39 +126,153 @@ export const appRouter = router({
     importItems: adminProcedure.input(z.object({
       rows: z.array(z.object({
         rowNumber: z.number().int().positive(),
-        sku: z.string().min(1).max(64),
-        name: z.string().min(2).max(180),
-        unit: z.string().min(1).max(32),
-        category: z.string().max(100).optional(),
-        sourceWarehouseCode: z.string().max(32).optional(),
+        sku: z.string().trim().min(1).max(64),
+        name: z.string().trim().min(2).max(180),
+        unit: z.string().trim().min(1).max(32),
+        category: z.string().trim().max(100).optional(),
+        sourceWarehouseCode: z.string().trim().max(32).optional(),
         minStock: z.number().int().min(0),
+        initialStockQty: z.number().int().min(0).default(0),
       })).min(1).max(5000),
     })).mutation(async ({ input, ctx }) => {
       const db = await getDb();
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database belum tersedia." });
-      const sourceWarehouses = await db.select().from(warehouses).where(eq(warehouses.active, true));
-      const warehouseByCode = new Map(sourceWarehouses.map((warehouse) => [warehouse.code.toUpperCase(), warehouse.id]));
-      const unknownWarehouses = Array.from(new Set(input.rows.map((row) => row.sourceWarehouseCode).filter((code): code is string => Boolean(code && !warehouseByCode.has(code.toUpperCase())))));
-      if (unknownWarehouses.length) throw new TRPCError({ code: "BAD_REQUEST", message: `Kode gudang tidak ditemukan: ${unknownWarehouses.join(", ")}.` });
+
+      // Normalize on the server too: UI validation is helpful feedback, not a trust boundary.
+      const normalizedRows: ImportItemRow[] = input.rows.map((row) => ({
+        ...row,
+        sku: row.sku.trim().toUpperCase(),
+        name: row.name.trim(),
+        unit: row.unit.trim(),
+        category: row.category?.trim() || undefined,
+        sourceWarehouseCode: row.sourceWarehouseCode?.trim().toUpperCase() || undefined,
+        initialStockQty: row.initialStockQty ?? 0,
+      }));
+
+      const rowBySku = new Map<string, number>();
+      for (const row of normalizedRows) {
+        if (!row.sku) {
+          throw new TRPCError({ code: "BAD_REQUEST", message: `SKU wajib diisi pada baris ${row.rowNumber}.` });
+        }
+        const previousRow = rowBySku.get(row.sku);
+        if (previousRow !== undefined) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: `SKU duplikat "${row.sku}" pada baris ${previousRow} dan ${row.rowNumber}. Perbaiki file lalu impor kembali.`,
+          });
+        }
+        rowBySku.set(row.sku, row.rowNumber);
+      }
+
+      const activeWarehouses = await db.select().from(warehouses).where(eq(warehouses.active, true));
+      const warehouseDetailsByCode = new Map(activeWarehouses.map((warehouse) => [warehouse.code.toUpperCase(), warehouse]));
+      const warehouseByCode = new Map(activeWarehouses.map((warehouse) => [warehouse.code.toUpperCase(), warehouse.id]));
+      const unknownWarehouses = Array.from(new Set(
+        normalizedRows
+          .map((row) => row.sourceWarehouseCode)
+          .filter((code): code is string => Boolean(code && !warehouseByCode.has(code))),
+      ));
+      if (unknownWarehouses.length) {
+        throw new TRPCError({ code: "BAD_REQUEST", message: `Kode gudang tidak ditemukan atau tidak aktif: ${unknownWarehouses.join(", ")}.` });
+      }
+      const missingOpeningWarehouse = normalizedRows.find((row) => row.initialStockQty > 0 && !row.sourceWarehouseCode);
+      if (missingOpeningWarehouse) {
+        throw new TRPCError({ code: "BAD_REQUEST", message: `Kolom Gudang sumber wajib diisi untuk Stok Awal pada baris ${missingOpeningWarehouse.rowNumber} (SKU ${missingOpeningWarehouse.sku}).` });
+      }
+      const invalidOpeningWarehouse = normalizedRows.find((row) =>
+        row.initialStockQty > 0 && row.sourceWarehouseCode && warehouseDetailsByCode.get(row.sourceWarehouseCode)?.kind !== "source"
+      );
+      if (invalidOpeningWarehouse) {
+        throw new TRPCError({ code: "BAD_REQUEST", message: `Stok Awal pada baris ${invalidOpeningWarehouse.rowNumber} harus memakai salah satu gudang sumber aktif, bukan gudang logistik.` });
+      }
 
       let created = 0;
       let updated = 0;
+      let stockInitialized = 0;
+      let initialStockQtyTotal = 0;
       await db.transaction(async (tx) => {
-        for (const row of input.rows as ImportItemRow[]) {
-          const sourceWarehouseId = row.sourceWarehouseCode ? warehouseByCode.get(row.sourceWarehouseCode.toUpperCase()) ?? null : null;
-          const existing = await tx.select({ id: items.id }).from(items).where(eq(items.sku, row.sku)).limit(1);
-          const values = { sku: row.sku, name: row.name, unit: row.unit, category: row.category || null, sourceWarehouseId, minStock: row.minStock };
+        for (const row of normalizedRows) {
+          const sourceWarehouseId = row.sourceWarehouseCode ? warehouseByCode.get(row.sourceWarehouseCode) ?? null : null;
+          // Match case-insensitively to avoid creating FAR-001 beside an older far-001.
+          const existing = await tx
+            .select({ id: items.id, active: items.active, sku: items.sku })
+            .from(items)
+            .where(sql`lower(${items.sku}) = ${row.sku.toLowerCase()}`)
+            .limit(2)
+            .for("update");
+
+          if (existing.length > 1) {
+            throw new TRPCError({
+              code: "CONFLICT",
+              message: `SKU "${row.sku}" memiliki lebih dari satu varian huruf besar/kecil di master barang. Selesaikan duplikasi tersebut sebelum impor.`,
+            });
+          }
+          if (existing[0] && !existing[0].active) {
+            throw new TRPCError({
+              code: "BAD_REQUEST",
+              message: `SKU "${row.sku}" sudah tidak aktif. Impor dihentikan agar barang nonaktif tidak tampak berhasil diperbarui tetapi tetap tersembunyi.`,
+            });
+          }
+          if (existing[0] && row.initialStockQty > 0) {
+            const priorMovements = await tx
+              .select({ id: stockMovements.id })
+              .from(stockMovements)
+              .where(eq(stockMovements.itemId, existing[0].id))
+              .limit(1);
+            if (priorMovements.length > 0) {
+              throw new TRPCError({
+                code: "CONFLICT",
+                message: `Stok Awal untuk SKU "${row.sku}" tidak ditambahkan karena barang sudah memiliki riwayat mutasi. Kosongkan kolom Stok Awal untuk SKU ini lalu impor ulang, atau catat penambahan lewat menu Barang Masuk.`,
+              });
+            }
+          }
+
+          const values = {
+            sku: row.sku,
+            name: row.name,
+            unit: row.unit,
+            category: row.category || null,
+            sourceWarehouseId,
+            minStock: row.minStock,
+          };
+          let itemId: number;
           if (existing[0]) {
             await tx.update(items).set(values).where(eq(items.id, existing[0].id));
+            itemId = existing[0].id;
             updated++;
           } else {
-            await tx.insert(items).values(values);
+            const inserted = await tx.insert(items).values(values).returning({ id: items.id });
+            if (!inserted[0]?.id) {
+              throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: `Barang SKU "${row.sku}" gagal disimpan.` });
+            }
+            itemId = inserted[0].id;
             created++;
+          }
+
+          if (row.initialStockQty > 0) {
+            await tx.insert(stockMovements).values({
+              itemId,
+              movementType: "in",
+              quantity: row.initialStockQty,
+              sourceWarehouseId: sourceWarehouseId ?? undefined,
+              roomId: null,
+              createdBy: ctx.user.id,
+              occurredAt: new Date(),
+              notes: `Stok awal impor · ${row.sourceWarehouseCode} · SKU ${row.sku}`,
+            });
+            stockInitialized++;
+            initialStockQtyTotal += row.initialStockQty;
           }
         }
       });
-      await writeAudit(ctx.user.id, "import", "items", null, null, { rowCount: input.rows.length, created, updated }, "Impor master barang dari Excel");
-      return { created, updated, total: input.rows.length };
+      await writeAudit(ctx.user.id, "import", "items", null, null, {
+        rowCount: normalizedRows.length,
+        created,
+        updated,
+        stockInitialized,
+        initialStockQtyTotal,
+      }, "Impor master barang beserta saldo stok awal");
+      return { created, updated, total: normalizedRows.length, stockInitialized, initialStockQtyTotal };
     }),
   }),
   dashboard: router({
