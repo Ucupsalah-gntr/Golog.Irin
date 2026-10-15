@@ -18,4 +18,10 @@ describe("daily room requester rules", () => {
     expect(getJakartaDateKey(new Date("2026-09-16T17:00:00.000Z"))).toBe("2026-09-17");
     expect(getJakartaDateKey(new Date("2026-09-17T16:59:59.000Z"))).toBe("2026-09-17");
   });
+
+  it("rejects impossible dates even when their string sorts inside the allowed window", () => {
+    expect(isRequestDateWithinWindow("2026-10-32", "2026-10-25")).toBe(false);
+    expect(isRequestDateWithinWindow("2026-02-29", "2026-02-27")).toBe(false);
+    expect(() => addJakartaDays("2026-10-32", 1)).toThrow("Invalid Jakarta date");
+  });
 });
