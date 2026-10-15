@@ -1,6 +1,6 @@
 import type { CreateExpressContextOptions } from "@trpc/server/adapters/express";
 import type { User } from "../../drizzle/schema.ts";
-import { getUserByAuthUserId, getUserByUsername, upsertUser } from "../db.ts";
+import { getUserByAuthUserId, upsertUser } from "../db.ts";
 import { ENV } from "./env.ts";
 
 export type TrpcContext = {
