@@ -192,10 +192,9 @@ export const appRouter = router({
       let initialStockQtyTotal = 0;
       await db.transaction(async (tx) => {
         for (const row of normalizedRows) {
-          const sourceWarehouseId = row.sourceWarehouseCode ? warehouseByCode.get(row.sourceWarehouseCode) ?? null : null;
           // Match case-insensitively to avoid creating FAR-001 beside an older far-001.
           const existing = await tx
-            .select({ id: items.id, active: items.active, sku: items.sku })
+            .select({ id: items.id, active: items.active, sku: items.sku, sourceWarehouseId: items.sourceWarehouseId })
             .from(items)
             .where(sql`lower(${items.sku}) = ${row.sku.toLowerCase()}`)
             .limit(2)
@@ -227,6 +226,11 @@ export const appRouter = router({
             }
           }
 
+          // A blank source warehouse preserves the mapping of an existing SKU;
+          // newly created SKUs without a mapping remain unassigned.
+          const sourceWarehouseId = row.sourceWarehouseCode
+            ? warehouseByCode.get(row.sourceWarehouseCode) ?? null
+            : existing[0]?.sourceWarehouseId ?? null;
           const values = {
             sku: row.sku,
             name: row.name,
@@ -264,14 +268,22 @@ export const appRouter = router({
             initialStockQtyTotal += row.initialStockQty;
           }
         }
+        await tx.insert(auditLogs).values({
+          actorId: ctx.user.id,
+          action: "import",
+          entityType: "items",
+          entityId: null,
+          beforeData: null,
+          afterData: {
+            rowCount: normalizedRows.length,
+            created,
+            updated,
+            stockInitialized,
+            initialStockQtyTotal,
+          },
+          notes: "Impor master barang beserta saldo stok awal",
+        });
       });
-      await writeAudit(ctx.user.id, "import", "items", null, null, {
-        rowCount: normalizedRows.length,
-        created,
-        updated,
-        stockInitialized,
-        initialStockQtyTotal,
-      }, "Impor master barang beserta saldo stok awal");
       return { created, updated, total: normalizedRows.length, stockInitialized, initialStockQtyTotal };
     }),
   }),
