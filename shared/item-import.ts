@@ -91,5 +91,5 @@ export function validateItemImport(inputRows: Array<Record<string, unknown>>): I
 }
 
 export function importTemplateCsv() {
-  return "SKU,Nama Barang,Satuan,Kategori,Kode Gudang Sumber,Stok Minimum\nFAR-001,Contoh item,box,Alat kesehatan,FARMASI,10\n";
+  return "SKU,Nama Barang,Satuan,Kategori,Kode Gudang Sumber,Stok Minimum\n";
 }
