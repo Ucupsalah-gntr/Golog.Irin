@@ -191,18 +191,44 @@ export const appRouter = router({
   }),
   inbound: router({
     create: adminProcedure.input(z.object({ itemId: z.number().int(), quantity: z.number().int().positive(), sourceWarehouseId: z.number().int(), occurredAt: z.coerce.date().optional(), notes: z.string().max(500).optional() })).mutation(async ({ input, ctx }) => {
-      const db = await getDb(); if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database belum tersedia." });
-      const itemRows = await db.select({ id: items.id }).from(items).where(and(eq(items.id, input.itemId), eq(items.active, true))).limit(1);
-      if (!itemRows[0]) throw new TRPCError({ code: "BAD_REQUEST", message: "Barang tidak ditemukan atau sudah tidak aktif." });
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database belum tersedia." });
 
-      const warehouseRows = await db.select({ id: warehouses.id }).from(warehouses).where(and(eq(warehouses.id, input.sourceWarehouseId), eq(warehouses.active, true))).limit(1);
-      if (!warehouseRows[0]) throw new TRPCError({ code: "BAD_REQUEST", message: "Gudang sumber tidak ditemukan atau sudah tidak aktif." });
+      return db.transaction(async (tx) => {
+        // Share the item-row lock with stocktake/adjustment/approval operations.
+        const itemRows = await tx.select({ id: items.id }).from(items)
+          .where(and(eq(items.id, input.itemId), eq(items.active, true))).limit(1).for("update");
+        if (!itemRows[0]) throw new TRPCError({ code: "BAD_REQUEST", message: "Barang tidak ditemukan atau sudah tidak aktif." });
 
-      const result = await db.insert(stockMovements).values({ ...input, movementType: "in", createdBy: ctx.user.id, occurredAt: input.occurredAt ?? new Date() }).returning({ id: stockMovements.id });
-      const id = result[0]?.id;
-      if (!id) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Barang masuk gagal disimpan." });
-      await writeAudit(ctx.user.id, "create", "stock_movement", id, null, input, "Barang masuk dicatat");
-      return { id };
+        const warehouseRows = await tx.select({ id: warehouses.id }).from(warehouses)
+          .where(and(eq(warehouses.id, input.sourceWarehouseId), eq(warehouses.active, true))).limit(1);
+        if (!warehouseRows[0]) throw new TRPCError({ code: "BAD_REQUEST", message: "Gudang sumber tidak ditemukan atau sudah tidak aktif." });
+
+        const occurredAt = input.occurredAt ?? new Date();
+        const result = await tx.insert(stockMovements).values({
+          itemId: input.itemId,
+          quantity: input.quantity,
+          sourceWarehouseId: input.sourceWarehouseId,
+          occurredAt,
+          notes: input.notes,
+          movementType: "in",
+          createdBy: ctx.user.id,
+          roomId: null,
+        }).returning({ id: stockMovements.id });
+        const id = result[0]?.id;
+        if (!id) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Barang masuk gagal disimpan." });
+
+        await tx.insert(auditLogs).values({
+          actorId: ctx.user.id,
+          action: "create",
+          entityType: "stock_movement",
+          entityId: id,
+          beforeData: null,
+          afterData: { ...input, occurredAt, movementType: "in" },
+          notes: "Barang masuk dicatat",
+        });
+        return { id };
+      });
     }),
   }),
   requests: router({
