@@ -8,6 +8,7 @@ import App from "./App";
 import "./index.css";
 
 const queryClient = new QueryClient();
+const supabasePublishableKey = String(import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY ?? "").trim();
 
 const handleApiError = (error: unknown) => {
   if (error instanceof TRPCClientError) {
@@ -36,11 +37,10 @@ const trpcClient = trpc.createClient({
         const { data } = await supabase.auth.getSession();
         const token = data.session?.access_token;
 
-        return token
-          ? {
-              Authorization: `Bearer ${token}`,
-            }
-          : {};
+        const headers: Record<string, string> = {};
+        if (token) headers.Authorization = `Bearer ${token}`;
+        if (supabasePublishableKey) headers["x-supabase-apikey"] = supabasePublishableKey;
+        return headers;
       },
 
       async fetch(input, init) {
@@ -50,6 +50,9 @@ const trpcClient = trpc.createClient({
 
         if (token) {
           headers.set("Authorization", `Bearer ${token}`);
+        }
+        if (supabasePublishableKey) {
+          headers.set("x-supabase-apikey", supabasePublishableKey);
         }
 
         return globalThis.fetch(input, {
