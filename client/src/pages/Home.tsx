@@ -8,7 +8,7 @@ import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import CategoryPivotTable from "@/components/CategoryPivotTable";
+import SourceWarehousePivotTable from "@/components/SourceWarehousePivotTable";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -1106,7 +1106,7 @@ function Overview({
             return <Card key={item.label} className="border-slate-200/80 shadow-sm"><CardContent className="flex items-start justify-between p-5"><div><p className="text-sm text-slate-500">{item.label}</p><p className="mt-2 text-3xl font-semibold tracking-tight">{formatNumber(item.value)}</p><p className="mt-1 text-xs text-slate-400">{item.hint}</p></div><div className={"rounded-2xl p-3 " + item.tint}><Icon size={20} /></div></CardContent></Card>;
           })}
         </div>
-        {report && <CategoryPivotTable report={report} />}
+        {report && <SourceWarehousePivotTable report={report} />}
         <Card className="border-slate-200/80 shadow-sm">
           <CardHeader className="flex flex-row items-center justify-between">
             <div><CardTitle>Aktivitas Gudang Pusat</CardTitle><p className="mt-1 text-sm text-slate-500">Pergerakan terakhir di Gudang Pusat.</p></div>
