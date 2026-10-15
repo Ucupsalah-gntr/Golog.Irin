@@ -126,6 +126,19 @@ export const appRouter = router({
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database belum tersedia." });
 
       return db.transaction(async (tx) => {
+        // SKU uniqueness is case-insensitive for inventory purposes, even though
+        // the historical PostgreSQL unique index is case-sensitive.
+        const duplicateSku = await tx.select({ id: items.id, sku: items.sku }).from(items)
+          .where(sql`lower(${items.sku}) = ${input.sku.toLowerCase()}`)
+          .limit(1)
+          .for("update");
+        if (duplicateSku[0]) {
+          throw new TRPCError({
+            code: "CONFLICT",
+            message: `SKU "${input.sku}" sudah ada pada master barang sebagai "${duplicateSku[0].sku}". Gunakan SKU baru atau perbarui item yang ada.`,
+          });
+        }
+
         const sourceWarehouseId = input.sourceWarehouseId ?? null;
         if (sourceWarehouseId !== null) {
           const sourceRows = await tx.select({ id: warehouses.id }).from(warehouses)
