@@ -1592,6 +1592,40 @@ function MobileUserOverview({
   );
 }
 
+function inferStockCategory(value: unknown): string {
+  const name = String(value ?? "").normalize("NFKD").toLowerCase().replace(/[\\u0300-\\u036f]/g, " ").replace(/[^a-z0-9]+/g, " ").trim();
+  const has = (...terms: string[]) => terms.some((term) => name.includes(term));
+
+  if (has("sarung tangan", "handscoon", "handcoon", "glove", "masker", "gown", "hazmat", "apron", "face shield", "faceshield", "goggle", "shoe cover", "penutup kepala", "n95", "respirator", "pelindung wajah")) {
+    return "APD & Sarung Tangan";
+  }
+  if (has("infus", "iv catheter", "iv cannula", "iv line", "abocath", "venflon", "three way", "3 way", "extension tube", "infusion set", "blood transfusion set", "transfusion set", "needleless connector", "heparin cap", "stopcock", "cvc", "central venous", "arterial line")) {
+    return "Infus & Akses Vaskular";
+  }
+  if (has("spuit", "syringe", "jarum suntik", "jarum injeksi", "needle", "insulin syringe", "syringe gas darah", "gas darah syringe")) {
+    return "Spuit & Jarum";
+  }
+  if (has("endotracheal", "ett", "tracheostomy", "trakeostomi", "kanul nasal", "nasal cannula", "oxygen mask", "masker oksigen", "nebul", "ambu", "breathing circuit", "ventilator circuit", "hfnc", "cpap", "bipap", "filter ventilator", "suction catheter", "suction", "catheter mount", "hme", "oropharyngeal airway", "nasopharyngeal airway", "laryngeal mask", "lma", "oksigen")) {
+    return "Pernapasan & Suction";
+  }
+  if (has("kateter", "catheter", "foley", "urine bag", "urin bag", "urimeter", "nephrostomy", "drainase", "drainage", "chest tube", "thoracic tube", "ngt", "nasogastric", "sonde", "feeding tube", "colostomy", "stoma")) {
+    return "Kateter, Sonde & Drainase";
+  }
+  if (has("kasa", "gauze", "dressing", "verban", "perban", "bandage", "plester", "adhesive", "wound", "tegaderm", "hypafix", "underpad")) {
+    return "Perawatan Luka & Balutan";
+  }
+  if (has("alkohol", "alcohol swab", "povidone", "iodine", "chlorhexidine", "chlorhex", "disinfektan", "desinfektan", "antiseptik", "antiseptic", "handrub", "hand rub", "hand sanitizer", "ethanol", "hydrogen peroxide", "h2o2")) {
+    return "Antiseptik & Disinfektan";
+  }
+  if (has("vacutainer", "specimen", "spesimen", "tabung darah", "blood collection", "edta", "serum", "pot dahak", "urine container", "container sample", "swab", "test strip", "strip gula", "glucose strip", "lancet", "ecg electrode", "electrode", "gas darah")) {
+    return "Laboratorium & Pemeriksaan";
+  }
+  if (has("underpad", "linen", "tissue", "tisu", "handuk", "lap ", "wipes", "wipe ", "popok", "diaper", "sprei", "bed cover", "kantong sampah", "limbah medis", "yellow bag", "red bag", "biohazard", "masker bedah bekas")) {
+    return "Kebersihan, Linen & Limbah";
+  }
+  return "Lainnya / Perlu ditinjau";
+}
+
 function StockView({ stock, isAdmin, items, warehouses, onCreateItem, busy, onImport, importBusy, focusItemId }: any) {
   const [show, setShow] = useState(false);
   const [showImport, setShowImport] = useState(false);
@@ -1644,8 +1678,8 @@ function StockView({ stock, isAdmin, items, warehouses, onCreateItem, busy, onIm
     [warehouses],
   );
   const categories = useMemo(
-    () => Array.from(new Set(rows.map((row: any) => String(row.category ?? "").trim() || "Umum"))
-      .values()).sort((a, b) => a.localeCompare(b, "id")),
+    () => Array.from(new Set(rows.map((row: any) => inferStockCategory(row.name))))
+      .sort((a, b) => a.localeCompare(b, "id")),
     [rows],
   );
   const sourceWarehouses = useMemo(
@@ -1662,7 +1696,7 @@ function StockView({ stock, isAdmin, items, warehouses, onCreateItem, busy, onIm
     const sourceItem = itemById.get(Number(row.itemId));
     const sourceWarehouseId = sourceItem?.sourceWarehouseId == null ? null : Number(sourceItem.sourceWarehouseId);
     const sourceWarehouse = sourceWarehouseId == null ? undefined : warehouseById.get(sourceWarehouseId);
-    const category = String(row.category ?? "").trim() || "Umum";
+    const category = inferStockCategory(row.name);
     const isEmpty = quantity <= 0;
     const isLow = quantity > 0 && quantity <= minimum;
     const isSafe = quantity > minimum;
@@ -1691,7 +1725,7 @@ function StockView({ stock, isAdmin, items, warehouses, onCreateItem, busy, onIm
       const diff = Number(b.movementQty) - Number(a.movementQty);
       if (diff !== 0) return diff;
     } else if (sortBy === "category") {
-      const categoryDiff = String(a.category || "Umum").localeCompare(String(b.category || "Umum"), "id");
+      const categoryDiff = inferStockCategory(a.name).localeCompare(inferStockCategory(b.name), "id");
       if (categoryDiff !== 0) return categoryDiff;
     }
     return String(a.name ?? "").localeCompare(String(b.name ?? ""), "id");
@@ -1868,7 +1902,7 @@ function StockView({ stock, isAdmin, items, warehouses, onCreateItem, busy, onIm
               <div className="flex flex-wrap items-center gap-2">
                 <label className="sr-only" htmlFor="stock-category-filter">Kategori</label>
                 <select id="stock-category-filter" value={categoryFilter} onChange={(e) => setCategoryFilter(e.target.value)} className="h-11 min-w-36 flex-1 rounded-lg border border-[#9CCED8] bg-white px-3 text-sm text-[#07304A] sm:flex-none">
-                  <option value="all">Semua kategori</option>
+                  <option value="all">Semua kategori otomatis</option>
                   {categories.map((category) => <option key={category} value={category}>{category}</option>)}
                 </select>
                 {isAdmin && (
@@ -1900,6 +1934,9 @@ function StockView({ stock, isAdmin, items, warehouses, onCreateItem, busy, onIm
                 </button>
               )}
             </div>
+            <p className="mt-2 text-[11px] leading-5 text-[#55727C]">
+              Kategori dibuat otomatis dari nama barang untuk membantu pencarian, tanpa mengubah data master. Barang yang belum cocok masuk ke “Lainnya / Perlu ditinjau”.
+            </p>
           </div>
 
           <div className="mt-4 space-y-2">
@@ -1908,6 +1945,7 @@ function StockView({ stock, isAdmin, items, warehouses, onCreateItem, busy, onIm
               const open = expanded === Number(row.itemId);
               const stockQty = Number(row.movementQty);
               const minQty = Number(row.minStock);
+              const category = inferStockCategory(row.name);
               const coverage = minQty > 0 ? Math.min(100, Math.max(0, (stockQty / minQty) * 100)) : stockQty > 0 ? 100 : 0;
 
               return (
@@ -1928,7 +1966,7 @@ function StockView({ stock, isAdmin, items, warehouses, onCreateItem, busy, onIm
                           {low ? "Perlu cek" : "Aman"}
                         </Badge>
                       </div>
-                      <p className="mt-1 truncate text-xs text-[#55727C]">{row.sku} · {row.category || "Umum"} · {row.unit}</p>
+                      <p className="mt-1 truncate text-xs text-[#55727C]">{row.sku} · {category} · {row.unit}</p>
                       <div className="mt-3 h-1.5 w-full max-w-md overflow-hidden rounded-full bg-[#dfd1a7]">
                         <div className={`h-full rounded-full ${low ? "bg-[#FF6500]" : "bg-[#0091B9]"}`} style={{ width: `${coverage}%` }} />
                       </div>
