@@ -25,6 +25,8 @@ import {
   Hospital,
   LogOut,
   Menu,
+  PanelLeftClose,
+  PanelLeftOpen,
   PackagePlus,
   RefreshCw,
   ShieldCheck,
@@ -123,6 +125,13 @@ export default function Home() {
   const { user, loading, isAuthenticated, logout, error: authError } = useAuth();
   const [active, setActive] = useState<NavKey>("overview");
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
+    try {
+      return window.localStorage.getItem("gologirin-sidebar-collapsed") === "true";
+    } catch {
+      return false;
+    }
+  });
   const [selectedRoom, setSelectedRoom] = useState<number | null>(null);
   const roomInitUserRef = useRef<number | null>(null);
   const [requestLines, setRequestLines] = useState<Line[]>([{ itemId: 0, requestedQty: 1 }]);
@@ -206,6 +215,14 @@ export default function Home() {
   const selectedRoomName = effectiveRooms.find((room: any) => room.id === selectedRoom)?.name;
 
   const notificationStorageKey = user?.id ? `gologirin-notifications-read:${user.id}` : null;
+
+  useEffect(() => {
+    try {
+      window.localStorage.setItem("gologirin-sidebar-collapsed", String(sidebarCollapsed));
+    } catch {
+      // Sidebar preference is optional; ignore storage failures.
+    }
+  }, [sidebarCollapsed]);
 
   useEffect(() => {
     if (!notificationStorageKey) {
@@ -396,7 +413,7 @@ export default function Home() {
   return (
     <div className={`golog-app golog-theme-${active} min-h-screen text-[#07304A]`}>
       <div className="flex min-h-screen">
-        <aside className={`${mobileOpen ? "translate-y-0 opacity-100" : "-translate-y-3 opacity-0 pointer-events-none"} fixed left-3 right-3 top-[76px] z-40 max-h-[calc(100vh-92px)] overflow-y-auto rounded-2xl border border-white/10 golog-sidebar text-white shadow-2xl transition-all duration-200 md:pointer-events-auto md:inset-y-0 md:left-0 md:right-auto md:top-0 md:z-30 md:max-h-none md:w-72 md:translate-y-0 md:overflow-y-auto md:rounded-none md:border-0 md:opacity-100 md:shadow-none`}>
+        <aside className={`${mobileOpen ? "translate-y-0 opacity-100" : "-translate-y-3 opacity-0 pointer-events-none"} fixed left-3 right-3 top-[76px] z-40 max-h-[calc(100vh-92px)] overflow-y-auto rounded-2xl border border-white/10 golog-sidebar text-white shadow-2xl transition-all duration-200 md:pointer-events-auto md:inset-y-0 md:left-0 md:right-auto md:top-0 md:z-30 md:max-h-none md:w-72 ${sidebarCollapsed ? "md:-translate-x-full" : "md:translate-x-0"} md:translate-y-0 md:overflow-y-auto md:rounded-none md:border-0 md:opacity-100 md:shadow-none`}>
           <div className="flex min-h-full flex-col px-5 py-5 md:h-full md:py-6">
             <div className="flex items-center justify-between border-b border-white/10 pb-6"><div className="flex items-center gap-3"><div className="golog-brand-mark grid h-11 w-11 place-items-center rounded-2xl"><Hospital size={22} /></div><div><p className="golog-display text-lg not-italic text-[#FFFFFF]">Golog.Irin</p><p className="text-xs text-[#BAE4F0]/75">Rawat Intensif</p></div></div><button className="md:hidden" onClick={() => setMobileOpen(false)}><X size={18} /></button></div>
             <div className="mt-7 rounded-xl border border-[#BAE4F0]/15 bg-black/10 p-4"><p className="text-[11px] uppercase tracking-[0.18em] text-[#BAE4F0]/60">Sesi aktif</p><p className="mt-1 truncate font-medium">{user?.name || user?.email || "Pengguna"}</p><div className="mt-2 flex items-center gap-2 text-xs text-[#BAE4F0]/70"><ShieldCheck size={14} />{isAdmin ? "Kepala gudang" : "Petugas ruangan"}</div></div>
@@ -405,8 +422,17 @@ export default function Home() {
           </div>
         </aside>
 
-        <main className="min-w-0 flex-1 md:ml-72">
-          <header className={`sticky top-0 z-20 flex h-20 items-center justify-between border-b border-slate-200/80 golog-topbar px-5 backdrop-blur md:px-8 ${active === "overview" ? "hidden md:flex" : ""}`}><div className="flex items-center gap-3"><button className="rounded-xl p-2 hover:bg-white md:hidden" onClick={() => setMobileOpen(true)}><Menu size={20} /></button><div><p className="text-xs font-semibold uppercase tracking-[0.18em] text-teal-700">Instalasi Rawat Intensif</p><h1 className="text-xl font-semibold tracking-tight">{visibleNav.find((x) => x.key === active)?.label}</h1></div></div><div className="flex items-center gap-2">{!isAdmin && accessibleRooms.length > 0 && <select aria-label="Ruangan aktif" value={selectedRoom ?? ""} onChange={(event) => { const nextRoomId = Number(event.target.value); if (accessibleRooms.some((room: any) => Number(room.id) === nextRoomId)) setSelectedRoom(nextRoomId); }} className="hidden h-10 max-w-[180px] rounded-xl border border-[#9CCED8] bg-[#FFFFFF] px-3 text-sm font-semibold text-[#07304A] outline-none sm:block">{accessibleRooms.map((room: any) => <option key={room.id} value={room.id}>{room.name}</option>)}</select>}<button
+        <main className={`min-w-0 flex-1 transition-[margin] duration-200 ease-in-out ${sidebarCollapsed ? "md:ml-0" : "md:ml-72"}`}>
+          <header className={`sticky top-0 z-20 flex h-20 items-center justify-between border-b border-slate-200/80 golog-topbar px-5 backdrop-blur md:px-8 ${active === "overview" ? "hidden md:flex" : ""}`}><div className="flex items-center gap-3"><button className="rounded-xl p-2 hover:bg-white md:hidden" onClick={() => setMobileOpen(true)}><Menu size={20} /></button><button
+              type="button"
+              onClick={() => setSidebarCollapsed((collapsed) => !collapsed)}
+              title={sidebarCollapsed ? "Buka sidebar" : "Tutup sidebar"}
+              aria-label={sidebarCollapsed ? "Buka sidebar" : "Tutup sidebar"}
+              aria-expanded={!sidebarCollapsed}
+              className="hidden h-10 w-10 shrink-0 place-items-center rounded-xl border border-slate-200 bg-white text-[#07304A] transition-colors hover:bg-[#DCEEF2] md:grid"
+            >
+              {sidebarCollapsed ? <PanelLeftOpen size={18} /> : <PanelLeftClose size={18} />}
+            </button><div><p className="text-xs font-semibold uppercase tracking-[0.18em] text-teal-700">Instalasi Rawat Intensif</p><h1 className="text-xl font-semibold tracking-tight">{visibleNav.find((x) => x.key === active)?.label}</h1></div></div><div className="flex items-center gap-2">{!isAdmin && accessibleRooms.length > 0 && <select aria-label="Ruangan aktif" value={selectedRoom ?? ""} onChange={(event) => { const nextRoomId = Number(event.target.value); if (accessibleRooms.some((room: any) => Number(room.id) === nextRoomId)) setSelectedRoom(nextRoomId); }} className="hidden h-10 max-w-[180px] rounded-xl border border-[#9CCED8] bg-[#FFFFFF] px-3 text-sm font-semibold text-[#07304A] outline-none sm:block">{accessibleRooms.map((room: any) => <option key={room.id} value={room.id}>{room.name}</option>)}</select>}<button
               type="button"
               title="Notifikasi"
               aria-label="Notifikasi"
