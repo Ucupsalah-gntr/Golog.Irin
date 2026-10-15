@@ -16,6 +16,7 @@ import {
   getRoomDemandPatterns,
   getRoomStockRows,
   getStockQty,
+  auditLogs,
   getStockRows,
   writeAudit,
   items,
@@ -621,18 +622,8 @@ export const appRouter = router({
       return db.select({ adjustment: stockAdjustments, item: items, room: rooms }).from(stockAdjustments).leftJoin(items, eq(stockAdjustments.itemId, items.id)).leftJoin(rooms, eq(stockAdjustments.roomId, rooms.id)).orderBy(desc(stockAdjustments.createdAt)).limit(100);
     }),
     applyAdjustment: adminProcedure.input(z.object({ itemId: z.number().int(), roomId: z.number().int().nullable().optional(), adjustmentType: z.enum(["add", "subtract"]), quantity: z.number().int().positive(), physicalQty: z.number().int().min(0), reasonType: z.enum(["forgotten_entry", "holiday_pickup", "damaged", "expired", "emergency", "stocktake", "other"]), reason: z.string().min(10), incidentDate: z.coerce.date() })).mutation(async ({ input, ctx }) => {
-      const db = await getDb(); if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database belum tersedia." });
-
-      // Rekonsiliasi ditentukan dari hasil stok fisik, bukan dari direction/quantity
-      // yang dikirim UI. Dengan begitu systemQty=135 dan physicalQty=130 selalu
-      // menghasilkan movement -5, sedangkan 80 -> 84 menghasilkan +4.
-      const itemRows = await db.select({ id: items.id }).from(items).where(and(eq(items.id, input.itemId), eq(items.active, true))).limit(1);
-      if (!itemRows[0]) throw new TRPCError({ code: "BAD_REQUEST", message: "Barang tidak ditemukan atau sudah tidak aktif." });
-
-      if (input.roomId !== null && input.roomId !== undefined) {
-        const roomRows = await db.select({ id: rooms.id }).from(rooms).where(and(eq(rooms.id, input.roomId), eq(rooms.active, true))).limit(1);
-        if (!roomRows[0]) throw new TRPCError({ code: "BAD_REQUEST", message: "Ruangan tidak ditemukan atau sedang tidak aktif." });
-      }
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database belum tersedia." });
 
       if (input.reasonType === "stocktake" && input.roomId !== null && input.roomId !== undefined) {
         throw new TRPCError({
@@ -641,27 +632,86 @@ export const appRouter = router({
         });
       }
 
-      const systemQty = await getStockQty(input.itemId, input.roomId ?? null);
-      let difference: number;
-      try {
-        difference = calculateStockDifference(systemQty, input.physicalQty);
-      } catch {
-        throw new TRPCError({ code: "BAD_REQUEST", message: "Jumlah stok sistem/fisik tidak valid." });
-      }
+      // Serialize stock-changing operations on the item row, then write the
+      // adjustment, movement, and audit record in one transaction.
+      return db.transaction(async (tx) => {
+        const itemRows = await tx
+          .select({ id: items.id })
+          .from(items)
+          .where(and(eq(items.id, input.itemId), eq(items.active, true)))
+          .limit(1)
+          .for("update");
+        if (!itemRows[0]) throw new TRPCError({ code: "BAD_REQUEST", message: "Barang tidak ditemukan atau sudah tidak aktif." });
 
-      if (difference === 0) {
-        throw new TRPCError({ code: "BAD_REQUEST", message: "Stok fisik sama dengan stok sistem. Tidak ada penyesuaian yang perlu diterapkan." });
-      }
+        const roomId = input.roomId ?? null;
+        if (roomId !== null) {
+          const roomRows = await tx.select({ id: rooms.id }).from(rooms)
+            .where(and(eq(rooms.id, roomId), eq(rooms.active, true))).limit(1);
+          if (!roomRows[0]) throw new TRPCError({ code: "BAD_REQUEST", message: "Ruangan tidak ditemukan atau sedang tidak aktif." });
+        }
 
-      const adjustmentType = difference > 0 ? "add" : "subtract";
-      const quantity = Math.abs(difference);
-      const adjustmentNo = nowNo("ADJ");
-      const inserted = await db.insert(stockAdjustments).values({ ...input, adjustmentType, quantity, adjustmentNo, systemQty, status: "applied", createdBy: ctx.user.id, verifiedBy: ctx.user.id, appliedAt: new Date() }).returning({ id: stockAdjustments.id });
-      const adjustmentId = inserted[0]?.id;
-      if (!adjustmentId) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Penyesuaian stok gagal disimpan." });
-      await db.insert(stockMovements).values({ itemId: input.itemId, movementType: "adjustment", quantity: difference, roomId: input.roomId, adjustmentId, createdBy: ctx.user.id, notes: input.reason, occurredAt: input.incidentDate });
-      await writeAudit(ctx.user.id, "apply", "stock_adjustment", adjustmentId, { systemQty }, { ...input, adjustmentNo, adjustmentType, quantity, difference, finalQty: input.physicalQty, status: "applied", verifiedBy: ctx.user.id }, "Rekonsiliasi stok berdasarkan hasil fisik");
-      return { adjustmentId, adjustmentNo, systemQty, physicalQty: input.physicalQty, difference, finalQty: input.physicalQty };
+        const stockRows = await tx
+          .select({ qty: sql<number>`COALESCE(SUM(${stockMovements.quantity}), 0)` })
+          .from(stockMovements)
+          .where(and(eq(stockMovements.itemId, input.itemId), roomId === null ? isNull(stockMovements.roomId) : eq(stockMovements.roomId, roomId)));
+        const systemQty = Number(stockRows[0]?.qty ?? 0);
+
+        let difference: number;
+        try {
+          difference = calculateStockDifference(systemQty, input.physicalQty);
+        } catch {
+          throw new TRPCError({ code: "BAD_REQUEST", message: "Jumlah stok sistem/fisik tidak valid." });
+        }
+        if (difference === 0) {
+          throw new TRPCError({ code: "BAD_REQUEST", message: "Stok fisik sama dengan stok sistem. Tidak ada penyesuaian yang perlu diterapkan." });
+        }
+
+        const adjustmentType = difference > 0 ? "add" : "subtract";
+        const quantity = Math.abs(difference);
+        const adjustmentNo = nowNo("ADJ");
+        const appliedAt = new Date();
+        const inserted = await tx.insert(stockAdjustments).values({
+          itemId: input.itemId,
+          roomId,
+          adjustmentType,
+          quantity,
+          systemQty,
+          physicalQty: input.physicalQty,
+          reasonType: input.reasonType,
+          reason: input.reason,
+          incidentDate: input.incidentDate,
+          adjustmentNo,
+          status: "applied",
+          createdBy: ctx.user.id,
+          verifiedBy: ctx.user.id,
+          appliedAt,
+        }).returning({ id: stockAdjustments.id });
+        const adjustmentId = inserted[0]?.id;
+        if (!adjustmentId) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Penyesuaian stok gagal disimpan." });
+
+        await tx.insert(stockMovements).values({
+          itemId: input.itemId,
+          movementType: "adjustment",
+          quantity: difference,
+          roomId,
+          adjustmentId,
+          createdBy: ctx.user.id,
+          notes: input.reason,
+          occurredAt: input.incidentDate,
+        });
+
+        await tx.insert(auditLogs).values({
+          actorId: ctx.user.id,
+          action: "apply",
+          entityType: "stock_adjustment",
+          entityId: adjustmentId,
+          beforeData: { systemQty },
+          afterData: { ...input, roomId, adjustmentNo, adjustmentType, quantity, difference, finalQty: input.physicalQty, status: "applied", verifiedBy: ctx.user.id },
+          notes: "Rekonsiliasi stok berdasarkan hasil fisik",
+        });
+
+        return { adjustmentId, adjustmentNo, systemQty, physicalQty: input.physicalQty, difference, finalQty: input.physicalQty };
+      });
     }),
     applyBulkStocktake: adminProcedure.input(z.object({
       lines: z.array(z.object({
