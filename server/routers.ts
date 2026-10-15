@@ -211,11 +211,11 @@ export const appRouter = router({
       if (missingOpeningWarehouse) {
         throw new TRPCError({ code: "BAD_REQUEST", message: `Kolom Gudang sumber wajib diisi untuk Stok Awal pada baris ${missingOpeningWarehouse.rowNumber} (SKU ${missingOpeningWarehouse.sku}).` });
       }
-      const invalidOpeningWarehouse = normalizedRows.find((row) =>
-        row.initialStockQty > 0 && row.sourceWarehouseCode && warehouseDetailsByCode.get(row.sourceWarehouseCode)?.kind !== "source"
+      const invalidSourceWarehouse = normalizedRows.find((row) =>
+        row.sourceWarehouseCode && warehouseDetailsByCode.get(row.sourceWarehouseCode)?.kind !== "source"
       );
-      if (invalidOpeningWarehouse) {
-        throw new TRPCError({ code: "BAD_REQUEST", message: `Stok Awal pada baris ${invalidOpeningWarehouse.rowNumber} harus memakai salah satu gudang sumber aktif, bukan gudang logistik.` });
+      if (invalidSourceWarehouse) {
+        throw new TRPCError({ code: "BAD_REQUEST", message: `Kode gudang sumber pada baris ${invalidSourceWarehouse.rowNumber} harus menunjuk ke gudang sumber aktif, bukan Gudang Logistik IR.` });
       }
 
       let created = 0;
@@ -358,8 +358,8 @@ export const appRouter = router({
         if (!itemRows[0]) throw new TRPCError({ code: "BAD_REQUEST", message: "Barang tidak ditemukan atau sudah tidak aktif." });
 
         const warehouseRows = await tx.select({ id: warehouses.id }).from(warehouses)
-          .where(and(eq(warehouses.id, input.sourceWarehouseId), eq(warehouses.active, true))).limit(1);
-        if (!warehouseRows[0]) throw new TRPCError({ code: "BAD_REQUEST", message: "Gudang sumber tidak ditemukan atau sudah tidak aktif." });
+          .where(and(eq(warehouses.id, input.sourceWarehouseId), eq(warehouses.active, true), eq(warehouses.kind, "source"))).limit(1);
+        if (!warehouseRows[0]) throw new TRPCError({ code: "BAD_REQUEST", message: "Gudang sumber tidak ditemukan/tidak aktif atau bukan gudang sumber." });
 
         const occurredAt = input.occurredAt ?? new Date();
         const result = await tx.insert(stockMovements).values({
