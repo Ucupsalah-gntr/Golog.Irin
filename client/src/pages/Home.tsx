@@ -1597,19 +1597,14 @@ function StockView({ stock, isAdmin, items, warehouses, onCreateItem, busy, onIm
   const [showImport, setShowImport] = useState(false);
   const [expanded, setExpanded] = useState<number | null>(null);
   const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState<"all" | "safe" | "low">("all");
+  const [statusFilter, setStatusFilter] = useState<"all" | "safe" | "low" | "empty">("all");
+  const [categoryFilter, setCategoryFilter] = useState("all");
+  const [warehouseFilter, setWarehouseFilter] = useState("all");
+  const [sortBy, setSortBy] = useState<"name" | "stock-asc" | "stock-desc" | "category">("name");
+  const [visibleCount, setVisibleCount] = useState(50);
   const [form, setForm] = useState({ sku: "", name: "", unit: "box", category: "", sourceWarehouseId: "", minStock: "0" });
   const [preview, setPreview] = useState<ImportPreview | null>(null);
   const [fileName, setFileName] = useState("");
-
-  useEffect(() => {
-    if (!focusItemId) return;
-    const targetId = Number(focusItemId);
-    if (!Number.isFinite(targetId)) return;
-    setExpanded(targetId);
-    const element = document.getElementById(`stock-item-${targetId}`);
-    window.requestAnimationFrame(() => element?.scrollIntoView({ behavior: "smooth", block: "center" }));
-  }, [focusItemId]);
 
   async function handleImportFile(file: File) {
     setFileName(file.name);
@@ -1640,19 +1635,93 @@ function StockView({ stock, isAdmin, items, warehouses, onCreateItem, busy, onIm
   }
 
   const rows = Array.isArray(stock) ? stock : [];
+  const itemById = useMemo(
+    () => new Map<number, any>((Array.isArray(items) ? items : []).map((item: any) => [Number(item.id), item])),
+    [items],
+  );
+  const warehouseById = useMemo(
+    () => new Map<number, any>((Array.isArray(warehouses) ? warehouses : []).map((warehouse: any) => [Number(warehouse.id), warehouse])),
+    [warehouses],
+  );
+  const categories = useMemo(
+    () => Array.from(new Set(rows.map((row: any) => String(row.category ?? "").trim() || "Umum"))
+      .values()).sort((a, b) => a.localeCompare(b, "id")),
+    [rows],
+  );
+  const sourceWarehouses = useMemo(
+    () => (Array.isArray(warehouses) ? warehouses : [])
+      .filter((warehouse: any) => warehouse.kind === "source")
+      .sort((a: any, b: any) => String(a.name).localeCompare(String(b.name), "id")),
+    [warehouses],
+  );
   const normalizedSearch = search.trim().toLowerCase();
-  const filtered = rows.filter((row: any) => {
-    const low = Number(row.movementQty) <= Number(row.minStock);
-    const matchesStatus = statusFilter === "all" || (statusFilter === "low" ? low : !low);
-    const matchesSearch = !normalizedSearch || [row.name, row.sku, row.category].some((value) => String(value ?? "").toLowerCase().includes(normalizedSearch));
-    return matchesStatus && matchesSearch;
-  });
 
-  const lowCount = rows.filter((row: any) => Number(row.movementQty) <= Number(row.minStock)).length;
-  const safeCount = Math.max(0, rows.length - lowCount);
+  const filtered = useMemo(() => rows.filter((row: any) => {
+    const quantity = Number(row.movementQty);
+    const minimum = Number(row.minStock);
+    const sourceItem = itemById.get(Number(row.itemId));
+    const sourceWarehouseId = sourceItem?.sourceWarehouseId == null ? null : Number(sourceItem.sourceWarehouseId);
+    const sourceWarehouse = sourceWarehouseId == null ? undefined : warehouseById.get(sourceWarehouseId);
+    const category = String(row.category ?? "").trim() || "Umum";
+    const isEmpty = quantity <= 0;
+    const isLow = quantity > 0 && quantity <= minimum;
+    const isSafe = quantity > minimum;
+
+    const matchesStatus = statusFilter === "all"
+      || (statusFilter === "safe" && isSafe)
+      || (statusFilter === "low" && isLow)
+      || (statusFilter === "empty" && isEmpty);
+    const matchesCategory = categoryFilter === "all" || category === categoryFilter;
+    const matchesWarehouse = !isAdmin || warehouseFilter === "all"
+      || (warehouseFilter === "unassigned" && sourceWarehouseId === null)
+      || (sourceWarehouseId !== null && String(sourceWarehouseId) === warehouseFilter);
+    const searchable = [
+      row.name, row.sku, category, row.unit,
+      sourceWarehouse?.name, sourceWarehouse?.code,
+    ].some((value) => String(value ?? "").toLowerCase().includes(normalizedSearch));
+
+    return matchesStatus && matchesCategory && matchesWarehouse && (!normalizedSearch || searchable);
+  }), [rows, itemById, warehouseById, normalizedSearch, statusFilter, categoryFilter, warehouseFilter, isAdmin]);
+
+  const sortedFiltered = useMemo(() => [...filtered].sort((a: any, b: any) => {
+    if (sortBy === "stock-asc") {
+      const diff = Number(a.movementQty) - Number(b.movementQty);
+      if (diff !== 0) return diff;
+    } else if (sortBy === "stock-desc") {
+      const diff = Number(b.movementQty) - Number(a.movementQty);
+      if (diff !== 0) return diff;
+    } else if (sortBy === "category") {
+      const categoryDiff = String(a.category || "Umum").localeCompare(String(b.category || "Umum"), "id");
+      if (categoryDiff !== 0) return categoryDiff;
+    }
+    return String(a.name ?? "").localeCompare(String(b.name ?? ""), "id");
+  }), [filtered, sortBy]);
+
+  const visibleRows = sortedFiltered.slice(0, visibleCount);
+  const hasActiveFilters = Boolean(normalizedSearch) || statusFilter !== "all" || categoryFilter !== "all"
+    || warehouseFilter !== "all" || sortBy !== "name";
+  const lowCount = rows.filter((row: any) => Number(row.movementQty) > 0 && Number(row.movementQty) <= Number(row.minStock)).length;
+  const emptyCount = rows.filter((row: any) => Number(row.movementQty) <= 0).length;
+  const safeCount = rows.filter((row: any) => Number(row.movementQty) > Number(row.minStock)).length;
   const canImport = Boolean(preview && preview.rows.length && preview.errors.length === 0);
   const openingStockRows = preview?.rows.filter((row) => row.initialStockQty > 0).length ?? 0;
   const openingStockTotal = preview?.rows.reduce((sum, row) => sum + row.initialStockQty, 0) ?? 0;
+
+  useEffect(() => {
+    setVisibleCount(50);
+  }, [search, statusFilter, categoryFilter, warehouseFilter, sortBy]);
+
+  useEffect(() => {
+    if (!focusItemId) return;
+    const targetId = Number(focusItemId);
+    if (!Number.isFinite(targetId)) return;
+    const targetIndex = sortedFiltered.findIndex((row: any) => Number(row.itemId) === targetId);
+    if (targetIndex >= visibleCount) setVisibleCount(Math.ceil((targetIndex + 1) / 50) * 50);
+    setExpanded(targetId);
+    window.requestAnimationFrame(() => window.requestAnimationFrame(() => {
+      document.getElementById(`stock-item-${targetId}`)?.scrollIntoView({ behavior: "smooth", block: "center" });
+    }));
+  }, [focusItemId, sortedFiltered, visibleCount]);
 
   return (
     <div className="space-y-5">
@@ -1761,51 +1830,80 @@ function StockView({ stock, isAdmin, items, warehouses, onCreateItem, busy, onIm
             </div>
           )}
 
-          <div className="grid gap-3 sm:grid-cols-3">
-            <div className="golog-panel-soft rounded-2xl p-4">
-              <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[#55727C]">SKU aktif</p>
-              <p className="mt-2 text-3xl font-semibold tracking-tight">{formatNumber(rows.length)}</p>
-              <p className="mt-1 text-xs text-[#315563]">barang yang sedang terpantau</p>
-            </div>
-            <button type="button" onClick={() => setStatusFilter(statusFilter === "safe" ? "all" : "safe")} className="golog-panel-soft rounded-2xl p-4 text-left transition hover:-translate-y-0.5">
-              <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[#55727C]">Aman</p>
-              <p className="mt-2 text-3xl font-semibold tracking-tight">{formatNumber(safeCount)}</p>
-              <p className="mt-1 text-xs text-[#004E9B]">di atas minimum</p>
+          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+            <button type="button" onClick={() => setStatusFilter("all")} className={`rounded-2xl border p-4 text-left transition hover:-translate-y-0.5 ${statusFilter === "all" ? "border-[#07304A] bg-[#E6F4F7]" : "border-[#9CCED8] bg-white"}`}>
+              <p className="text-xs font-semibold uppercase tracking-[0.1em] text-[#55727C]">Total barang</p>
+              <p className="mt-2 text-3xl font-semibold tracking-tight text-[#07304A]">{formatNumber(rows.length)}</p>
+              <p className="mt-1 text-xs text-[#315563]">klik untuk lihat semua</p>
             </button>
-            <button type="button" onClick={() => setStatusFilter(statusFilter === "low" ? "all" : "low")} className="rounded-2xl border-2 border-[#FFB45C] bg-[#FFF6D6] p-4 text-left shadow-[inset_0_0_0_2px_rgba(255,250,240,0.55)] transition hover:-translate-y-0.5">
-              <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[#FF6500]">Perlu cek</p>
-              <p className="mt-2 text-3xl font-semibold tracking-tight text-[#6d4c2f]">{formatNumber(lowCount)}</p>
-              <p className="mt-1 text-xs text-[#FF6500]">stok ≤ minimum</p>
+            <button type="button" onClick={() => setStatusFilter(statusFilter === "safe" ? "all" : "safe")} className={`rounded-2xl border p-4 text-left transition hover:-translate-y-0.5 ${statusFilter === "safe" ? "border-[#18794E] bg-[#EAF7EF]" : "border-[#C8E5D1] bg-white"}`}>
+              <p className="text-xs font-semibold uppercase tracking-[0.1em] text-[#18794E]">Aman</p>
+              <p className="mt-2 text-3xl font-semibold tracking-tight text-[#18794E]">{formatNumber(safeCount)}</p>
+              <p className="mt-1 text-xs text-[#315563]">di atas minimum</p>
+            </button>
+            <button type="button" onClick={() => setStatusFilter(statusFilter === "low" ? "all" : "low")} className={`rounded-2xl border p-4 text-left transition hover:-translate-y-0.5 ${statusFilter === "low" ? "border-[#B76E00] bg-[#FFF6D6]" : "border-[#F3D59B] bg-white"}`}>
+              <p className="text-xs font-semibold uppercase tracking-[0.1em] text-[#B76E00]">Stok menipis</p>
+              <p className="mt-2 text-3xl font-semibold tracking-tight text-[#8A4B08]">{formatNumber(lowCount)}</p>
+              <p className="mt-1 text-xs text-[#8A4B08]">masih ada, ≤ minimum</p>
+            </button>
+            <button type="button" onClick={() => setStatusFilter(statusFilter === "empty" ? "all" : "empty")} className={`rounded-2xl border p-4 text-left transition hover:-translate-y-0.5 ${statusFilter === "empty" ? "border-[#B42318] bg-[#FEECEB]" : "border-[#F4C7C3] bg-white"}`}>
+              <p className="text-xs font-semibold uppercase tracking-[0.1em] text-[#B42318]">Stok kosong</p>
+              <p className="mt-2 text-3xl font-semibold tracking-tight text-[#B42318]">{formatNumber(emptyCount)}</p>
+              <p className="mt-1 text-xs text-[#B42318]">saldo 0 atau kurang</p>
             </button>
           </div>
 
-          <div className="mt-5 flex flex-col gap-3 md:flex-row">
-            <div className="relative flex-1">
-              <Search size={18} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[#55727C]" />
-              <Input
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                placeholder="Cari nama barang, SKU, atau kategori…"
-                className="h-11 pl-10"
-                aria-label="Cari stok"
-              />
+          <div className="mt-5 rounded-2xl border border-[#9CCED8] bg-[#F4FAFC]/55 p-3 sm:p-4">
+            <div className="flex flex-col gap-3 lg:flex-row">
+              <div className="relative min-w-0 flex-1">
+                <Search size={18} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[#55727C]" />
+                <Input
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  placeholder="Cari nama, SKU, kategori, atau gudang…"
+                  className="h-11 border-[#9CCED8] bg-white pl-10"
+                  aria-label="Cari stok"
+                />
+              </div>
+              <div className="flex flex-wrap items-center gap-2">
+                <label className="sr-only" htmlFor="stock-category-filter">Kategori</label>
+                <select id="stock-category-filter" value={categoryFilter} onChange={(e) => setCategoryFilter(e.target.value)} className="h-11 min-w-36 flex-1 rounded-lg border border-[#9CCED8] bg-white px-3 text-sm text-[#07304A] sm:flex-none">
+                  <option value="all">Semua kategori</option>
+                  {categories.map((category) => <option key={category} value={category}>{category}</option>)}
+                </select>
+                {isAdmin && (
+                  <>
+                    <label className="sr-only" htmlFor="stock-warehouse-filter">Gudang sumber</label>
+                    <select id="stock-warehouse-filter" value={warehouseFilter} onChange={(e) => setWarehouseFilter(e.target.value)} className="h-11 min-w-40 flex-1 rounded-lg border border-[#9CCED8] bg-white px-3 text-sm text-[#07304A] sm:flex-none">
+                      <option value="all">Semua gudang sumber</option>
+                      {sourceWarehouses.map((warehouse: any) => <option key={warehouse.id} value={String(warehouse.id)}>{warehouse.name}</option>)}
+                      <option value="unassigned">Belum ditetapkan</option>
+                    </select>
+                  </>
+                )}
+                <label className="sr-only" htmlFor="stock-sort-filter">Urutan</label>
+                <select id="stock-sort-filter" value={sortBy} onChange={(e) => setSortBy(e.target.value as typeof sortBy)} className="h-11 min-w-36 flex-1 rounded-lg border border-[#9CCED8] bg-white px-3 text-sm text-[#07304A] sm:flex-none">
+                  <option value="name">Nama A–Z</option>
+                  <option value="category">Kategori A–Z</option>
+                  <option value="stock-asc">Stok terendah</option>
+                  <option value="stock-desc">Stok tertinggi</option>
+                </select>
+              </div>
             </div>
-            <div className="flex w-full overflow-x-auto rounded-xl border-2 border-[#9CCED8] bg-[#BAE4F0]/55 p-1 md:w-auto">
-              {([["all", "Semua"], ["safe", "Aman"], ["low", "Perlu cek"]] as const).map(([value, label]) => (
-                <button
-                  key={value}
-                  type="button"
-                  onClick={() => setStatusFilter(value)}
-                  className={`whitespace-nowrap rounded-lg px-3 py-2 text-xs font-semibold transition ${statusFilter === value ? "bg-[#07304A] text-[#FFFFFF] shadow-sm" : "text-[#315563] hover:bg-[#FFFFFF]"}`}
-                >
-                  {label}
+            <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
+              <p className="text-xs text-[#315563]">
+                Menampilkan <strong>{formatNumber(Math.min(visibleCount, sortedFiltered.length))}</strong> dari <strong>{formatNumber(sortedFiltered.length)}</strong> hasil, total {formatNumber(rows.length)} barang.
+              </p>
+              {hasActiveFilters && (
+                <button type="button" onClick={() => { setSearch(""); setStatusFilter("all"); setCategoryFilter("all"); setWarehouseFilter("all"); setSortBy("name"); }} className="rounded-lg px-2 py-1 text-xs font-semibold text-[#004E9B] hover:bg-white">
+                  Reset filter
                 </button>
-              ))}
+              )}
             </div>
           </div>
 
           <div className="mt-4 space-y-2">
-            {filtered.map((row: any) => {
+            {visibleRows.map((row: any) => {
               const low = Number(row.movementQty) <= Number(row.minStock);
               const open = expanded === Number(row.itemId);
               const stockQty = Number(row.movementQty);
@@ -1871,14 +1969,22 @@ function StockView({ stock, isAdmin, items, warehouses, onCreateItem, busy, onIm
               );
             })}
 
-            {!filtered.length && (
-              <Card className="border-2 border-[#9CCED8] shadow-sm">
+            {!sortedFiltered.length && (
+              <Card className="border border-[#9CCED8] shadow-sm">
                 <CardContent>
-                  <EmptyState title={rows.length ? "Barang tidak ditemukan" : "Master barang masih kosong"} text={rows.length ? "Coba ubah kata pencarian atau filter status." : isAdmin ? "Tambahkan master barang terlebih dahulu." : "Belum ada data stok."} />
+                  <EmptyState title={rows.length ? "Barang tidak ditemukan" : "Master barang masih kosong"} text={rows.length ? "Coba ubah kata pencarian, kategori, gudang sumber, atau reset filter." : isAdmin ? "Tambahkan master barang terlebih dahulu." : "Belum ada data stok."} />
                 </CardContent>
               </Card>
             )}
           </div>
+
+          {visibleCount < sortedFiltered.length && (
+            <div className="mt-4 flex justify-center">
+              <Button variant="outline" onClick={() => setVisibleCount((current) => Math.min(current + 50, sortedFiltered.length))}>
+                Tampilkan {formatNumber(Math.min(50, sortedFiltered.length - visibleCount))} barang lagi
+              </Button>
+            </div>
+          )}
 
           {rows.length > 0 && (
             <p className="mt-4 rounded-xl border border-[#9CCED8]/70 bg-[#F4FAFC]/40 px-3 py-2 text-xs leading-5 text-[#315563]">
