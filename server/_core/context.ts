@@ -1,6 +1,6 @@
 import type { CreateExpressContextOptions } from "@trpc/server/adapters/express";
 import type { User } from "../../drizzle/schema.ts";
-import { getUserByAuthUserId, upsertUser } from "../db.ts";
+import { getUserByAuthUserId, updateUserLastSignedInByAuthUserId } from "../db.ts";
 import { ENV } from "./env.ts";
 
 export type TrpcContext = {
@@ -76,18 +76,10 @@ export async function createContext(
         authUserId: authUser.id,
       });
     } else {
-      // Existing lookup is by the immutable Supabase auth user id. Keep the
-      // application's role and room assignments from the database profile.
-      user = await upsertUser({
-        id: user.id,
-        username: user.username,
-        name: user.name,
-        email: authUser.email ?? user.email ?? null,
-        authUserId: authUser.id,
-        role: user.role,
-        roomId: user.roomId,
-        lastSignedIn: new Date(),
-      }) ?? user;
+      // Only update the sign-in timestamp by immutable auth id. Do not call a
+      // general-purpose upsert here because it also has username-based lookup
+      // behavior intended for provisioning, not for authenticating a session.
+      user = await updateUserLastSignedInByAuthUserId(authUser.id) ?? user;
     }
   } catch (error) {
     console.warn("[Auth] Supabase authentication failed:", error);
