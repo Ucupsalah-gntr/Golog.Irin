@@ -15,7 +15,6 @@ import {
   getMonthlyReportData,
   getRoomDemandPatterns,
   getRoomStockRows,
-  getStockQty,
   auditLogs,
   getStockRows,
   writeAudit,
