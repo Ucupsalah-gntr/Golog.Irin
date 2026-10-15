@@ -833,23 +833,23 @@ export const appRouter = router({
           });
         }
 
+        await tx.insert(auditLogs).values({
+          actorId: ctx.user.id,
+          action: "bulk_apply",
+          entityType: "stocktake",
+          entityId: null,
+          beforeData: { itemCount: input.lines.length },
+          afterData: {
+            itemCount: input.lines.length,
+            adjusted: results.length,
+            noDifference: input.lines.length - results.length,
+            adjustments: results,
+          },
+          notes: "Stock opname gudang pusat diproses sekaligus",
+        });
+
         return results;
       });
-
-      await writeAudit(
-        ctx.user.id,
-        "bulk_apply",
-        "stocktake",
-        null,
-        { itemCount: input.lines.length },
-        {
-          itemCount: input.lines.length,
-          adjusted: applied.length,
-          noDifference: input.lines.length - applied.length,
-          adjustments: applied,
-        },
-        "Stock opname gudang pusat diproses sekaligus",
-      );
 
       const increase = applied
         .filter((row) => row.difference > 0)
