@@ -138,14 +138,14 @@ export default function Home() {
   const dashboard = trpc.dashboard.summary.useQuery({ roomId: selectedRoom }, { enabled: isAuthenticated });
   const requests = trpc.requests.list.useQuery({}, { enabled: isAuthenticated });
   const todayRoomLocks = trpc.requests.todayLocks.useQuery(undefined, { enabled: isAuthenticated });
-  const adjustments = trpc.adjustments.list.useQuery(undefined, { enabled: isAuthenticated && user?.role === "admin" });
+  const adjustments = trpc.adjustments.list.useQuery(undefined, { enabled: isAuthenticated && Boolean(currentUser.data) && currentUser.data?.role === "admin" });
   const monthlyReport = trpc.reports.monthly.useQuery(
     { month: reportMonth },
-    { enabled: isAuthenticated && user?.role === "admin" && (active === "reports" || active === "overview") },
+    { enabled: isAuthenticated && Boolean(currentUser.data) && currentUser.data?.role === "admin" && (active === "reports" || active === "overview") },
   );
   const roomDemand = trpc.analytics.roomDemand.useQuery(
     { days: roomDemandDays },
-    { enabled: isAuthenticated && user?.role === "admin" && active === "room-demand" },
+    { enabled: isAuthenticated && Boolean(currentUser.data) && currentUser.data?.role === "admin" && active === "room-demand" },
   );
   const createRequest = trpc.requests.create.useMutation({
     onSuccess: () => {
