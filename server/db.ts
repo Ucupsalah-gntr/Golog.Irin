@@ -338,7 +338,13 @@ export async function getMonthlyReportData(monthKey: string) {
       unit: items.unit,
       minStock: items.minStock,
       sourceWarehouseId: items.sourceWarehouseId,
-    }).from(items).where(eq(items.active, true)).orderBy(items.name),
+      sourceWarehouseName: warehouses.name,
+      sourceWarehouseCode: warehouses.code,
+    })
+      .from(items)
+      .leftJoin(warehouses, eq(items.sourceWarehouseId, warehouses.id))
+      .where(eq(items.active, true))
+      .orderBy(items.name),
     db.select({
       id: rooms.id,
       code: rooms.code,
