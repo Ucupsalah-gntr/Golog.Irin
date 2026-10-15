@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { validateItemImport } from "./item-import";
+import { importTemplateCsv, validateItemImport } from "./item-import";
 
 describe("master item import validation", () => {
   it("normalizes aliases and numeric minimum stock", () => {
@@ -11,6 +11,13 @@ describe("master item import validation", () => {
   it("rejects missing required columns", () => {
     const result = validateItemImport([{ SKU: "FAR-001" }]);
     expect(result.errors.map((error) => error.field)).toEqual(expect.arrayContaining(["name", "unit"]));
+  });
+
+  it("downloads a header-only template without a sample item", () => {
+    const lines = importTemplateCsv().trimEnd().split("\n");
+    expect(lines).toHaveLength(1);
+    expect(lines[0]).toContain("SKU");
+    expect(lines[0]).toContain("Kode Gudang Sumber");
   });
 
   it("reports duplicate SKUs and invalid minimum stock", () => {
