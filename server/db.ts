@@ -100,6 +100,19 @@ export async function getUserByAuthUserId(authUserId: string) {
   return result[0];
 }
 
+export async function updateUserLastSignedInByAuthUserId(authUserId: string, lastSignedIn = new Date()) {
+  const db = await getDb();
+  if (!db) return undefined;
+
+  const result = await db
+    .update(users)
+    .set({ lastSignedIn, updatedAt: new Date() })
+    .where(eq(users.authUserId, authUserId))
+    .returning();
+
+  return result[0];
+}
+
 export async function getUserByUsername(username: string) {
   const db = await getDb();
   if (!db) return undefined;
