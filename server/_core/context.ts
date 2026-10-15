@@ -21,17 +21,6 @@ type SupabaseAuthUser = {
   user_metadata?: Record<string, unknown> | null;
 };
 
-function usernameFromAuthUser(user: SupabaseAuthUser) {
-  const metadataUsername = user.user_metadata?.username;
-  if (typeof metadataUsername === "string" && metadataUsername.trim()) {
-    return metadataUsername.trim().toLowerCase();
-  }
-
-  const email = user.email?.trim().toLowerCase() ?? "";
-  const at = email.indexOf("@");
-  return at > 0 ? email.slice(0, at) : "";
-}
-
 async function getSupabaseAuthUser(accessToken: string, supabaseKey: string): Promise<SupabaseAuthUser | null> {
   const response = await fetch(`${ENV.supabaseUrl}/auth/v1/user`, {
     method: "GET",
@@ -77,43 +66,18 @@ export async function createContext(
       return { req: opts.req, res: opts.res, user: null };
     }
 
-    const username = usernameFromAuthUser(authUser);
-    if (!username) {
-      console.warn("[Auth] Supabase user has no username/email identity.");
-      return { req: opts.req, res: opts.res, user: null };
-    }
-
-    console.info("[Auth] Auth user validated:", {
-      authUserId: authUser.id,
-      username,
-    });
-
+    // A Supabase identity must be provisioned against an application profile
+    // before it can enter the app. Never link by username/email: user metadata
+    // can be changed by the client and must not be able to claim an admin profile.
     user = (await getUserByAuthUserId(authUser.id)) ?? null;
 
     if (!user) {
-      const existingProfile = await getUserByUsername(username);
-      if (existingProfile) {
-        user = (await upsertUser({
-          id: existingProfile.id,
-          username,
-          name: existingProfile.name ?? (typeof authUser.user_metadata?.name === "string" ? authUser.user_metadata.name : username),
-          email: authUser.email ?? existingProfile.email ?? null,
-          authUserId: authUser.id,
-          role: existingProfile.role,
-          roomId: existingProfile.roomId,
-          lastSignedIn: new Date(),
-        })) ?? null;
-      }
-    }
-
-    if (!user) {
-      console.warn("[Auth] No local user profile found for:", {
+      console.warn("[Auth] Supabase identity has no pre-linked application profile:", {
         authUserId: authUser.id,
-        username,
       });
-    }
-
-    if (user) {
+    } else {
+      // Existing lookup is by the immutable Supabase auth user id. Keep the
+      // application's role and room assignments from the database profile.
       user = await upsertUser({
         id: user.id,
         username: user.username,
