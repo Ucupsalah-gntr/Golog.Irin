@@ -433,7 +433,7 @@ export default function Home() {
               <img
                 src={sidebarCollapsed
                   ? "https://img.icons8.com/fluency/48/show-left-side-panel.png"
-                  : "https://img.icons8.com/fluency/48/hide-left-side-panel.png"}
+                  : "https://img.icons8.com/fluency/48/hide-sidepanel.png"}
                 alt=""
                 width={25}
                 height={25}
