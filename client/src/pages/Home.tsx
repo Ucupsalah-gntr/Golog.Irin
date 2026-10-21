@@ -25,7 +25,6 @@ import {
   Hospital,
   LogOut,
   Menu,
-  PanelLeft,
   PackagePlus,
   RefreshCw,
   ShieldCheck,
@@ -431,7 +430,16 @@ export default function Home() {
               aria-expanded={!sidebarCollapsed}
               className="hidden h-10 w-10 shrink-0 place-items-center rounded-xl text-[#07304A] transition-colors hover:bg-[#DCEEF2] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0091B9] md:grid"
             >
-              <PanelLeft size={19} aria-hidden="true" />
+              <img
+                src={sidebarCollapsed
+                  ? "https://img.icons8.com/fluency/48/show-left-side-panel.png"
+                  : "https://img.icons8.com/fluency/48/hide-left-side-panel.png"}
+                alt=""
+                width={25}
+                height={25}
+                aria-hidden="true"
+                className="object-contain"
+              />
             </button><div><p className="text-xs font-semibold uppercase tracking-[0.18em] text-teal-700">Instalasi Rawat Intensif</p><h1 className="text-xl font-semibold tracking-tight">{visibleNav.find((x) => x.key === active)?.label}</h1></div></div><div className="flex items-center gap-2">{!isAdmin && accessibleRooms.length > 0 && <select aria-label="Ruangan aktif" value={selectedRoom ?? ""} onChange={(event) => { const nextRoomId = Number(event.target.value); if (accessibleRooms.some((room: any) => Number(room.id) === nextRoomId)) setSelectedRoom(nextRoomId); }} className="hidden h-10 max-w-[180px] rounded-xl border border-[#9CCED8] bg-[#FFFFFF] px-3 text-sm font-semibold text-[#07304A] outline-none sm:block">{accessibleRooms.map((room: any) => <option key={room.id} value={room.id}>{room.name}</option>)}</select>}<button
               type="button"
               title="Notifikasi"
