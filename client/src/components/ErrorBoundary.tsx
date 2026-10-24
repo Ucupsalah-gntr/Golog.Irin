@@ -31,13 +31,12 @@ class ErrorBoundary extends Component<Props, State> {
               className="text-destructive mb-6 flex-shrink-0"
             />
 
-            <h2 className="text-xl mb-4">An unexpected error occurred.</h2>
+            <h2 className="text-xl mb-3">Terjadi kendala pada aplikasi.</h2>
 
-            <div className="p-4 w-full rounded bg-muted overflow-auto mb-6">
-              <pre className="text-sm text-muted-foreground whitespace-break-spaces">
-                {this.state.error?.stack}
-              </pre>
-            </div>
+            <p className="max-w-xl text-center text-sm leading-6 text-muted-foreground mb-6">
+              Halaman tidak dapat ditampilkan dengan benar. Muat ulang halaman untuk mencoba kembali.
+              Data yang sudah tersimpan tetap berada di server.
+            </p>
 
             <button
               onClick={() => window.location.reload()}
@@ -48,7 +47,7 @@ class ErrorBoundary extends Component<Props, State> {
               )}
             >
               <RotateCcw size={16} />
-              Reload Page
+              Muat ulang halaman
             </button>
           </div>
         </div>
