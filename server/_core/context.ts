@@ -1,6 +1,6 @@
 import type { CreateExpressContextOptions } from "@trpc/server/adapters/express";
 import type { User } from "../../drizzle/schema.ts";
-import { getUserByAuthUserId, getUserByUsername, upsertUser } from "../db.ts";
+import { getUserByAuthUserId, upsertUser } from "../db.ts";
 import { ENV } from "./env.ts";
 
 export type TrpcContext = {
@@ -89,22 +89,6 @@ export async function createContext(
     });
 
     user = (await getUserByAuthUserId(authUser.id)) ?? null;
-
-    if (!user) {
-      const existingProfile = await getUserByUsername(username);
-      if (existingProfile) {
-        user = (await upsertUser({
-          id: existingProfile.id,
-          username,
-          name: existingProfile.name ?? (typeof authUser.user_metadata?.name === "string" ? authUser.user_metadata.name : username),
-          email: authUser.email ?? existingProfile.email ?? null,
-          authUserId: authUser.id,
-          role: existingProfile.role,
-          roomId: existingProfile.roomId,
-          lastSignedIn: new Date(),
-        })) ?? null;
-      }
-    }
 
     if (!user) {
       console.warn("[Auth] No local user profile found for:", {

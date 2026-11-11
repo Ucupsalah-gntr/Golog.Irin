@@ -120,7 +120,7 @@ function downloadWorkbook(filename: string, sheets: Array<{ name: string; rows: 
 }
 
 export default function Home() {
-  const { user, loading, isAuthenticated, logout, error: authError } = useAuth();
+  const { loading, isAuthenticated, logout, error: authError } = useAuth();
   const [active, setActive] = useState<NavKey>("overview");
   const [mobileOpen, setMobileOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
@@ -131,6 +131,7 @@ export default function Home() {
     }
   });
   const [selectedRoom, setSelectedRoom] = useState<number | null>(null);
+  const [requestRoomLock, setRequestRoomLock] = useState<{ roomId: number; requestDate: string } | null>(null);
   const roomInitUserRef = useRef<number | null>(null);
   const [requestLines, setRequestLines] = useState<Line[]>([{ itemId: 0, requestedQty: 1 }]);
   const [reportMonth, setReportMonth] = useState(getJakartaMonthKeyClient());
@@ -141,18 +142,24 @@ export default function Home() {
   const utils = trpc.useUtils();
   const catalog = trpc.catalog.all.useQuery(undefined, { enabled: isAuthenticated });
   const currentUser = trpc.auth.me.useQuery(undefined, { enabled: isAuthenticated });
-  const roomAccess = trpc.system.users.myRooms.useQuery(undefined, { enabled: isAuthenticated && user?.role !== "admin" });
+  // The server-side local profile is the source of truth for role and app identity.
+  // Supabase user_metadata is user-editable and must never decide admin UI access.
+  const profile = currentUser.data;
+  const appUserId = profile?.id ?? null;
+  const roomAccess = trpc.system.users.myRooms.useQuery(undefined, {
+    enabled: isAuthenticated && currentUser.isSuccess && profile?.role !== "admin",
+  });
   const dashboard = trpc.dashboard.summary.useQuery({ roomId: selectedRoom }, { enabled: isAuthenticated });
   const requests = trpc.requests.list.useQuery({}, { enabled: isAuthenticated });
   const todayRoomLocks = trpc.requests.todayLocks.useQuery(undefined, { enabled: isAuthenticated });
-  const adjustments = trpc.adjustments.list.useQuery(undefined, { enabled: isAuthenticated && user?.role === "admin" });
+  const adjustments = trpc.adjustments.list.useQuery(undefined, { enabled: isAuthenticated && currentUser.isSuccess && profile?.role === "admin" });
   const monthlyReport = trpc.reports.monthly.useQuery(
     { month: reportMonth },
-    { enabled: isAuthenticated && user?.role === "admin" && (active === "reports" || active === "overview") },
+    { enabled: isAuthenticated && currentUser.isSuccess && profile?.role === "admin" && (active === "reports" || active === "overview") },
   );
   const roomDemand = trpc.analytics.roomDemand.useQuery(
     { days: roomDemandDays },
-    { enabled: isAuthenticated && user?.role === "admin" && active === "room-demand" },
+    { enabled: isAuthenticated && currentUser.isSuccess && profile?.role === "admin" && active === "room-demand" },
   );
   const createRequest = trpc.requests.create.useMutation({
     onSuccess: () => {
@@ -205,14 +212,14 @@ export default function Home() {
   const items = catalog.data?.items ?? [];
   const warehouses = catalog.data?.warehouses ?? [];
   const stock = dashboard.data?.stock ?? [];
-  const isAdmin = user?.role === "admin";
+  const isAdmin = profile?.role === "admin";
   const visibleNav = nav.filter((item) => !item.adminOnly || isAdmin);
   const accessibleRooms = roomAccess.data?.map((row: any) => row.room) ?? [];
   const roomAccessErrorMessage = roomAccess.error?.message || "Akses ruangan gagal dimuat.";
   const effectiveRooms = isAdmin ? rooms : accessibleRooms;
   const selectedRoomName = effectiveRooms.find((room: any) => room.id === selectedRoom)?.name;
 
-  const notificationStorageKey = user?.id ? `gologirin-notifications-read:${user.id}` : null;
+  const notificationStorageKey = appUserId ? `gologirin-notifications-read:${appUserId}` : null;
 
   useEffect(() => {
     try {
@@ -356,7 +363,11 @@ export default function Home() {
   }, [active, isAdmin]);
 
   useEffect(() => {
-    if (isAdmin || !user?.id) {
+    if (active !== "requests") setRequestRoomLock(null);
+  }, [active]);
+
+  useEffect(() => {
+    if (isAdmin || !appUserId) {
       roomInitUserRef.current = null;
       return;
     }
@@ -366,18 +377,18 @@ export default function Home() {
     const accessIds = accessibleRooms.map((room: any) => Number(room.id));
     if (!accessIds.length) {
       if (selectedRoom !== null) setSelectedRoom(null);
-      roomInitUserRef.current = user.id;
+      roomInitUserRef.current = appUserId;
       return;
     }
 
     // Restore the persisted room only once per user session.
     // Never re-read sessionStorage on every selectedRoom/dashboard change,
     // otherwise a fresh room choice can be immediately overwritten by the old room.
-    if (roomInitUserRef.current !== user.id) {
-      const stored = window.sessionStorage.getItem(`gologirin-active-room:${user.id}`);
+    if (roomInitUserRef.current !== appUserId) {
+      const stored = window.sessionStorage.getItem(`gologirin-active-room:${appUserId}`);
       const storedId = stored ? Number(stored) : null;
       const nextRoomId = storedId && accessIds.includes(storedId) ? storedId : accessIds[0];
-      roomInitUserRef.current = user.id;
+      roomInitUserRef.current = appUserId;
       if (nextRoomId !== selectedRoom) setSelectedRoom(nextRoomId);
       return;
     }
@@ -386,16 +397,17 @@ export default function Home() {
     if (selectedRoom !== null && !accessIds.includes(Number(selectedRoom))) {
       setSelectedRoom(accessIds[0]);
     }
-  }, [isAdmin, roomAccess.data, user?.id, selectedRoom, accessibleRooms.map((room: any) => room.id).join(",")]);
+  }, [isAdmin, roomAccess.data, appUserId, selectedRoom, accessibleRooms.map((room: any) => room.id).join(",")]);
 
   useEffect(() => {
-    if (!isAdmin && user?.id && selectedRoom !== null) {
-      window.sessionStorage.setItem(`gologirin-active-room:${user.id}`, String(selectedRoom));
+    if (!isAdmin && appUserId && selectedRoom !== null) {
+      window.sessionStorage.setItem(`gologirin-active-room:${appUserId}`, String(selectedRoom));
     }
-  }, [isAdmin, selectedRoom, user?.id]);
+  }, [isAdmin, selectedRoom, appUserId]);
 
-  if (loading) return <div className="min-h-screen grid place-items-center bg-[#f4f7f6]"><div className="text-center"><Activity className="mx-auto mb-3 animate-pulse text-teal-600" /><p className="text-sm text-slate-500">Menyiapkan ruang kerja…</p></div></div>;
+  if (loading || (isAuthenticated && currentUser.isLoading)) return <div className="min-h-screen grid place-items-center bg-[#f4f7f6]"><div className="text-center"><Activity className="mx-auto mb-3 animate-pulse text-teal-600" /><p className="text-sm text-slate-500">Memverifikasi profil dan hak akses…</p></div></div>;
   if (!isAuthenticated) return <LoginScreen />;
+  if (!profile) return <div className="min-h-screen grid place-items-center bg-[#f4f7f6] p-6"><div className="w-full max-w-md rounded-2xl border border-amber-200 bg-white p-6 text-center shadow-sm"><ShieldCheck className="mx-auto mb-3 text-amber-600" size={30} /><h1 className="text-lg font-semibold text-slate-900">Profil akses belum dapat diverifikasi</h1><p className="mt-2 text-sm leading-6 text-slate-600">Sesi Supabase aktif, tetapi server belum menemukan profil akun Golog.Irin yang terhubung. Hubungi admin untuk memeriksa tautan akun, lalu coba kembali.</p><div className="mt-5 flex justify-center gap-2"><Button variant="outline" onClick={() => currentUser.refetch()} disabled={currentUser.isFetching}>Coba lagi</Button><Button onClick={() => logout()}>Keluar</Button></div></div></div>;
 
   function refreshAll() {
     dashboard.refetch();
@@ -414,7 +426,7 @@ export default function Home() {
         <aside id="golog-sidebar" className={`${mobileOpen ? "translate-y-0 opacity-100" : "-translate-y-3 opacity-0 pointer-events-none"} fixed left-3 right-3 top-[76px] z-40 max-h-[calc(100vh-92px)] overflow-y-auto rounded-2xl border border-white/10 golog-sidebar text-white shadow-2xl transition-all duration-200 md:pointer-events-auto md:inset-y-0 md:left-0 md:right-auto md:top-0 md:z-30 md:max-h-none md:w-72 ${sidebarCollapsed ? "md:-translate-x-full" : "md:translate-x-0"} md:translate-y-0 md:overflow-y-auto md:rounded-none md:border-0 md:opacity-100 md:shadow-none`}>
           <div className="flex min-h-full flex-col px-5 py-5 md:h-full md:py-6">
             <div className="flex items-center justify-between border-b border-white/10 pb-6"><div className="flex min-w-0 items-center gap-3"><div className="golog-brand-mark grid h-11 w-11 shrink-0 place-items-center rounded-2xl"><Hospital size={22} /></div><div className="min-w-0"><p className="golog-display text-lg not-italic text-[#FFFFFF]">Golog.Irin</p><p className="text-xs text-[#BAE4F0]/75">Rawat Intensif</p></div></div><div className="flex shrink-0 items-center gap-1"><button type="button" title="Tutup menu" aria-label="Tutup menu" className="grid h-9 w-9 place-items-center rounded-xl text-white/80 transition-colors hover:bg-white/10 hover:text-white md:hidden" onClick={() => setMobileOpen(false)}><X size={18} /></button></div></div>
-            <div className="mt-7 rounded-xl border border-[#BAE4F0]/15 bg-black/10 p-4"><p className="text-[11px] uppercase tracking-[0.18em] text-[#BAE4F0]/60">Sesi aktif</p><p className="mt-1 truncate font-medium">{user?.name || user?.email || "Pengguna"}</p><div className="mt-2 flex items-center gap-2 text-xs text-[#BAE4F0]/70"><ShieldCheck size={14} />{isAdmin ? "Kepala gudang" : "Petugas ruangan"}</div></div>
+            <div className="mt-7 rounded-xl border border-[#BAE4F0]/15 bg-black/10 p-4"><p className="text-[11px] uppercase tracking-[0.18em] text-[#BAE4F0]/60">Sesi aktif</p><p className="mt-1 truncate font-medium">{profile.name || profile.username || profile.email || "Pengguna"}</p><div className="mt-2 flex items-center gap-2 text-xs text-[#BAE4F0]/70"><ShieldCheck size={14} />{isAdmin ? "Kepala gudang" : "Petugas ruangan"}</div></div>
             <nav className="mt-8 space-y-1">{visibleNav.map((item) => { const Icon = item.icon; return <button key={item.key} onClick={() => go(item.key)} className={`flex w-full items-center gap-3 rounded-xl px-4 py-3 text-left text-sm transition ${active === item.key ? "golog-nav-active font-semibold" : "text-[#f5ecd5]/70 hover:bg-white/10 hover:text-white"}`}><Icon size={18} />{item.label}</button>; })}</nav>
             <div className="mt-auto border-t border-white/10 pt-5"><button onClick={() => logout()} className="flex w-full items-center gap-3 rounded-xl px-4 py-3 text-sm text-teal-50/70 hover:bg-white/10 hover:text-white"><LogOut size={18} />Keluar</button></div>
           </div>
@@ -440,7 +452,7 @@ export default function Home() {
                 aria-hidden="true"
                 className="object-contain"
               />
-            </button><div><p className="text-xs font-semibold uppercase tracking-[0.18em] text-teal-700">Instalasi Rawat Intensif</p><h1 className="text-xl font-semibold tracking-tight">{visibleNav.find((x) => x.key === active)?.label}</h1></div></div><div className="flex items-center gap-2">{!isAdmin && accessibleRooms.length > 0 && <select aria-label="Ruangan aktif" value={selectedRoom ?? ""} onChange={(event) => { const nextRoomId = Number(event.target.value); if (accessibleRooms.some((room: any) => Number(room.id) === nextRoomId)) setSelectedRoom(nextRoomId); }} className="hidden h-10 max-w-[180px] rounded-xl border border-[#9CCED8] bg-[#FFFFFF] px-3 text-sm font-semibold text-[#07304A] outline-none sm:block">{accessibleRooms.map((room: any) => <option key={room.id} value={room.id}>{room.name}</option>)}</select>}<button
+            </button><div><p className="text-xs font-semibold uppercase tracking-[0.18em] text-teal-700">Instalasi Rawat Intensif</p><h1 className="text-xl font-semibold tracking-tight">{visibleNav.find((x) => x.key === active)?.label}</h1></div></div><div className="flex items-center gap-2">{!isAdmin && accessibleRooms.length > 0 && <select aria-label="Ruangan aktif" value={requestRoomLock?.roomId ?? selectedRoom ?? ""} disabled={Boolean(requestRoomLock)} onChange={(event) => { const nextRoomId = Number(event.target.value); if (requestRoomLock && nextRoomId !== requestRoomLock.roomId) { const lockedRoomName = accessibleRooms.find((room: any) => Number(room.id) === requestRoomLock.roomId)?.name || "ruangan lain"; toast.error("Untuk tanggal " + requestRoomLock.requestDate + ", akun ini sudah mengajukan melalui " + lockedRoomName + ". Ruangan tidak dapat diganti."); return; } if (accessibleRooms.some((room: any) => Number(room.id) === nextRoomId)) setSelectedRoom(nextRoomId); }} title={requestRoomLock ? "Ruangan dikunci karena sudah ada pengajuan pada tanggal kebutuhan" : "Ruangan aktif"} className="hidden h-10 max-w-[180px] rounded-xl border border-[#9CCED8] bg-[#FFFFFF] px-3 text-sm font-semibold text-[#07304A] outline-none disabled:cursor-not-allowed disabled:opacity-70 sm:block">{accessibleRooms.map((room: any) => <option key={room.id} value={room.id}>{room.name}{requestRoomLock && Number(room.id) === requestRoomLock.roomId ? " · terkunci untuk tanggal ini" : ""}</option>)}</select>}<button
               type="button"
               title="Notifikasi"
               aria-label="Notifikasi"
@@ -449,12 +461,12 @@ export default function Home() {
             >
               <Bell size={17} />
               {unreadNotificationCount > 0 && <span className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-[#FF6500] ring-2 ring-[#FFFFFF]" />}
-            </button><button title="Refresh" onClick={refreshAll} className="rounded-xl border border-[#9CCED8] bg-[#FFFFFF] p-2.5 text-slate-500 hover:text-teal-700"><RefreshCw size={17} /></button><div className="hidden rounded-xl border border-[#9CCED8] bg-[#FFFFFF] px-3 py-2 text-right sm:block"><p className="text-xs font-semibold">{user?.name || "Akun aktif"}</p><p className="text-[11px] text-slate-500">{isAdmin ? "Kepala gudang" : "Petugas"}</p></div></div></header>
+            </button><button title="Refresh" onClick={refreshAll} className="rounded-xl border border-[#9CCED8] bg-[#FFFFFF] p-2.5 text-slate-500 hover:text-teal-700"><RefreshCw size={17} /></button><div className="hidden rounded-xl border border-[#9CCED8] bg-[#FFFFFF] px-3 py-2 text-right sm:block"><p className="text-xs font-semibold">{profile.name || profile.username || "Akun aktif"}</p><p className="text-[11px] text-slate-500">{isAdmin ? "Kepala gudang" : "Petugas"}</p></div></div></header>
           <div className={`golog-page mx-auto max-w-[1500px] space-y-6 ${active === "overview" ? "p-0 pb-28 md:p-8 md:pb-8" : "p-5 md:p-8"}`}>
-            {active === "overview" && <Overview dashboard={dashboard.data} isAdmin={isAdmin} onGo={go} report={isAdmin ? monthlyReport.data : null} requests={requests.data ?? []} userName={user?.name || user?.username || "Kepala Gudang"} unreadNotificationCount={unreadNotificationCount} onOpenNotifications={() => setNotificationOpen(true)} />}
+            {active === "overview" && <Overview dashboard={dashboard.data} isAdmin={isAdmin} onGo={go} report={isAdmin ? monthlyReport.data : null} requests={requests.data ?? []} userName={profile.name || profile.username || "Kepala Gudang"} unreadNotificationCount={unreadNotificationCount} onOpenNotifications={() => setNotificationOpen(true)} />}
             {active === "stock" && <StockView stock={stock} isAdmin={isAdmin} items={items} warehouses={warehouses} onCreateItem={(input: any) => createItem.mutate(input)} busy={createItem.isPending} onImport={(rows: any[]) => importItems.mutateAsync({ rows })} importBusy={importItems.isPending} focusItemId={notificationTarget?.nav === "stock" ? notificationTarget.itemId : undefined} />}
             {active === "inbound" && <InboundView items={items} warehouses={warehouses} onSubmit={(input: any) => createInbound.mutate(input)} busy={createInbound.isPending} />}
-            {active === "requests" && <RequestsView requests={requests.data ?? []} rooms={rooms} items={items} warehouses={warehouses} isAdmin={isAdmin} currentUserId={currentUser.data?.id} todayRoomLocks={todayRoomLocks.data ?? []} selectedRoom={selectedRoom} selectedRoomName={selectedRoomName} setSelectedRoom={setSelectedRoom} accessibleRooms={accessibleRooms} roomAccessLoading={roomAccess.isLoading} roomAccessError={roomAccessErrorMessage} onRetryRoomAccess={() => roomAccess.refetch()} lines={requestLines} setLines={setRequestLines} total={requestTotal} onCreate={(input: any) => createRequest.mutateAsync(input)} onVerify={(input: any) => verifyRequest.mutateAsync(input)} busy={createRequest.isPending || verifyRequest.isPending} focusRequestId={notificationTarget?.nav === "requests" ? notificationTarget.requestId : undefined} />}
+            {active === "requests" && <RequestsView requests={requests.data ?? []} rooms={rooms} items={items} warehouses={warehouses} isAdmin={isAdmin} currentUserId={currentUser.data?.id} todayRoomLocks={todayRoomLocks.data ?? []} selectedRoom={selectedRoom} selectedRoomName={selectedRoomName} setSelectedRoom={setSelectedRoom} onMineDateLockChange={setRequestRoomLock} accessibleRooms={accessibleRooms} roomAccessLoading={roomAccess.isLoading} roomAccessError={roomAccessErrorMessage} onRetryRoomAccess={() => roomAccess.refetch()} lines={requestLines} setLines={setRequestLines} total={requestTotal} onCreate={(input: any) => createRequest.mutateAsync(input)} onVerify={(input: any) => verifyRequest.mutateAsync(input)} busy={createRequest.isPending || verifyRequest.isPending} focusRequestId={notificationTarget?.nav === "requests" ? notificationTarget.requestId : undefined} />}
             {active === "adjustments" && <AdjustmentsView adjustments={adjustments.data ?? []} items={items} rooms={rooms} onSubmit={(input: any) => createAdjustment.mutate(input)} busy={createAdjustment.isPending} />}
             {active === "stocktake" && <StockOpnameView stock={stock} items={items} onSubmit={(input: any) => createBulkStocktake.mutate(input)} busy={createBulkStocktake.isPending} />}
             {active === "reports" && <ReportsView report={monthlyReport.data} month={reportMonth} onMonthChange={setReportMonth} />}
@@ -2024,8 +2036,9 @@ function StockView({ stock, isAdmin, items, warehouses, onCreateItem, busy, onIm
 }
 function InboundView({ items, warehouses, onSubmit, busy }: any) { const [form, setForm] = useState({ itemId: "", quantity: "", sourceWarehouseId: "", notes: "", occurredAt: new Date().toISOString().slice(0, 10) }); return <Card className="max-w-3xl border-slate-200/80 shadow-sm"><CardHeader><CardTitle>Catat barang masuk</CardTitle><p className="mt-1 text-sm text-slate-500">Penerimaan dari Gudang Farmasi, Gudang RT, CSSD, atau Laboratorium.</p></CardHeader><CardContent><div className="grid gap-4 md:grid-cols-2"><Field label="Barang"><select className="h-10 w-full rounded-lg border-2 border-[#9CCED8] bg-[#FFFFFF] px-3 text-sm text-[#07304A] shadow-[inset_0_0_0_2px_rgba(255,250,240,0.52)]" value={form.itemId} onChange={(e) => setForm({ ...form, itemId: e.target.value })}><option value="">Pilih barang</option>{items.map((item: any) => <option key={item.id} value={item.id}>{item.name} · {item.sku}</option>)}</select></Field><Field label="Sumber gudang"><select className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm" value={form.sourceWarehouseId} onChange={(e) => setForm({ ...form, sourceWarehouseId: e.target.value })}><option value="">Pilih gudang sumber</option>{warehouses.filter((w: any) => w.kind === "source").map((w: any) => <option key={w.id} value={w.id}>{w.name}</option>)}</select></Field><Field label="Jumlah"><Input type="number" min="1" value={form.quantity} onChange={(e) => setForm({ ...form, quantity: e.target.value })} placeholder="0" /></Field><Field label="Tanggal kejadian"><Input type="date" value={form.occurredAt} onChange={(e) => setForm({ ...form, occurredAt: e.target.value })} /></Field><div className="md:col-span-2"><Field label="Catatan"><Textarea value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} placeholder="Nomor dokumen, nota, atau keterangan penerimaan" /></Field></div></div><Button className="mt-6" disabled={busy || !form.itemId || !form.quantity || !form.sourceWarehouseId} onClick={() => onSubmit({ itemId: Number(form.itemId), quantity: Number(form.quantity), sourceWarehouseId: Number(form.sourceWarehouseId), occurredAt: new Date(form.occurredAt) })}><ArrowDownToLine size={16} className="mr-2" />Simpan barang masuk</Button></CardContent></Card> }
 
-function RequestsView({ requests, rooms, items, warehouses, isAdmin, currentUserId, todayRoomLocks, selectedRoom, selectedRoomName, setSelectedRoom, accessibleRooms, roomAccessLoading, roomAccessError, onRetryRoomAccess, lines, setLines, total, onCreate, onVerify, busy, focusRequestId }: any) {
+function RequestsView({ requests, rooms, items, warehouses, isAdmin, currentUserId, todayRoomLocks, selectedRoom, selectedRoomName, setSelectedRoom, onMineDateLockChange, accessibleRooms, roomAccessLoading, roomAccessError, onRetryRoomAccess, lines, setLines, total, onCreate, onVerify, busy, focusRequestId }: any) {
   const [priority, setPriority] = useState("normal");
+  const [selectedSourceWarehouseId, setSelectedSourceWarehouseId] = useState("");
   const [requestDate, setRequestDate] = useState(getJakartaDateKeyClient());
   const [notes, setNotes] = useState("");
   const [filter, setFilter] = useState("all");
@@ -2082,6 +2095,32 @@ function RequestsView({ requests, rooms, items, warehouses, isAdmin, currentUser
   const selectedLock = getRoomLock(selectedRoom);
   const selectedIsMine = Boolean(selectedLock && (selectedLock.isMine || Number(selectedLock.requesterId) === Number(currentUserId)));
   const selectedLockedByOther = Boolean(selectedLock && !selectedIsMine);
+  const myDateLock = !isAdmin && currentUserId
+    ? (requestLocks.data ?? []).find((lock: any) => Number(lock.requesterId) === Number(currentUserId)) ?? null
+    : null;
+  const myLockedRoomName = myDateLock
+    ? accessibleRooms.find((room: any) => Number(room.id) === Number(myDateLock.roomId))?.name ?? "ruangan yang dipilih"
+    : null;
+  const sourceWarehouses = warehouses.filter((warehouse: any) => warehouse.active !== false && warehouse.kind === "source");
+  const sourceItems = selectedSourceWarehouseId
+    ? items.filter((item: any) => Number(item.sourceWarehouseId) === Number(selectedSourceWarehouseId))
+    : [];
+  const selectedSourceWarehouse = sourceWarehouses.find((warehouse: any) => Number(warehouse.id) === Number(selectedSourceWarehouseId));
+  const selectedItemCount = lines.filter((line: Line) => Number(line.itemId) > 0).length;
+  const selectedUnitCount = lines.reduce((sum: number, line: Line) => sum + (Number(line.itemId) > 0 ? Math.max(0, Number(line.requestedQty) || 0) : 0), 0);
+
+  useEffect(() => {
+    if (!requestLocks.isFetched) return;
+    onMineDateLockChange?.(myDateLock
+      ? { roomId: Number(myDateLock.roomId), requestDate }
+      : null);
+  }, [requestLocks.isFetched, myDateLock?.roomId, requestDate, onMineDateLockChange]);
+
+  useEffect(() => {
+    if (!isAdmin && myDateLock && Number(selectedRoom) !== Number(myDateLock.roomId)) {
+      setSelectedRoom(Number(myDateLock.roomId));
+    }
+  }, [isAdmin, myDateLock?.roomId, selectedRoom, setSelectedRoom]);
 
   function getApprovalQty(requestId: number, line: any) {
     const key = `${requestId}:${line.line.id}`;
@@ -2310,7 +2349,7 @@ function RequestsView({ requests, rooms, items, warehouses, isAdmin, currentUser
   }
 
   return <>
-    <div className="grid gap-6 xl:grid-cols-[.85fr_1.5fr]">
+    <div className="grid gap-6 2xl:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)]">
     <Card className="border-slate-200/80 shadow-sm">
       <CardHeader><CardTitle>Buat permintaan</CardTitle><p className="mt-1 text-sm text-slate-500">Ajukan kebutuhan untuk hari ini sampai maksimal 7 hari ke depan. Kepala gudang memproses pemenuhan sesuai hari operasional dan ketersediaan stok.</p></CardHeader>
       <CardContent>
@@ -2325,8 +2364,8 @@ function RequestsView({ requests, rooms, items, warehouses, isAdmin, currentUser
                 setSelectedRoom(nextRoomId);
               }
             }}
-            className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm font-semibold text-[#07304A]"
-            disabled={!accessibleRooms.length}
+            className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm font-semibold text-[#07304A] disabled:cursor-not-allowed disabled:bg-slate-100"
+            disabled={!accessibleRooms.length || Boolean(myDateLock)}
           >
             {roomAccessLoading && !accessibleRooms.length ? (
               <option value="">Memuat daftar ruangan…</option>
@@ -2334,12 +2373,15 @@ function RequestsView({ requests, rooms, items, warehouses, isAdmin, currentUser
               accessibleRooms.map((room: any) => {
                 const lock = roomLockById.get(Number(room.id));
                 const isMine = Boolean(lock && (lock.isMine || Number(lock.requesterId) === Number(currentUserId)));
-                const label = lock
-                  ? isMine
-                    ? `${room.name} — PIC Anda`
-                    : `${room.name} — PIC ${lock.requesterName || "petugas lain"}`
-                  : `${room.name} — belum ada PIC`;
-                return <option key={room.id} value={room.id}>{label}</option>;
+                const isLockedByMyAccount = Boolean(myDateLock && Number(myDateLock.roomId) !== Number(room.id));
+                const label = isLockedByMyAccount
+                  ? room.name + " — terkunci, sudah pilih " + (myLockedRoomName || "ruangan lain")
+                  : lock
+                    ? isMine
+                      ? room.name + " — PIC Anda"
+                      : room.name + " — PIC " + (lock.requesterName || "petugas lain")
+                    : room.name + " — belum ada PIC";
+                return <option key={room.id} value={room.id} disabled={isLockedByMyAccount}>{label}</option>;
               })
             ) : (
               <option value="">Tidak ada ruangan yang ditetapkan</option>
@@ -2357,39 +2399,96 @@ function RequestsView({ requests, rooms, items, warehouses, isAdmin, currentUser
         </Field>
         </div>
         <div className={`mt-4 rounded-xl p-3 text-sm ${selectedLockedByOther ? "border-[#FFD1C2] bg-[#f8e3de] text-[#D94A1A]" : selectedLock ? "bg-emerald-50 text-emerald-800" : "border-[#FFD500] bg-[#E6F4F7] text-[#004E9B]"}`}>
-          {selectedLock
-            ? selectedIsMine
-              ? <>Anda adalah PIC request <strong>{selectedRoomName}</strong> pada tanggal kebutuhan ini. Anda dapat membuat request susulan.</>
-              : <>Ruangan <strong>{selectedRoomName}</strong> sudah memiliki PIC request pada tanggal kebutuhan ini: <strong>{selectedLock.requesterName || "petugas lain"}</strong>.</>
-            : <>Permintaan akan menjadi request pertama untuk <strong>{selectedRoomName || "ruangan yang dipilih"}</strong> pada <strong>{requestDate}</strong>.</>}
+          {myDateLock ?
+            <>Akun Anda sudah mengajukan melalui <strong>{myLockedRoomName}</strong> pada <strong>{requestDate}</strong>. Untuk tanggal ini, pengajuan susulan hanya dapat dibuat di ruangan yang sama.</>
+            : selectedLock
+              ? selectedIsMine
+                ? <>Anda adalah PIC <strong>{selectedRoomName}</strong> pada tanggal kebutuhan ini. Pengajuan susulan tetap untuk ruangan ini.</>
+                : <>Ruangan <strong>{selectedRoomName}</strong> sudah memiliki PIC request pada tanggal kebutuhan ini: <strong>{selectedLock.requesterName || "petugas lain"}</strong>.</>
+              : <>Permintaan akan menjadi request pertama untuk <strong>{selectedRoomName || "ruangan yang dipilih"}</strong> pada <strong>{requestDate}</strong>.</>}
         </div>
         <div className="mt-5"><Field label="Prioritas"><select className="h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm" value={priority} onChange={(e) => setPriority(e.target.value)}><option value="normal">Normal</option><option value="mendesak">Mendesak</option><option value="darurat">Darurat</option></select></Field></div>
+        <div className="mt-5">
+          <Field label="Gudang sumber">
+            <select
+              value={selectedSourceWarehouseId}
+              onChange={(event) => {
+                const nextWarehouseId = event.target.value;
+                if (nextWarehouseId !== selectedSourceWarehouseId && lines.some((line: Line) => Number(line.itemId) > 0)) {
+                  setLines([{ itemId: 0, requestedQty: 1 }]);
+                }
+                setSelectedSourceWarehouseId(nextWarehouseId);
+              }}
+              className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm font-semibold text-[#07304A]"
+            >
+              <option value="">Pilih gudang sumber untuk melihat daftar barang</option>
+              {sourceWarehouses.map((warehouse: any) => {
+                const count = items.filter((item: any) => Number(item.sourceWarehouseId) === Number(warehouse.id)).length;
+                return <option key={warehouse.id} value={warehouse.id}>{warehouse.name} · {formatNumber(count)} barang</option>;
+              })}
+            </select>
+          </Field>
+          {selectedSourceWarehouse && (
+            <div className="mt-2 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-[#9CCED8] bg-[#E6F4F7] px-3 py-2 text-xs text-[#315563]">
+              <span>Daftar barang dari <strong>{selectedSourceWarehouse.name}</strong></span>
+              <span><strong>{formatNumber(sourceItems.length)}</strong> barang tersedia</span>
+            </div>
+          )}
+          {!selectedSourceWarehouse && (
+            <p className="mt-2 text-xs text-slate-500">Pilih satu gudang terlebih dahulu. Barang dari gudang lain tidak akan ditampilkan atau tercampur dalam permintaan ini.</p>
+          )}
+        </div>
         <div className="mt-5 space-y-3">
           {lines.map((line: Line, index: number) => {
             const selectedItem = items.find((item: any) => Number(item.id) === Number(line.itemId));
             const warehouseQty = Number(selectedItem?.warehouseStockQty ?? 0);
             const exceeds = Boolean(selectedItem && Number(line.requestedQty) > warehouseQty);
-            return <div key={index} className="rounded-xl border border-slate-200 bg-slate-50/70 p-3">
-              <div className="grid grid-cols-[1fr_90px_auto] gap-2">
-                <select className="h-10 rounded-md border border-input bg-background px-3 text-sm" value={line.itemId || ""} onChange={(e) => {
-                  const nextItemId = Number(e.target.value);
-                  if (nextItemId) {
-                    const alreadyUsed = lines.some((x: Line, i: number) => i !== index && Number(x.itemId) === nextItemId);
-                    if (alreadyUsed) {
-                      const duplicateItem = items.find((item: any) => Number(item.id) === nextItemId);
-                      setDuplicateDialog(`${duplicateItem?.name || "Barang"} sudah ada di daftar permintaan. Ubah jumlah pada baris tersebut.`);
-                      return;
+            return <div key={index} className="min-w-0 overflow-hidden rounded-xl border border-slate-200 bg-slate-50/70 p-3">
+              <div className="grid min-w-0 grid-cols-1 gap-2 sm:grid-cols-[minmax(0,1fr)_104px_36px]">
+                <select
+                  className="h-10 w-full min-w-0 rounded-md border border-input bg-background px-3 text-sm"
+                  value={line.itemId || ""}
+                  disabled={!selectedSourceWarehouseId || !sourceItems.length}
+                  onChange={(e) => {
+                    const nextItemId = Number(e.target.value);
+                    if (nextItemId) {
+                      const alreadyUsed = lines.some((x: Line, i: number) => i !== index && Number(x.itemId) === nextItemId);
+                      if (alreadyUsed) {
+                        const duplicateItem = items.find((item: any) => Number(item.id) === nextItemId);
+                        setDuplicateDialog((duplicateItem?.name || "Barang") + " sudah ada di daftar permintaan. Ubah jumlah pada baris tersebut.");
+                        return;
+                      }
                     }
-                  }
-                  setLines(lines.map((x: Line, i: number) => i === index ? { ...x, itemId: nextItemId } : x));
-                }}><option value="">Pilih barang</option>{items.map((item: any) => <option key={item.id} value={item.id}>{item.name}</option>)}</select>
-                <Input type="number" min="1" value={line.requestedQty} onChange={(e) => setLines(lines.map((x: Line, i: number) => i === index ? { ...x, requestedQty: Number(e.target.value) } : x))} />
-                <button type="button" className="rounded-lg px-2 text-slate-400 hover:bg-white" onClick={() => setLines(lines.filter((_: Line, i: number) => i !== index))}>×</button>
+                    setLines(lines.map((x: Line, i: number) => i === index ? { ...x, itemId: nextItemId } : x));
+                  }}
+                >
+                  <option value="">{selectedSourceWarehouse ? "Pilih barang dari gudang ini" : "Pilih gudang sumber terlebih dahulu"}</option>
+                  {sourceItems.map((item: any) => (
+                    <option key={item.id} value={item.id}>{item.name} · {item.sku} · stok {formatNumber(item.warehouseStockQty)} {item.unit}</option>
+                  ))}
+                </select>
+                <div className="flex min-w-0 items-center gap-2">
+                  <span className="shrink-0 text-xs font-semibold text-slate-500">Qty</span>
+                  <Input className="w-full min-w-0" type="number" min="1" step="1" value={line.requestedQty} onChange={(e) => setLines(lines.map((x: Line, i: number) => i === index ? { ...x, requestedQty: Number(e.target.value) } : x))} />
+                </div>
+                <button type="button" aria-label="Hapus barang dari permintaan" disabled={lines.length <= 1} className="h-10 rounded-lg px-2 text-lg text-slate-400 hover:bg-white disabled:cursor-not-allowed disabled:opacity-30" onClick={() => setLines(lines.filter((_: Line, i: number) => i !== index))}>×</button>
               </div>
-              {selectedItem && <div className={`mt-2 flex items-center justify-between gap-3 rounded-lg px-3 py-2 text-xs ${exceeds ? "bg-amber-50 text-amber-800" : "bg-white text-slate-500"}`}><span>Stok Gudang Pusat: <strong className={exceeds ? "text-amber-900" : "text-slate-700"}>{formatNumber(warehouseQty)} {selectedItem.unit}</strong></span>{exceeds && <span>Permintaan melebihi stok tersedia.</span>}</div>}
+              {selectedItem && <div className={`mt-2 flex flex-wrap items-center justify-between gap-2 rounded-lg px-3 py-2 text-xs ${exceeds ? "bg-amber-50 text-amber-800" : "bg-white text-slate-500"}`}>
+                <span>Stok gudang sumber: <strong className={exceeds ? "text-amber-900" : "text-slate-700"}>{formatNumber(warehouseQty)} {selectedItem.unit}</strong></span>
+                {exceeds && <span>Jumlah diminta melebihi stok tersedia.</span>}
+              </div>}
+              {!selectedSourceWarehouse && index === 0 && <p className="mt-2 text-xs text-slate-500">Item belum dapat dipilih sebelum gudang sumber ditentukan.</p>}
             </div>;
           })}
-          <Button variant="outline" size="sm" onClick={() => setLines([...lines, { itemId: 0, requestedQty: 1 }])}>+ Tambah item</Button>
+          {selectedSourceWarehouse && !sourceItems.length && (
+            <div className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-3 text-xs leading-5 text-amber-800">
+              Belum ada barang aktif yang dipetakan ke {selectedSourceWarehouse.name}. Minta admin melengkapi pemetaan gudang sumber.
+            </div>
+          )}
+          <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white px-3 py-3">
+            <div className="text-xs text-slate-600"><strong>{formatNumber(selectedItemCount)}</strong> jenis barang <span className="mx-1 text-slate-300">·</span> <strong>{formatNumber(selectedUnitCount)}</strong> unit diminta</div>
+            <Button variant="outline" size="sm" disabled={!selectedSourceWarehouseId || !sourceItems.length} onClick={() => setLines([...lines, { itemId: 0, requestedQty: 1 }])}>+ Tambah item</Button>
+          </div>
         </div>
         <div className="mt-5"><Field label="Catatan"><Textarea value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Keperluan atau keterangan permintaan" /></Field></div>
         <button
@@ -2405,8 +2504,16 @@ function RequestsView({ requests, rooms, items, warehouses, isAdmin, currentUser
               toast.error("Pilih ruangan aktif terlebih dahulu.");
               return;
             }
+            if (myDateLock && Number(myDateLock.roomId) !== Number(selectedRoom)) {
+              toast.error("Akun Anda sudah mengajukan melalui " + myLockedRoomName + " pada " + requestDate + ". Ruangan lain dikunci untuk tanggal ini.");
+              return;
+            }
             if (selectedLockedByOther) {
               toast.error(`Ruangan ${selectedRoomName || "ini"} sudah memiliki PIC lain untuk tanggal kebutuhan tersebut.`);
+              return;
+            }
+            if (!selectedSourceWarehouseId) {
+              toast.error("Pilih gudang sumber terlebih dahulu.");
               return;
             }
             const invalidLine = lines.find((x: Line) => !x.itemId || Number(x.requestedQty) < 1);
@@ -2425,7 +2532,7 @@ function RequestsView({ requests, rooms, items, warehouses, isAdmin, currentUser
             setReviewOpen(true);
           }}
         >
-          <ClipboardCheck size={16} className="mr-2" />Review & cek {total} unit
+          <ClipboardCheck size={16} className="mr-2" />Review {formatNumber(selectedItemCount)} jenis · {formatNumber(selectedUnitCount)} unit
         </button>
       </CardContent>
     </Card>

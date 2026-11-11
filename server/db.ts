@@ -53,14 +53,12 @@ export async function upsertUser(user: InsertUser): Promise<User | undefined> {
     .where(eq(users.authUserId, user.authUserId))
     .limit(1);
 
-  const existingByUsername = existingByAuth[0]
-    ? []
-    : await db.select().from(users).where(eq(users.username, user.username)).limit(1);
+  // A Supabase identity must match the immutable auth_user_id link.
+  // Never attach or create a local profile from a username supplied by Auth.
+  const existing = existingByAuth[0];
+  if (!existing) return undefined;
 
-  const existing = existingByAuth[0] ?? existingByUsername[0];
-
-  if (existing) {
-    const updateSet: Partial<InsertUser> = {
+  const updateSet: Partial<InsertUser> = {
       username: user.username,
       name: user.name ?? existing.name,
       email: user.email ?? existing.email,
@@ -69,24 +67,13 @@ export async function upsertUser(user: InsertUser): Promise<User | undefined> {
       updatedAt: new Date(),
     };
 
-    const updated = await db
-      .update(users)
-      .set(updateSet)
-      .where(eq(users.id, existing.id))
-      .returning();
-
-    return updated[0] ?? existing;
-  }
-
-  const inserted = await db
-    .insert(users)
-    .values({
-      ...user,
-      lastSignedIn: user.lastSignedIn ?? new Date(),
-    })
+  const updated = await db
+    .update(users)
+    .set(updateSet)
+    .where(eq(users.id, existing.id))
     .returning();
 
-  return inserted[0];
+  return updated[0] ?? existing;
 }
 
 export async function getUserByAuthUserId(authUserId: string) {
@@ -96,17 +83,6 @@ export async function getUserByAuthUserId(authUserId: string) {
     .select()
     .from(users)
     .where(eq(users.authUserId, authUserId))
-    .limit(1);
-  return result[0];
-}
-
-export async function getUserByUsername(username: string) {
-  const db = await getDb();
-  if (!db) return undefined;
-  const result = await db
-    .select()
-    .from(users)
-    .where(eq(users.username, username))
     .limit(1);
   return result[0];
 }
