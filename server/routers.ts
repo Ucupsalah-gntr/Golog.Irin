@@ -428,9 +428,46 @@ export const appRouter = router({
         throw new TRPCError({ code: "BAD_REQUEST", message: "Barang yang sama tidak boleh dimasukkan dua kali dalam satu permintaan." });
       }
 
-      const activeItems = await db.select({ id: items.id }).from(items).where(and(eq(items.active, true), inArray(items.id, itemIds)));
+      const activeItems = await db
+        .select({ id: items.id, sourceWarehouseId: items.sourceWarehouseId })
+        .from(items)
+        .where(and(eq(items.active, true), inArray(items.id, itemIds)));
       if (activeItems.length !== itemIds.length) {
         throw new TRPCError({ code: "BAD_REQUEST", message: "Salah satu barang tidak ditemukan atau sudah tidak aktif." });
+      }
+
+      const sourceWarehouseIds = new Set(
+        activeItems
+          .map((item) => item.sourceWarehouseId)
+          .filter((warehouseId): warehouseId is number => warehouseId !== null),
+      );
+      if (activeItems.some((item) => item.sourceWarehouseId === null)) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Ada barang yang belum dipetakan ke gudang sumber. Minta admin melengkapi gudang sumber barang tersebut.",
+        });
+      }
+      if (sourceWarehouseIds.size !== 1) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Satu permintaan hanya boleh berisi barang dari satu gudang sumber. Pisahkan permintaan berdasarkan gudang.",
+        });
+      }
+      const sourceWarehouseId = Array.from(sourceWarehouseIds)[0];
+      const sourceWarehouseRows = await db
+        .select({ id: warehouses.id })
+        .from(warehouses)
+        .where(and(
+          eq(warehouses.id, sourceWarehouseId),
+          eq(warehouses.active, true),
+          eq(warehouses.kind, "source"),
+        ))
+        .limit(1);
+      if (!sourceWarehouseRows[0]) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Gudang sumber barang tidak ditemukan atau sudah tidak aktif.",
+        });
       }
 
       const requestDate = input.requestDate;
@@ -439,12 +476,40 @@ export const appRouter = router({
       }
       const now = new Date();
       const roomId = input.roomId;
-      const requestAuditInput = { ...input, roomId, requestDate };
+      const requestAuditInput = { ...input, roomId, requestDate, sourceWarehouseId };
 
       const result = await db.transaction(async (tx) => {
+        // Serialize requests from the same account for the same date. This prevents
+        // concurrent tabs from assigning one operator to two rooms.
+        const requesterRows = await tx
+          .select({ id: users.id })
+          .from(users)
+          .where(eq(users.id, ctx.user.id))
+          .limit(1)
+          .for("update");
+        if (!requesterRows[0]) {
+          throw new TRPCError({ code: "UNAUTHORIZED", message: "Akun petugas tidak ditemukan." });
+        }
+
+        const requesterLocks = await tx
+          .select({ roomId: requestDayLocks.roomId })
+          .from(requestDayLocks)
+          .where(and(
+            eq(requestDayLocks.requesterId, ctx.user.id),
+            eq(requestDayLocks.requestDate, requestDate),
+          ))
+          .orderBy(requestDayLocks.id)
+          .limit(1);
+        const requesterLock = requesterLocks[0];
+        if (requesterLock && Number(requesterLock.roomId) !== roomId) {
+          throw new TRPCError({
+            code: "FORBIDDEN",
+            message: "Akun Anda sudah mengajukan permintaan untuk ruangan lain pada tanggal ini. Pengajuan berikutnya hanya boleh untuk ruangan yang sama.",
+          });
+        }
+
         // The first requester of a room/day becomes the PIC for that room/day.
-        // A later request by the same staff member reuses the existing lock.
-        // A different staff member must never overwrite the existing PIC.
+        // The same PIC may make follow-up requests, but another PIC cannot take over.
         await tx.insert(requestDayLocks)
           .values({ roomId, requestDate, requesterId: ctx.user.id })
           .onConflictDoNothing({
