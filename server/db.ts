@@ -53,11 +53,9 @@ export async function upsertUser(user: InsertUser): Promise<User | undefined> {
     .where(eq(users.authUserId, user.authUserId))
     .limit(1);
 
-  const existingByUsername = existingByAuth[0]
-    ? []
-    : await db.select().from(users).where(eq(users.username, user.username)).limit(1);
-
-  const existing = existingByAuth[0] ?? existingByUsername[0];
+  // A Supabase identity must match the immutable auth_user_id link.
+  // Never attach an authenticated identity to a profile by username alone.
+  const existing = existingByAuth[0];
 
   if (existing) {
     const updateSet: Partial<InsertUser> = {
