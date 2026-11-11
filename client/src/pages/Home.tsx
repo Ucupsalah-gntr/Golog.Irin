@@ -357,6 +357,10 @@ export default function Home() {
   }, [active, isAdmin]);
 
   useEffect(() => {
+    if (active !== "requests") setRequestRoomLock(null);
+  }, [active]);
+
+  useEffect(() => {
     if (isAdmin || !user?.id) {
       roomInitUserRef.current = null;
       return;
@@ -2096,6 +2100,7 @@ function RequestsView({ requests, rooms, items, warehouses, isAdmin, currentUser
     : [];
   const selectedSourceWarehouse = sourceWarehouses.find((warehouse: any) => Number(warehouse.id) === Number(selectedSourceWarehouseId));
   const selectedItemCount = lines.filter((line: Line) => Number(line.itemId) > 0).length;
+  const selectedUnitCount = lines.reduce((sum: number, line: Line) => sum + (Number(line.itemId) > 0 ? Math.max(0, Number(line.requestedQty) || 0) : 0), 0);
 
   useEffect(() => {
     if (!requestLocks.isFetched) return;
@@ -2452,7 +2457,7 @@ function RequestsView({ requests, rooms, items, warehouses, isAdmin, currentUser
                 >
                   <option value="">{selectedSourceWarehouse ? "Pilih barang dari gudang ini" : "Pilih gudang sumber terlebih dahulu"}</option>
                   {sourceItems.map((item: any) => (
-                    <option key={item.id} value={item.id}>{item.name} · stok {formatNumber(item.warehouseStockQty)} {item.unit}</option>
+                    <option key={item.id} value={item.id}>{item.name} · {item.sku} · stok {formatNumber(item.warehouseStockQty)} {item.unit}</option>
                   ))}
                 </select>
                 <div className="flex min-w-0 items-center gap-2">
@@ -2474,7 +2479,7 @@ function RequestsView({ requests, rooms, items, warehouses, isAdmin, currentUser
             </div>
           )}
           <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white px-3 py-3">
-            <div className="text-xs text-slate-600"><strong>{formatNumber(selectedItemCount)}</strong> jenis barang <span className="mx-1 text-slate-300">·</span> <strong>{formatNumber(total)}</strong> unit diminta</div>
+            <div className="text-xs text-slate-600"><strong>{formatNumber(selectedItemCount)}</strong> jenis barang <span className="mx-1 text-slate-300">·</span> <strong>{formatNumber(selectedUnitCount)}</strong> unit diminta</div>
             <Button variant="outline" size="sm" disabled={!selectedSourceWarehouseId || !sourceItems.length} onClick={() => setLines([...lines, { itemId: 0, requestedQty: 1 }])}>+ Tambah item</Button>
           </div>
         </div>
@@ -2520,7 +2525,7 @@ function RequestsView({ requests, rooms, items, warehouses, isAdmin, currentUser
             setReviewOpen(true);
           }}
         >
-          <ClipboardCheck size={16} className="mr-2" />Review {formatNumber(selectedItemCount)} jenis · {formatNumber(total)} unit
+          <ClipboardCheck size={16} className="mr-2" />Review {formatNumber(selectedItemCount)} jenis · {formatNumber(selectedUnitCount)} unit
         </button>
       </CardContent>
     </Card>
