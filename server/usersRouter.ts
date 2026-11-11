@@ -2,7 +2,7 @@ import { TRPCError } from "@trpc/server";
 import { and, eq, sql } from "drizzle-orm";
 import { z } from "zod";
 import { adminProcedure, protectedProcedure, router } from "./_core/trpc.ts";
-import { getDb, rooms, userRoomAccess, users, writeAudit } from "./db.ts";
+import { auditLogs, getDb, rooms, userRoomAccess, users } from "./db.ts";
 
 export const usersRouter = router({
   myRooms: protectedProcedure.query(async ({ ctx }) => {
@@ -27,8 +27,16 @@ export const usersRouter = router({
         await tx.insert(userRoomAccess).values({ userId: input.userId, roomId, active: true, updatedAt: new Date() }).onConflictDoUpdate({ target: [userRoomAccess.userId, userRoomAccess.roomId], set: { active: true, updatedAt: new Date() } });
       }
       await tx.update(users).set({ roomId: uniqueRoomIds[0] ?? null, updatedAt: new Date() }).where(eq(users.id, input.userId));
+      await tx.insert(auditLogs).values({
+        actorId: ctx.user.id,
+        action: "assign_rooms",
+        entityType: "user",
+        entityId: target.id,
+        beforeData: { roomIds: target.roomId === null ? [] : [target.roomId] },
+        afterData: { roomIds: uniqueRoomIds },
+        notes: "Akses ruangan akun diperbarui",
+      });
     });
-    await writeAudit(ctx.user.id, "assign_rooms", "user", target.id, { roomIds: target.roomId === null ? [] : [target.roomId] }, { roomIds: uniqueRoomIds }, "Akses ruangan akun diperbarui");
     return { success: true, userId: target.id, roomIds: uniqueRoomIds } as const;
   }),
 
