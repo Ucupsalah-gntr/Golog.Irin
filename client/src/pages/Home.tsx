@@ -120,7 +120,7 @@ function downloadWorkbook(filename: string, sheets: Array<{ name: string; rows: 
 }
 
 export default function Home() {
-  const { user, loading, isAuthenticated, logout, error: authError } = useAuth();
+  const { loading, isAuthenticated, logout, error: authError } = useAuth();
   const [active, setActive] = useState<NavKey>("overview");
   const [mobileOpen, setMobileOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
@@ -142,18 +142,24 @@ export default function Home() {
   const utils = trpc.useUtils();
   const catalog = trpc.catalog.all.useQuery(undefined, { enabled: isAuthenticated });
   const currentUser = trpc.auth.me.useQuery(undefined, { enabled: isAuthenticated });
-  const roomAccess = trpc.system.users.myRooms.useQuery(undefined, { enabled: isAuthenticated && user?.role !== "admin" });
+  // The server-side local profile is the source of truth for role and app identity.
+  // Supabase user_metadata is user-editable and must never decide admin UI access.
+  const profile = currentUser.data;
+  const appUserId = profile?.id ?? null;
+  const roomAccess = trpc.system.users.myRooms.useQuery(undefined, {
+    enabled: isAuthenticated && currentUser.isSuccess && profile?.role !== "admin",
+  });
   const dashboard = trpc.dashboard.summary.useQuery({ roomId: selectedRoom }, { enabled: isAuthenticated });
   const requests = trpc.requests.list.useQuery({}, { enabled: isAuthenticated });
   const todayRoomLocks = trpc.requests.todayLocks.useQuery(undefined, { enabled: isAuthenticated });
-  const adjustments = trpc.adjustments.list.useQuery(undefined, { enabled: isAuthenticated && user?.role === "admin" });
+  const adjustments = trpc.adjustments.list.useQuery(undefined, { enabled: isAuthenticated && currentUser.isSuccess && profile?.role === "admin" });
   const monthlyReport = trpc.reports.monthly.useQuery(
     { month: reportMonth },
-    { enabled: isAuthenticated && user?.role === "admin" && (active === "reports" || active === "overview") },
+    { enabled: isAuthenticated && currentUser.isSuccess && profile?.role === "admin" && (active === "reports" || active === "overview") },
   );
   const roomDemand = trpc.analytics.roomDemand.useQuery(
     { days: roomDemandDays },
-    { enabled: isAuthenticated && user?.role === "admin" && active === "room-demand" },
+    { enabled: isAuthenticated && currentUser.isSuccess && profile?.role === "admin" && active === "room-demand" },
   );
   const createRequest = trpc.requests.create.useMutation({
     onSuccess: () => {
@@ -206,14 +212,14 @@ export default function Home() {
   const items = catalog.data?.items ?? [];
   const warehouses = catalog.data?.warehouses ?? [];
   const stock = dashboard.data?.stock ?? [];
-  const isAdmin = user?.role === "admin";
+  const isAdmin = profile?.role === "admin";
   const visibleNav = nav.filter((item) => !item.adminOnly || isAdmin);
   const accessibleRooms = roomAccess.data?.map((row: any) => row.room) ?? [];
   const roomAccessErrorMessage = roomAccess.error?.message || "Akses ruangan gagal dimuat.";
   const effectiveRooms = isAdmin ? rooms : accessibleRooms;
   const selectedRoomName = effectiveRooms.find((room: any) => room.id === selectedRoom)?.name;
 
-  const notificationStorageKey = user?.id ? `gologirin-notifications-read:${user.id}` : null;
+  const notificationStorageKey = appUserId ? `gologirin-notifications-read:${appUserId}` : null;
 
   useEffect(() => {
     try {
@@ -361,7 +367,7 @@ export default function Home() {
   }, [active]);
 
   useEffect(() => {
-    if (isAdmin || !user?.id) {
+    if (isAdmin || !appUserId) {
       roomInitUserRef.current = null;
       return;
     }
@@ -371,18 +377,18 @@ export default function Home() {
     const accessIds = accessibleRooms.map((room: any) => Number(room.id));
     if (!accessIds.length) {
       if (selectedRoom !== null) setSelectedRoom(null);
-      roomInitUserRef.current = user.id;
+      roomInitUserRef.current = appUserId;
       return;
     }
 
     // Restore the persisted room only once per user session.
     // Never re-read sessionStorage on every selectedRoom/dashboard change,
     // otherwise a fresh room choice can be immediately overwritten by the old room.
-    if (roomInitUserRef.current !== user.id) {
-      const stored = window.sessionStorage.getItem(`gologirin-active-room:${user.id}`);
+    if (roomInitUserRef.current !== appUserId) {
+      const stored = window.sessionStorage.getItem(`gologirin-active-room:${appUserId}`);
       const storedId = stored ? Number(stored) : null;
       const nextRoomId = storedId && accessIds.includes(storedId) ? storedId : accessIds[0];
-      roomInitUserRef.current = user.id;
+      roomInitUserRef.current = appUserId;
       if (nextRoomId !== selectedRoom) setSelectedRoom(nextRoomId);
       return;
     }
@@ -391,16 +397,17 @@ export default function Home() {
     if (selectedRoom !== null && !accessIds.includes(Number(selectedRoom))) {
       setSelectedRoom(accessIds[0]);
     }
-  }, [isAdmin, roomAccess.data, user?.id, selectedRoom, accessibleRooms.map((room: any) => room.id).join(",")]);
+  }, [isAdmin, roomAccess.data, appUserId, selectedRoom, accessibleRooms.map((room: any) => room.id).join(",")]);
 
   useEffect(() => {
-    if (!isAdmin && user?.id && selectedRoom !== null) {
-      window.sessionStorage.setItem(`gologirin-active-room:${user.id}`, String(selectedRoom));
+    if (!isAdmin && appUserId && selectedRoom !== null) {
+      window.sessionStorage.setItem(`gologirin-active-room:${appUserId}`, String(selectedRoom));
     }
-  }, [isAdmin, selectedRoom, user?.id]);
+  }, [isAdmin, selectedRoom, appUserId]);
 
-  if (loading) return <div className="min-h-screen grid place-items-center bg-[#f4f7f6]"><div className="text-center"><Activity className="mx-auto mb-3 animate-pulse text-teal-600" /><p className="text-sm text-slate-500">Menyiapkan ruang kerja…</p></div></div>;
+  if (loading || (isAuthenticated && currentUser.isLoading)) return <div className="min-h-screen grid place-items-center bg-[#f4f7f6]"><div className="text-center"><Activity className="mx-auto mb-3 animate-pulse text-teal-600" /><p className="text-sm text-slate-500">Memverifikasi profil dan hak akses…</p></div></div>;
   if (!isAuthenticated) return <LoginScreen />;
+  if (!profile) return <div className="min-h-screen grid place-items-center bg-[#f4f7f6] p-6"><div className="w-full max-w-md rounded-2xl border border-amber-200 bg-white p-6 text-center shadow-sm"><ShieldCheck className="mx-auto mb-3 text-amber-600" size={30} /><h1 className="text-lg font-semibold text-slate-900">Profil akses belum dapat diverifikasi</h1><p className="mt-2 text-sm leading-6 text-slate-600">Sesi Supabase aktif, tetapi server belum menemukan profil akun Golog.Irin yang terhubung. Hubungi admin untuk memeriksa tautan akun, lalu coba kembali.</p><div className="mt-5 flex justify-center gap-2"><Button variant="outline" onClick={() => currentUser.refetch()} disabled={currentUser.isFetching}>Coba lagi</Button><Button onClick={() => logout()}>Keluar</Button></div></div></div>;
 
   function refreshAll() {
     dashboard.refetch();
@@ -419,7 +426,7 @@ export default function Home() {
         <aside id="golog-sidebar" className={`${mobileOpen ? "translate-y-0 opacity-100" : "-translate-y-3 opacity-0 pointer-events-none"} fixed left-3 right-3 top-[76px] z-40 max-h-[calc(100vh-92px)] overflow-y-auto rounded-2xl border border-white/10 golog-sidebar text-white shadow-2xl transition-all duration-200 md:pointer-events-auto md:inset-y-0 md:left-0 md:right-auto md:top-0 md:z-30 md:max-h-none md:w-72 ${sidebarCollapsed ? "md:-translate-x-full" : "md:translate-x-0"} md:translate-y-0 md:overflow-y-auto md:rounded-none md:border-0 md:opacity-100 md:shadow-none`}>
           <div className="flex min-h-full flex-col px-5 py-5 md:h-full md:py-6">
             <div className="flex items-center justify-between border-b border-white/10 pb-6"><div className="flex min-w-0 items-center gap-3"><div className="golog-brand-mark grid h-11 w-11 shrink-0 place-items-center rounded-2xl"><Hospital size={22} /></div><div className="min-w-0"><p className="golog-display text-lg not-italic text-[#FFFFFF]">Golog.Irin</p><p className="text-xs text-[#BAE4F0]/75">Rawat Intensif</p></div></div><div className="flex shrink-0 items-center gap-1"><button type="button" title="Tutup menu" aria-label="Tutup menu" className="grid h-9 w-9 place-items-center rounded-xl text-white/80 transition-colors hover:bg-white/10 hover:text-white md:hidden" onClick={() => setMobileOpen(false)}><X size={18} /></button></div></div>
-            <div className="mt-7 rounded-xl border border-[#BAE4F0]/15 bg-black/10 p-4"><p className="text-[11px] uppercase tracking-[0.18em] text-[#BAE4F0]/60">Sesi aktif</p><p className="mt-1 truncate font-medium">{user?.name || user?.email || "Pengguna"}</p><div className="mt-2 flex items-center gap-2 text-xs text-[#BAE4F0]/70"><ShieldCheck size={14} />{isAdmin ? "Kepala gudang" : "Petugas ruangan"}</div></div>
+            <div className="mt-7 rounded-xl border border-[#BAE4F0]/15 bg-black/10 p-4"><p className="text-[11px] uppercase tracking-[0.18em] text-[#BAE4F0]/60">Sesi aktif</p><p className="mt-1 truncate font-medium">{profile.name || profile.username || profile.email || "Pengguna"}</p><div className="mt-2 flex items-center gap-2 text-xs text-[#BAE4F0]/70"><ShieldCheck size={14} />{isAdmin ? "Kepala gudang" : "Petugas ruangan"}</div></div>
             <nav className="mt-8 space-y-1">{visibleNav.map((item) => { const Icon = item.icon; return <button key={item.key} onClick={() => go(item.key)} className={`flex w-full items-center gap-3 rounded-xl px-4 py-3 text-left text-sm transition ${active === item.key ? "golog-nav-active font-semibold" : "text-[#f5ecd5]/70 hover:bg-white/10 hover:text-white"}`}><Icon size={18} />{item.label}</button>; })}</nav>
             <div className="mt-auto border-t border-white/10 pt-5"><button onClick={() => logout()} className="flex w-full items-center gap-3 rounded-xl px-4 py-3 text-sm text-teal-50/70 hover:bg-white/10 hover:text-white"><LogOut size={18} />Keluar</button></div>
           </div>
@@ -454,9 +461,9 @@ export default function Home() {
             >
               <Bell size={17} />
               {unreadNotificationCount > 0 && <span className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-[#FF6500] ring-2 ring-[#FFFFFF]" />}
-            </button><button title="Refresh" onClick={refreshAll} className="rounded-xl border border-[#9CCED8] bg-[#FFFFFF] p-2.5 text-slate-500 hover:text-teal-700"><RefreshCw size={17} /></button><div className="hidden rounded-xl border border-[#9CCED8] bg-[#FFFFFF] px-3 py-2 text-right sm:block"><p className="text-xs font-semibold">{user?.name || "Akun aktif"}</p><p className="text-[11px] text-slate-500">{isAdmin ? "Kepala gudang" : "Petugas"}</p></div></div></header>
+            </button><button title="Refresh" onClick={refreshAll} className="rounded-xl border border-[#9CCED8] bg-[#FFFFFF] p-2.5 text-slate-500 hover:text-teal-700"><RefreshCw size={17} /></button><div className="hidden rounded-xl border border-[#9CCED8] bg-[#FFFFFF] px-3 py-2 text-right sm:block"><p className="text-xs font-semibold">{profile.name || profile.username || "Akun aktif"}</p><p className="text-[11px] text-slate-500">{isAdmin ? "Kepala gudang" : "Petugas"}</p></div></div></header>
           <div className={`golog-page mx-auto max-w-[1500px] space-y-6 ${active === "overview" ? "p-0 pb-28 md:p-8 md:pb-8" : "p-5 md:p-8"}`}>
-            {active === "overview" && <Overview dashboard={dashboard.data} isAdmin={isAdmin} onGo={go} report={isAdmin ? monthlyReport.data : null} requests={requests.data ?? []} userName={user?.name || user?.username || "Kepala Gudang"} unreadNotificationCount={unreadNotificationCount} onOpenNotifications={() => setNotificationOpen(true)} />}
+            {active === "overview" && <Overview dashboard={dashboard.data} isAdmin={isAdmin} onGo={go} report={isAdmin ? monthlyReport.data : null} requests={requests.data ?? []} userName={profile.name || profile.username || "Kepala Gudang"} unreadNotificationCount={unreadNotificationCount} onOpenNotifications={() => setNotificationOpen(true)} />}
             {active === "stock" && <StockView stock={stock} isAdmin={isAdmin} items={items} warehouses={warehouses} onCreateItem={(input: any) => createItem.mutate(input)} busy={createItem.isPending} onImport={(rows: any[]) => importItems.mutateAsync({ rows })} importBusy={importItems.isPending} focusItemId={notificationTarget?.nav === "stock" ? notificationTarget.itemId : undefined} />}
             {active === "inbound" && <InboundView items={items} warehouses={warehouses} onSubmit={(input: any) => createInbound.mutate(input)} busy={createInbound.isPending} />}
             {active === "requests" && <RequestsView requests={requests.data ?? []} rooms={rooms} items={items} warehouses={warehouses} isAdmin={isAdmin} currentUserId={currentUser.data?.id} todayRoomLocks={todayRoomLocks.data ?? []} selectedRoom={selectedRoom} selectedRoomName={selectedRoomName} setSelectedRoom={setSelectedRoom} onMineDateLockChange={setRequestRoomLock} accessibleRooms={accessibleRooms} roomAccessLoading={roomAccess.isLoading} roomAccessError={roomAccessErrorMessage} onRetryRoomAccess={() => roomAccess.refetch()} lines={requestLines} setLines={setRequestLines} total={requestTotal} onCreate={(input: any) => createRequest.mutateAsync(input)} onVerify={(input: any) => verifyRequest.mutateAsync(input)} busy={createRequest.isPending || verifyRequest.isPending} focusRequestId={notificationTarget?.nav === "requests" ? notificationTarget.requestId : undefined} />}
