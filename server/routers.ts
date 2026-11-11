@@ -4,7 +4,7 @@ import { z } from "zod";
 import { systemRouter } from "./_core/systemRouter.ts";
 import { adminProcedure, protectedProcedure, publicProcedure, router } from "./_core/trpc.ts";
 import { canTransitionRequestStatus, validateApprovedQuantity, validateApprovalStatus } from "../shared/request-rules.ts";
-import { canReuseRequestDayLock, getJakartaDateKey, isRequestDateWithinWindow } from "../shared/request-day-lock.ts";
+import { canReuseRequestDayLock, canReuseRequesterDayRoomLock, getJakartaDateKey, isRequestDateWithinWindow } from "../shared/request-day-lock.ts";
 import { calculateStockDifference } from "../shared/stock-reconciliation.ts";
 import type { ImportItemRow } from "../shared/item-import.ts";
 import {
@@ -436,24 +436,19 @@ export const appRouter = router({
         throw new TRPCError({ code: "BAD_REQUEST", message: "Salah satu barang tidak ditemukan atau sudah tidak aktif." });
       }
 
-      const sourceWarehouseIds = new Set(
-        activeItems
-          .map((item) => item.sourceWarehouseId)
-          .filter((warehouseId): warehouseId is number => warehouseId !== null),
-      );
       if (activeItems.some((item) => item.sourceWarehouseId === null)) {
         throw new TRPCError({
           code: "BAD_REQUEST",
           message: "Ada barang yang belum dipetakan ke gudang sumber. Minta admin melengkapi gudang sumber barang tersebut.",
         });
       }
-      if (sourceWarehouseIds.size !== 1) {
+      const sourceWarehouseId = activeItems[0]?.sourceWarehouseId;
+      if (sourceWarehouseId === null || sourceWarehouseId === undefined || activeItems.some((item) => item.sourceWarehouseId !== sourceWarehouseId)) {
         throw new TRPCError({
           code: "BAD_REQUEST",
           message: "Satu permintaan hanya boleh berisi barang dari satu gudang sumber. Pisahkan permintaan berdasarkan gudang.",
         });
       }
-      const sourceWarehouseId = Array.from(sourceWarehouseIds)[0];
       const sourceWarehouseRows = await db
         .select({ id: warehouses.id })
         .from(warehouses)
@@ -501,7 +496,7 @@ export const appRouter = router({
           .orderBy(requestDayLocks.id)
           .limit(1);
         const requesterLock = requesterLocks[0];
-        if (requesterLock && Number(requesterLock.roomId) !== roomId) {
+        if (!canReuseRequesterDayRoomLock(requesterLock ? Number(requesterLock.roomId) : null, roomId)) {
           throw new TRPCError({
             code: "FORBIDDEN",
             message: "Akun Anda sudah mengajukan permintaan untuk ruangan lain pada tanggal ini. Pengajuan berikutnya hanya boleh untuk ruangan yang sama.",
