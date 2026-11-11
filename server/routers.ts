@@ -925,7 +925,8 @@ export const appRouter = router({
           difference: number;
         }> = [];
 
-        for (const line of input.lines) {
+        // Lock item rows in a stable order to reduce deadlock risk when stocktakes overlap.
+        for (const line of [...input.lines].sort((a, b) => a.itemId - b.itemId)) {
           const itemRows = await tx
             .select({ id: items.id, name: items.name })
             .from(items)
