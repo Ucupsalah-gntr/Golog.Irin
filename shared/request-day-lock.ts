@@ -11,6 +11,15 @@ export function canReuseRequestDayLock(requesterId: number, currentUserId: numbe
   return requesterId === currentUserId;
 }
 
+/**
+ * Once an operator has selected a room for a request date, they cannot
+ * submit another request for a different room on that same date.
+ * Repeated requests for the same room remain allowed.
+ */
+export function canReuseRequesterDayRoomLock(lockedRoomId: number | null, requestedRoomId: number): boolean {
+  return lockedRoomId === null || lockedRoomId === requestedRoomId;
+}
+
 
 export function addJakartaDays(dateKey: string, days: number): string {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(dateKey) || !Number.isInteger(days)) {
